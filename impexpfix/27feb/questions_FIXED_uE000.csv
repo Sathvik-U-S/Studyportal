@@ -1,0 +1,1304 @@
+id,assessment_id,heading,media_type,media_content,q_type,correct_answer
+343,38,"Consider a point $x = \begin{bmatrix} 1 \\ -1 \end{bmatrix}$ and a line passing through the origin which is represented by the vector $w = \begin{bmatrix} 3 \\ 3 \end{bmatrix}$. What can you say about the following quantities?
+(1) the projection of $x$ onto the line
+(2) the residue
+
+*Note: The projection is treated as a vector. The residue after the projection is also treated as a vector.*",,,mcq,
+349,38,"Consider a dataset that has $1000$ samples, where each sample belongs to $\mathbb{R}^{30}$. PCA is run on this dataset and the top $4$ principal components are retained, the rest being discarded. If it takes one unit of memory to store a real number, find the percentage decrease in storage space of the dataset by moving to its compressed representation. 
+
+Enter your answer correct to two decimal places; it should lie in the range $[0, 100]$.",,,numerical,"86.2, 86.35"
+352,38,"Consider a dataset of $100$ points all of which lie in $\mathbb{R}^5$. The eigenvalues of the covariance matrix are given below:
+$3.2, 1.5, 0.2, 0.01, 0.001$
+
+If we run the PCA algorithm on this dataset and retain the top-$k$ principal components, what is a good choice of $k$? Use the heuristic that was discussed in the lectures.",,,numerical,2
+353,38,"PCA is run on a dataset that has $2$ features. The resulting principal components are $w_1$ and $w_2$. We represent the points in 2D space in terms of this new coordinate system made up of the principal components. The first coordinate corresponds to $w_1$ and the second to $w_2$. 
+
+In such a scenario, what would be the sign of the coordinates for the points $P$ and $Q$?",image,img_009.png,mcq,
+350,38,"Consider a dataset that has $8$ points all of which belong to $\mathbb{R}^2$.
+
+Find the covariance matrix of this dataset.",image,img_010.png,mcq,
+348,38,Consider the images of points in 2D space provided below. The red line segments in one of the images represent the lengths of the residues after projecting the points on the line $L$. Which image is it?,image,,mcq,
+345,38,"Consider a point $P$ and a line $L$ that passes through the origin $O$. The point $R$ lies on the line.
+We use the following notation: $w = \vec{OR}, x = \vec{OP}$
+
+Find the length of the projection of $x$ on the line $L$. Enter your answer correct to two decimal places.",image,img_001.png,numerical,"4.9, 5.0"
+351,38,"Consider a dataset that has $8$ points all of which belong to $\mathbb{R}^2$.
+
+If PCA is run on this dataset, find the variance of the dataset along the first principal component. The eigenvectors of the covariance matrix are given below:
+$\begin{bmatrix} -0.993 \\ 0.115 \end{bmatrix}, \begin{bmatrix} -0.115 \\ -0.993 \end{bmatrix}$
+
+Recall that the first principal component is the most important. Enter your answer correct to two decimal places.
+*Note: Do not try to round off or drop decimal places in the intermediate computations. If a number has 4 places after the decimal, use all of them.*",image,img_010.png,numerical,"4.5, 4.6"
+344,38,"Consider a point $P$ and a line $L$ that passes through the origin $O$. The point $R$ lies on the line.
+We use the following notation: $w = \vec{OR}, x = \vec{OP}$
+
+Consider the following statements:
+
+- Statement-1: The projection of $x$ on the line $L$ is given by $(x^T w)w$
+
+- Statement-2: The projection of $x$ on the line $L$ is given by $(x^T w)x$
+
+- Statement-3: The projection of $x$ on the line $L$ is given by $(x^T x)w$
+
+- Statement-4: The projection of $x$ on the line $L$ is given by $w^T x$
+
+Which of the above statements is true?",image,img_001.png,mcq,
+354,39,"A function $k$ is defined as follows:
+$k:\mathbb{R}^d \times \mathbb{R}^d \to \mathbb{R}, k(x_1, x_2) = x_1^T x_2$
+
+Is $k$ a valid kernel?",,,mcq,
+346,38,"Consider a point $P$ and a line $L$ that passes through the origin $O$. The point $R$ lies on the line.
+We use the following notation: $w = \vec{OR}, x = \vec{OP}$
+
+Find the residue after projecting $x$ on the line $L$.",image,img_001.png,mcq,
+347,38,"Consider a point $P$ and a line $L$ that passes through the origin $O$. The point $R$ lies on the line.
+We use the following notation: $w = \vec{OR}, x = \vec{OP}$
+
+Find the reconstruction error for this point. Enter your answer correct to two decimal places.",image,img_001.png,numerical,"4.4, 4.6"
+355,39,"A function $k$ is defined as follows:
+$k:\mathbb{R}^d \times \mathbb{R}^d \to \mathbb{R}, k(x_1, x_2) = x_1^T x_2$
+
+If $k$ is the valid kernel, we apply it to the three-dimensional dataset to run the kernel PCA. Select the correct options.",,,mcq,
+356,39,Consider ten data points lying on a curve of degree two in a two-dimensional space. We run a kernel PCA with a polynomial kernel of degree two on the same data points. Choose the correct options.,,,mcq,
+357,39,Which of the following matrices can not be appropriate matrix $K=X^T X$ for some data matrix $X$?,,,mcq,
+358,39,"A function $k$ is defined as
+$k:\mathbb{R}^2 \times \mathbb{R}^2 \to \mathbb{R}, k(x_1, x_2) = (x_1^T x_2)^2$
+
+Is $k$ a valid kernel?",,,mcq,
+359,39,"Kernel PCA was run on the four data points $[1,2]^T, [2,3]^T, [2,-3]^T,$ and $[4,4]^T$ with the polynomial kernel of degree 2. What will be the shape of the matrix $K$? Notations are used as per lectures.",,,mcq,
+360,39,"Kernel PCA was run on the four data points $[1,2]^T, [2,3]^T, [2,-3]^T,$ and $[4,4]^T$ with the polynomial kernel of degree 2. Find the element at the index $(2,3)$ of the matrix $K$. Take the points in the same order.",,,mcq,
+361,39,A dataset containing 200 examples in four-dimensional space has been transformed into higher dimensional space using the polynomial kernel of degree two. What will be the dimension of transformed feature space?,,,numerical,15
+362,39,"Let $x_1, x_2, \dots, x_n$ be $d$-dimensional data points ($d>n$) and $X$ be the matrix of shape $d \times n$ containing the data points. The $k$-th largest eigenvalue and corresponding unit eigenvector of $X^T X$ is $\lambda$ and $\alpha_k$, respectively. What will be the projection of $x_i$ on the $k$-th principal component?",,,mcq,
+363,39,Let $k_1$ and $k_2$ be two valid kernels. Is $3k_1 + 5k_2$ a valid kernel?,,,mcq,
+364,40,"Assume that $w_k; k=1,2,\dots,d$ are $d$ principal components corresponding to nonzero eigenvalues of the $d$-dimensional centered data points $x_i; i=1,2,\dots,n$.
+Statement 1: each $x_i$ can be written as a linear combination of $w_k$s.
+Statement 2: each $w_k$ can be written as a linear combination of $x_i$s.",,,mcq,
+365,40,"A transformation mapping $\phi$ is defined as
+$\phi:\mathbb{R} \to \mathbb{R}^4$
+$\phi(x)=[x^3, \sqrt{3}x^2, \sqrt{3}x, 1]^T$
+
+Which of the following options are the same as $\phi(x_1)^T \phi(x_2)$ for two points $x_1, x_2 \in \mathbb{R}$?",,,mcq,
+366,40,"Let $C$ be the covariance matrix of $n$ data points in $d$-dimensional space. Assume that the data points are mean-centered. If $2, 5$, and $7$ are the only non-zero eigenvalues of $C$, what will be the non-zero eigenvalues of $X^T X$, where $X$ is the matrix of shape $(d,n)$ containing the data points?",,,mcq,
+1,1,What does JAMStack stand for?,,,mcq,
+2,1,Who coined the term “JAMStack”?,,,mcq,
+367,40,"Consider an image dataset matrix $X$ of shape $(d,n)$ with $d>n$. The $k$-th principal component of the dataset can be written as $w_k = \alpha_1 x_1 + \alpha_2 x_2 + \dots + \alpha_n x_n$, where, the vector $x_i$ is the $i$-th data point. The $k$-th largest eigenvalue and the corresponding eigenvector of $X^T X$ are $4$ and $\left[ \frac{1}{\sqrt{51}}, \frac{3}{\sqrt{51}}, \frac{4}{\sqrt{51}}, \frac{5}{\sqrt{51}} \right]^T$, respectively.
+
+What will be the value of $\alpha_1$?",,,mcq,
+368,40,"Consider an image dataset matrix $X$ of shape $(d,n)$ with $d>n$. The $k$-th principal component of the dataset can be written as $w_k = \alpha_1 x_1 + \alpha_2 x_2 + \dots + \alpha_n x_n$, where, the vector $x_i$ is the $i$-th data point. The $k$-th largest eigenvalue and the corresponding eigenvector of $X^T X$ are $4$ and $\left[ \frac{1}{\sqrt{51}}, \frac{3}{\sqrt{51}}, \frac{4}{\sqrt{51}}, \frac{5}{\sqrt{51}} \right]^T$, respectively.
+
+What will be the $k$-th largest eigenvalue of the covariance matrix $\frac{1}{4}XX^T$? Note that $n=4$ as the length of the eigenvector of $X^T X$ is 4.",,,numerical,1
+369,40,"A function $k$ is defined as
+$k:\mathbb{R}^2 \times \mathbb{R}^2 \to \mathbb{R}$
+$k([x_1, x_2]^T, [y_1, y_2]^T) = x_1^2 y_1^2 + x_2^2 y_2^2$
+
+Is $k$ a valid kernel?",,,mcq,
+370,40,"A dataset of 1000 second-hand cars has four features: kilometers driven ($x_1$), mileage ($x_2$), the present price of the car ($x_3$), and the selling price ($x_4$). The selling price seems to have the following relationship (approximate) with the other three features.
+$x_4 = x_1^2 x_3 + 2x_2$
+
+If we want to project the dataset into a lower dimensional space, which of the following task would be most appropriate?",,,mcq,
+371,40,"Abhishek runs a kernel PCA on a dataset containing $n$ examples with $d$ features. Which of the following strategy he should follow to center the data points?
+Strategy 1: First center the dataset using the mean and then apply the kernel.
+Strategy 2: First apply the kernel and then center the matrix.",,,mcq,
+372,40,"A dataset containing 1000 points in 3-dimensional space is run through the kernel PCA with the polynomial kernel of degree $p$. If the transformed dataset lives in a ten-dimensional space, what will be the value of $p$?",,,numerical,2
+373,40,"A dataset containing 1000 examples in 10-dimensional space is projected into other dimension space using kernel PCA with the following kernel.
+$k(x_1, x_2) = \exp \left( -\frac{||x_1 - x_2||^2}{4} \right)$
+
+What will be the dimension of the projected dataset?",,,mcq,
+374,41,"Which of the following sequences is correct for K-Means algorithm?
+1. Assign each data point to the nearest cluster centres.
+2. Re-assign each point to nearest cluster centres.
+3. Assign cluster centres randomly.
+4. Re-compute cluster centres.
+5. Specify the number of clusters.",,,mcq,
+375,41,"If $F(z_1^t,z_2^t,\dots,z_n^t)$ represents the value of objective function in iteration $t$ of Lloyd's algorithm, then which of the following is true?",,,mcq,
+376,41,"If $\mu_1$ and $\mu_2$ are means of two clusters in k-means, then the boundary between the two clusters will be",,,mcq,
+377,41,Assume K-means is run on these points with $k = 2$. Which of the following are expected to be the clusters formed out of K-means?,image,km1.png,mcq,
+378,41,"In the initialization step of k-means++, the squared distances from the closest mean for 5 points $x_1, x_2, x_3, x_4, x_5$ are: 25, 67, 89, 24, 56. In this context, which of the following is true?",,,mcq,
+379,41,"With respect to Lloyd's algorithm, choose the correct statements:",,,mcq,
+380,41,"For 1000 data points, out of $k = 1, 10$ and $100$, which value of $k$ is likely to result in the maximum value of the objective function?",,,mcq,
+381,41,"For 100 data points, if $k = 100$, what will be the value of the objective function?",,,mcq,
+382,41,Choose the correct statements:,,,mcq,
+383,41,"Outliers are data points that deviate significantly from the rest of data points. Knowing the way Lloyd's algorithm works, do you think it is sensitive to outliers?",,,mcq,
+384,42,"$[2, 4, -5]$ belongs to which of the following?",,,mcq,
+385,42,Which of the following may not be an appropriate choice of loss function for regression?,,,mcq,
+386,42,Identify which of the following requires use of classification technique.,,,mcq,
+387,42,Mark all incorrect statements in the following,,,mcq,
+388,42,Which of the following is false regarding supervised and unsupervised machine learning?,,,mcq,
+389,42,The output of regression model is,,,mcq,
+390,42,Which of the following is/are supervised learning task(s)?,,,mcq,
+391,42,Which of the following is used for predicting a continuous target variable?,,,mcq,
+392,42,“The is _____ used to fit the model; the _____ is used for model selection; the _____ is used for computing the generalization error.” Which of the following will fill the above blanks correctly?,,,mcq,
+396,42,"We want to learn a function $f(x)=ax+b$ which is parameterized by $(a,b)$. Using average squared error as the loss function, which of the following parameters would be best to model the given data?",,,mcq,
+393,42,"Consider the following loss functions:
+1. $\frac{1}{n}\sum_{i=1}^n-\log(P(X_i))$
+
+2. $\frac{1}{n}\sum_{i=1}^n||g(f(X_i))-X_i||^2$
+
+3. $\frac{1}{n}\sum_{i=1}^n(f(X_i)-Y_i)^2$
+
+4. $\frac{1}{n}\sum_{i=1}^n\mathbb{1}(f(X_i)\neq Y_i)$
+
+The above loss functions pertain to which of the following ML techniques (in that order)?",,,mcq,
+395,42,"Compute the loss when Pair 1 and Pair 2 (shown below) are used for dimensionality reduction. Consider the loss function to be $\frac{1}{n}\sum_{i=1}^n||g(f(x_i))-x_i||^2$. 
+
+Pair 1: $f(x)=(x_1-x_2)$, $g(u)=[u/2,u/2]$
+
+Pair 2: $f(x)=(x_1+x_2)/2$, $g(u)=[u/2,u/2]$
+
+Here $f(x)$ is the encoder function and $g(x)$ is the decoder function. 
+
+Loss for pair 2:
+
+| X$_{1}$ | X$_{2}$ |
+|---|---|
+| $1$ | $0.5$ |
+| $2$ | $2.3$ |
+| $3$ | $3.1$ |
+| $4$ | $3.9$ |",,,numerical,"3.61,4"
+397,42,"What will be the amount of loss when the functions $g=3x_1+1$ and $h=2x_1+2$ are used to represent the regression line. Consider the average squared error as loss function. 
+
+Loss for g:
+
+| X | Y |
+|---|---|
+| $[2]$ | $5.8$ |
+| $[3]$ | $8.3$ |
+| $[6]$ | $18.3$ |
+| $[7]$ | $21$ |
+| $[8]$ | $22$ |",,,numerical,"2.82,3.11"
+398,42,"What will be the amount of loss when the functions $g=3x_1+1$ and $h=2x_1+2$ are used to represent the regression line. Consider the average squared error as loss function. 
+
+Loss for h:
+
+| X | Y |
+|---|---|
+| $[2]$ | $5.8$ |
+| $[3]$ | $8.3$ |
+| $[6]$ | $18.3$ |
+| $[7]$ | $21$ |
+| $[8]$ | $22$ |",,,numerical,"11.32,12.52"
+400,42,"What will be the average misclassification error when the functions $g(X)=\text{sign}(x_1-x_2-2)$ and $h(X)=\text{sign}(x_1+x_2-10)$ are used to classify the data points into classes $+1$ or $-1$. 
+
+| X | y |
+|---|---|
+| $[4,2]$ | $+1$ |
+| $[8,4]$ | $+1$ |
+| $[2,6]$ | $-1$ |
+| $[4,10]$ | $-1$ |
+| $[10,2]$ | $+1$ |
+| $[12,8]$ | $-1$ |
+
+Loss for h:",,,numerical,"0.475,0.525"
+401,42,"$f(x_1,x_2,x_3)=\frac{x_1+2x_2}{2}$ is used as encoder function and $g(u)=[u,2u,3u]$ is used as decoder function for dimensionality reduction of following data set. Give the reconstruction error for this encoder decoder pair. The reconstruction error is the mean of the squared distance between actual input and reconstructed input.
+
+| X |
+|---|
+| $[1,2,3]$ |
+| $[2,3,4]$ |
+| $[-1,0,1]$ |
+| $[0,1,1]$ |",,,numerical,"32.78,36.22"
+399,42,"What will be the average misclassification error when the functions $g(X)=\text{sign}(x_1-x_2-2)$ and $h(X)=\text{sign}(x_1+x_2-10)$ are used to classify the data points into classes $+1$ or $-1$. 
+
+| X | Y |
+|---|---|
+| $[4,2]$ | $+1$ |
+| $[8,4]$ | $+1$ |
+| $[2,6]$ | $-1$ |
+| $[4,10]$ | $-1$ |
+| $[10,2]$ | $+1$ |
+| $[12,8]$ | $-1$ |
+
+Loss for g:",,,numerical,"0.158,0.175"
+438,45,"Assuming that the index.html, module1.js, and module2.js are kept inside the same directory, then what will be the background color, height and width of the HTML element having ID 'div1', if rendered using a browser?",code,"#index.html
+<!DOCTYPE html>
+<html lang=""en"">
+  <head>
+    <meta charset=""UTF-8"" />
+    <title>Document</title>
+    <script src=""module1.js"" type=""module""></script>
+  </head>
+  <body>
+    <div id=""div1"" style=""border: 2px solid black""></div>
+  </body>
+</html>
+
+#module1.js
+import { divStyle1, divStyle2 } from './module2.js'
+divStyle1.width = ""50px""
+const div1Style = document.getElementById('div1').style
+div1Style.backgroundColor = divStyle1.color
+div1Style.height = divStyle2.height
+div1Style.width = divStyle1.width
+
+
+#module2.js
+export const divStyle1 = {
+  color: 'red',
+  height: '100px',
+  width: '100px',
+}
+
+export const divStyle2 = {
+  color: 'green',
+  height: '50px',
+}",mcq,
+3,1,What does PWA stand for in the context of an app?,,,mcq,
+4,1,What does SPA stand for in the context of an app?,,,mcq,
+5,1,What is the default port number used by a flask application?,,,mcq,
+32,6,Consider the following variable declaration. What will be printed on console for console.log(x.value)?,code,let x = {},mcq,
+441,46,"Which of the following shows the correct output, if the program written below is executed?",code,"let a = [2, 3, 4];
+let b = [2, 2, ...a, 5];
+let c = b.find(x => x % 2);
+console.log(c);",mcq,
+442,46,"Which of the following shows the correct output, if the program written below is executed?",code,"let a = {
+    'first_name' : 'abhi',
+    'age' : 22,
+    'place' : 'delhi'
+};
+
+let { first_name : alt } = a;
+console.log(first_name);",mcq,
+443,46,What will be the output of the following program?,code,"arr = ['iitmonline', true, 3, (a, b) => a + b]
+let result = Array()
+for (let i = 0; i < arr.length; i++) {
+    result.push(typeof arr[i])
+}
+console.log(result)",mcq,
+444,46,What will be the output of the following program?,code,"arr = ['iitmonline', true, 3, (a, b) => a + b]
+let result = Array()
+for (const i in arr) {
+    result.push(arr[i] * arr[i])
+}
+console.log(result)",mcq,
+445,46,What will be the output of the following program?,code,"fruit = {
+    name: 'Apple',
+    color: 'red',
+}
+
+let description = ({ name, color, shape = 'Spherical' }) => {
+    console.log(`NULL is NULL and NULL`)
+}
+
+description(fruit)",mcq,
+446,46,What will be the output of the following program?,code,"class Player {
+    constructor(name) {
+        this.name = name
+        this.team = 'Indian Cricket Team'
+        this.nationality = 'Indian'
+    }
+}
+
+class Bowler extends Player {
+    constructor(name, wicket, average) {
+        super(name)
+        this.role = 'Bowler'
+        this.wicket = wicket
+        this.average = average
+    }
+}
+
+bumbum = new Bowler('Jasprit Bumrah', 101, 22.79)
+console.log(bumbum)",mcq,
+447,46,What will be the output of the following program?,code,"class Player {
+    constructor(name, team) {
+        this.name = name
+        this.team = team
+    }
+
+    get describe() {
+        return `NULL from NULL is a NULL`
+    }
+}
+
+class Batsman extends Player {
+    constructor(name, team) {
+        super(name, team)
+        this.role = 'Batsman'
+    }
+}
+
+p = new Batsman('Rohit', 'Indian Cricket Team')
+console.log(p.describe)",mcq,
+448,46,What will be the output of the following program?,code,"const obj = {
+    a: 10,
+    operation(x, y, n) {
+        return x ** n + y + this.a
+    },
+}
+
+const arr = Array()
+p = obj.operation
+
+arr.push(p.bind(obj, 2)(3, 2))
+arr.push(p.apply(obj, [2, 2, 3, 4, 5]))
+arr.push(p.call(obj, 2, 3, 4))
+
+console.log(arr)",mcq,
+449,46,What will be the output of the following program?,code,"const obj = {
+    firstName: 'Narendra',
+    lastName: 'Mishra',
+
+    get fName() {
+        return this.firstName
+    },
+
+    get lName() {
+        return this.lastName
+    },
+
+    set lName(name) {
+        this.lastName = name
+    },
+}
+
+obj.lName = 'Mourya'
+obj.lName = console.log(obj.lName)",mcq,
+440,46,"Which of the following programs will generate an error, if executed?",code,"#Code snippet 1:
+for (const i = 1; i <= 5; i++) {
+    console.log(i)
+}
+
+#Code snippet 2:
+for (const i in [1, 2, 3, 4, 5]) {
+    console.log(i)
+}",mcq,
+394,42,"Compute the loss when Pair 1 and Pair 2 (shown below) are used for dimensionality reduction. Consider the loss function to be $\frac{1}{n}\sum_{i=1}^n||g(f(x_i))-x_i||^2$. 
+
+Pair 1: $f(x)=(x_1-x_2)$, $g(u)=[u/2,u/2]$
+
+Pair 2: $f(x)=(x_1+x_2)/2$, $g(u)=[u/2,u/2]$
+
+Here $f(x)$ is the encoder function and $g(x)$ is the decoder function. 
+
+Loss for pair 1:
+
+| X$_{1}$ | X$_{2}$ |
+|---|---|
+| $1$ | $0.5$ |
+| $2$ | $2.3$ |
+| $3$ | $3.1$ |
+| $4$ | $3.9$ |",,,numerical,"15,16"
+403,43,"Regarding a $d$-dimensional vector $x$, which of the following four options is not equivalent to the rest three options?",,,mcq,
+404,43,"$f(x) = \begin{cases} 3x+3, & \text{if } x \geq 3 \\ 2x+8, & \text{if } x < 3 \end{cases}$
+
+Which of the following is/are true?",,,mcq,
+405,43,Approximate the value of $e^{0.011}$ by linearizing $e^x$ around $x=0$.,,,numerical,"1,1.02"
+406,43,Approximate $\sqrt{3.9}$ by linearizing $\sqrt{x}$ around $x=4$.,,,numerical,"1.96,2.0"
+407,43,Which of the following pairs of vectors are perpendicular to each other?,,,mcq,
+408,43,"What is the linear approximation of $f(x,y)=x^3+y^3$ around (2, 2)?",,,mcq,
+409,43,"What is the gradient of $f(x,y)=x^3y^2$ at (1, 2)?",,,mcq,
+410,43,"The gradient of $f=x^3+y^2+z^3$ at $x=0$, $y=1$ and $z=1$ is given by",,,mcq,
+412,43,"The directional derivative of $f(x,y,z)=x^3+y^2+z^3$ at (1, 1, 1) in the direction of unit vector along $v=[1,-2,1]$ is (correct upto three decimal places)",,,numerical,"0.775,0.856"
+413,43,"The direction of steepest ascent for the function $2x+y^3+4z$ at the point $(1,0,1)$ is",,,mcq,
+414,43,"The directional derivative of $f(x,y,z)=x+y+z$ at $(-1,1,0)$ in the direction of unit vector along [1, -1, 1] is (correct upto three decimal places)",,,numerical,"0.548,0.605"
+415,43,"Which of the following is the equation of the line passing through $[7,8,6]$ in the direction of vector $[1,2,3]$",,,mcq,
+402,43,Which of the following functions is/are continuous?,,,mcq,
+411,43,"For two vectors $a$ and $b$, which of the following is true as per Cauchy-Schwarz inequality?
+(i) $a^Tb \leq ||a||*||b||$
+
+(ii) $a^Tb \geq -||a||*||b||$
+
+(iii) $a^Tb \geq ||a||*||b||$
+
+(iv) $a^Tb \leq -||a||*||b||$",,,mcq,
+416,44,"Let $f(x) = \begin{cases} \frac{\sin(x)}{x}, & x \neq 0 \\ 1, & x = 0 \end{cases}$
+
+Is $f(x)$ continuous at $x=0$?",text,,mcq,
+417,44,"If $U=[10,100]$, $A=[30,50]$ and $B=[50,90]$, which of the following is/are false?
+
+(Consider all values to be integers)",text,,mcq,
+418,44,"Two $d$-dimensional vectors $x$ and $y$ and the following terms:
+
+(i) $x^Ty$
+
+(ii) $x \cdot y$
+
+(iii) $\sum_{i=1}^d x_i y_i$
+
+Which of the above terms are equivalent?",,,mcq,
+419,44,The linear approximation of $\tan(x)$ around $x=0$ is:,text,,mcq,
+420,44,The partial derivative of $x^3+y^2$ w.r.t. $x$ at $x=1$ and $y=2$ is,,,numerical,3
+421,44,"$f(x) = \begin{cases} 7x+2, & \text{if } x > 1 \\ 9, & \text{if } x \leq 1 \end{cases}$
+
+Is $f(x)$ continuous?",,,mcq,
+6,2,"Which of the following is the correct way to embed an applet in an HTML document, assuming that the java byte code file “appletdemo.class” is kept in the same directory as the HTML document?",,,mcq,
+7,2,Which of the following is the correct usage of “alt” attribute in the <applet> tag in an HTML document?,,,mcq,
+8,2,Which of the following statements is true regarding JavaScript?,,,mcq,
+422,44,The best approximation of $e^{0.019}$? (Use linear approximation around 0).,,,mcq,
+423,44,"The linear approximation of $f(x,y)=x^2+y^2$ around $(1, 1)$ is:",,,mcq,
+424,44,"The gradient of $f(x,y)=x^2y$ at $(1, 3)$ is:",,,mcq,
+425,44,"The directional derivative of $f(x,y,z)=x^2+3y+z^2$ at $(1, 2, 1)$ along the unit vector in the direction of $[1, -2, 1]$ is (correct upto three decimal places)",,,numerical,"-0.856,-0.775"
+426,44,"The direction of steepest ascent for the function $x^2+y^3+z^4$ at point $(1, 1, 1)$ is:",text,,mcq,
+427,44,"The directional derivative of $f(x,y,z)=x+y+z$ at point $[-1, 1, -1]$ along the unit vector in the direction of $[1, -1, 1]$ is (correct upto three decimal places)",,,numerical,"0.548,0.605"
+428,44,"The vector equation/s of a line that passes through $[1, 2, 3]$ and $[4, 0, 1]$:
+
+(i) $[x,y,z]=[1,2,3]+\alpha[3,-2,-2]$
+
+(ii) $[x,y,z]=[4,0,1]+\alpha[-3,2,2]$
+
+(iii) $[x,y,z]=[1,2,3]+\alpha[4,0,1]$
+
+(iv) $[x,y,z]=[4,0,1]+\alpha[1,2,3]$",,,mcq,
+429,44,"As per Cauchy-Schwarz inequality, if $b$ is a negative scalar multiple of $a$, then:",text,,mcq,
+430,45,"Which of the following shows the correct output, if the program written below is executed?",code,"let a = [75, 55, 22, 5];
+console.log(a.sort());",mcq,
+9,2,Which of the following can be considered as advantage(s) of JavaScript language?,,,mcq,
+10,2,Which of the following is true regarding java applet?,,,mcq,
+11,2,"Which of the following web browsers, evolved from Netscape Navigator?",,,mcq,
+12,3,Which of the following statements is not true regarding JavaScript?,,,mcq,
+13,3,What will be the output on console if the following JavaScript program is executed using command line?,code,"{
+    let x = 5;
+}
+console.log(x)",mcq,
+14,3,What is AJAX?,,,mcq,
+15,3,Consider the following variable declaration. What will be printed on console for console.log(x)?,code,let x,mcq,
+16,3,Consider the following code snippet. What will be the output of console.log(x)?,code,"const x = 14
+x = 15",mcq,
+17,3,"Consider the following JavaScript program, What will be the output of the statement: console.log(obj.color)?",code,"const obj = {
+    color: 'red',
+    changeColor: function (color) {
+        this.color = color
+    },
+}
+
+obj.changeColor('Yellow')",mcq,
+18,3,Which of the following is/are correct way(s) to define a function in JavaScript?,,,mcq,
+19,3,Consider the following HTML document. What will be the background color of an element having ID ‘div1’ in the rendered webpage corresponding to this document?,code,"<!DOCTYPE html>
+<html lang=""""en"""">
+<head>
+    <meta charset=""""UTF-8"""" />
+    <script>
+        document.getElementById('div1').style.backgroundColor = 'yellow';
+    </script>
+    <title>Document</title>
+</head>
+<body>
+    <div
+        id=""""div1""""
+        style=""""height: 100px; width: 100px; background-color: red""""
+    ></div>
+</body>
+</html>""
+",mcq,
+20,3,Consider the following HTML document. What will be the background color of an element having ID ‘div’ after 6 seconds?,code,"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"" />
+    <title>Document</title>
+</head>
+<body>
+    <div
+        id=""div""
+        style=""background-color: black; height: 50px; width: 50px""
+    ></div>
+    <script>
+        const colors = {
+            color1: 'red',
+            color2: 'green',
+            color3: 'yellow',
+        }
+        let i = 1
+        let color = null
+        setInterval(() => {
+            if (i % 2 != 0) {
+                color = colors.color1
+            }
+            else if (i % 4 == 0) {
+                color = colors.color2
+            }
+            else {
+                color = colors.color3
+            }
+            document.getElementById('div').style.backgroundColor = color
+            i++
+        }, 1000)
+    </script>
+</body>
+</html>",mcq,
+21,4,Which of the following encoding does a JavaScript engine use in general?,,,mcq,
+22,4,What will be the output on console if the following JavaScript program is executed using command line?,code,"{
+    var x = 5;
+}
+console.log(x)",mcq,
+23,4,Which of the following operators is used to avoid coercion in JavaScript language?,,,mcq,
+24,4,Which of the following have a block-level scope in JavaScript language?,,,mcq,
+25,4,What is ECMAScript?,,,mcq,
+26,5,Which of the following is not a reserve word in JavaScript language?,,,mcq,
+27,5,Which of the following is not a valid literal in JavaScript?,,,mcq,
+28,5,Which of the following is not a primitive data type in the JavaScript language?,,,mcq,
+29,5,Which of the following is not a reserved word in JavaScript?,,,mcq,
+30,5,Which of the following is true regarding primitive data types in JavaScript?,,,mcq,
+31,6,Consider the following variable declaration. What will be printed on console for console.log(x)?,code,let x = {},mcq,
+432,45,"Which of the following shows the correct output, if the program written below is executed?",code,"const a = {
+  name: 'Abhi',
+  age: 22
+};
+
+b = [];
+for (let i = 0; i < 3; i++){
+  b.push({...a})
+}
+b[1].name = 'Akshay';
+console.log(b[0].name);",mcq,
+431,45,"Which of the following shows the correct output, if the program written below is executed?",code,"a = {
+  name: 'Abhi',
+  age: 22
+};
+
+b = [];
+for (let i = 0; i < 3; i++){
+  b.push(a)
+}
+
+b[1].name = 'Akshay';
+console.log(b[0].name);",mcq,
+433,45,What will be the output of the program?,code,"x = [1, 2, 3, 4, 5, 6]
+y = [...x, 7, 8, 9]
+z = y.filter((x) => x % 2 == 0)
+     .map((i) => i * i)
+     .reduce((a, i) => a + i, (a = 0))
+console.log(z)",mcq,
+435,45,What will be the output of the following program?,code,"const ePowerx = {
+  x: 1,
+  n: 1,
+  set parameters(param) {
+    param = param.split(' ')
+    this.x = param[0]
+    this.n = param[1]
+  },
+  get uptoNterms() {
+    let result = 1
+    let y = 1
+    for (let i = 1; i < this.n; i++) {
+      y = y * this.x
+      result = result + y
+    }
+    return result
+  },
+}
+ePowerx.parameters = '2 3'
+console.log(ePowerx.uptoNterms)",mcq,
+436,45,What will be the output of the following program?,code,"const course = {
+  courseName: 'Modern Application Development 2',
+  courseCode: 'mad2',
+}
+
+const student = {
+  __proto__: course,
+  studentName: 'Rakesh',
+  studentCity: 'Delhi',
+}
+
+const { courseName } = student
+console.log(courseName)",mcq,
+437,45,"Assuming that the index.html and script.js are kept inside the same directory, then what will be the height of the HTML element having ID 'div1' after 20 seconds, if rendered using a browser?",code,"#index.html
+<!DOCTYPE html>
+<html lang=""en"">
+  <head>
+    <meta charset=""UTF-8"" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id=""div1"" style=""background-color: red""></div>
+  </body>
+  <script src=""script.js""></script>
+</html>
+
+var height = 0
+var width = 0
+var divStyle = document.getElementById('div1').style
+let res = setInterval(() => {
+  height += 50
+  width += 50
+  divStyle.height = height + 'px'
+  divStyle.width = width + 'px'
+  console.log(height)
+}, 1000)
+
+#script.js
+setTimeout(() => {
+  clearInterval(res)
+}, 10050)",mcq,
+439,45,What will be the output of the following program?,code,"api = { A: 'Application', P: 'Programming', I: 'Interface' }
+const standsFor = (x) => {
+  for (const [k, v] of Object.entries(api)) {
+    if (k != x) {
+      return v
+    }
+  }
+}
+
+console.log(standsFor('A'))",mcq,
+33,6,"What will be the output, if the JavaScript program written below is executed?",code,"const x
+console.log(x)",mcq,
+34,6,Consider the following code snippet. What will be the output of console.log(x)?,code,"let x = 14
+x = 15",mcq,
+35,6,Consider the following JavaScript program. What will be the output for the statement: console.log(obj.color)?,code,"const obj = {color: 'red'}
+
+obj.changeColor = function (color) {this.color = color}
+
+obj.changeColor('green')",mcq,
+36,7,Which of the following is not a frontend framework for web development?,,,mcq,
+37,7,Which of the following is not a backend framework for web development?,,,mcq,
+38,7,Which of the following is correct regarding JavaScript?,,,mcq,
+39,7,What does AJAX stand for?,,,mcq,
+40,8,Which of the following is true about machine learning?,,,mcq,
+41,8,Which of the following tasks is more suitable for traditional programming than machine learning?,,,mcq,
+42,8,Which among these is not a machine learning problem?,,,mcq,
+43,8,The traditional programming approach for a given task may fail in cases where:,,,mcq,
+44,9,Which of these is better suited to be solved using regression?,,,mcq,
+45,9,Regression is used when the output variable is:,,,mcq,
+46,10,Which of the following is/are type(s) of supervised learning techniques?,,,mcq,
+47,10,Regression is a type of:,,,mcq,
+48,10,Which of the following functions corresponds to a regression model?,,,mcq,
+49,10,"In supervised learning, the training labels are available.",,,mcq,
+50,10,Supervised learning is essentially,,,mcq,
+51,11,Classification models are _______,,,mcq,
+52,11,Which of the following loss functions can be applied to a classification model?,,,mcq,
+53,11,We evaluate our model on which of the following data?,,,mcq,
+54,11,Model selection is done using which of the following data?,,,mcq,
+55,12,Unsupervised learning is essentially,,,mcq,
+56,12,Let $$f: \mathbb{R}^d \to \mathbb{R}^{d'}$$ be an encoder function for dimensionality reduction. What is the typical relation between $$d$$ and $$d'$$?,,,mcq,
+57,12,Let $$f: \mathbb{R}^{d'} \to \mathbb{R}^d$$ be a decoder function for dimensionality reduction. What is the typical relation between $$d$$ and $$d'$$?,,,mcq,
+58,12,"For the data $$\{X_1, X_2, \dots, X_n\}$$ where $$X_i \in \mathbb{R}^d$$, $$f: \mathbb{R}^d \to \mathbb{R}^{d'}$$ (encoder), and $$g: \mathbb{R}^{d'} \to \mathbb{R}^d$$ (decoder), which of the following is the correct loss function?",,,mcq,
+59,12,Which of the following come under unsupervised learning?,,,mcq,
+60,13,"The input data for an unsupervised learning algorithm is of the form (Note: $$X_i$$ and $$Y_i$$ are vectors, $$y_i$$ are scalars):",,,mcq,
+61,13,Which of the following gives a probabilistic model?,,,mcq,
+62,13,Which of the following is the correct loss function for density estimation?,,,mcq,
+63,13,"During parameter estimation for a density estimation method such as Gaussian Mixture Model, which of the following is minimized?",,,mcq,
+64,14,Which of the following is true about a model?,,,mcq,
+65,14,Identify which of the following problem requires regression algorithm.,,,mcq,
+66,14,"For spam detection, if we use traditional programming rather than a machine learning approach, which problems may be faced?",,,mcq,
+67,14,"In a regression model, the parameters $$w$$ and $$b$$ are:",,,mcq,
+68,14,Identify classification problem(s) in the following statements,,,mcq,
+69,14,Identify task that needs the use of regression in the following,,,mcq,
+70,14,Which of the following are examples of unsupervised learning problems?,,,mcq,
+71,14,Which of the following is/are incorrect?,,,mcq,
+72,14,Which of the following functions corresponds to a classification model?,,,mcq,
+73,14,Which of the following can form a good encoder decoder pair for $$d$$ dimensional data?,,,mcq,
+74,14,Consider Scenario 1 (Cancer detection) and Scenario 2 (Mobile Sales).,,,mcq,
+75,14,"Consider the data set in the image where each data point has features $$x_1, x_2, x_3$$. We want to reduce dimension from 3 to 1.
+
+**Pair 1:**
+$$f(x_1, x_2, x_3) = x_1 - x_2 + x_3$$
+$$g(u) = [u, u, u]$$
+
+Calculate the reconstruction loss for Pair 1.",image,pic/image_6edda2.png,numerical,"2.95,3.05"
+76,14,"Consider the data set in the image where each data point has features $$x_1, x_2, x_3$$. We want to reduce dimension from 3 to 1.
+
+**Pair 2:**
+$$\tilde{f}(x_1, x_2, x_3) = \frac{x_1 + x_2 + x_3}{3}$$
+$$\tilde{g}(u) = [u, u, u]$$
+
+Calculate the reconstruction loss for Pair 2.",image,pic/image_6edda2.png,numerical,"0.63,0.7"
+77,15,Which of the following keywords can be used to declare a variable with global scope?,,,mcq,
+78,15,Which of the following statements is true regarding JavaScript language?,,,mcq,
+79,15,Which of the following statement(s) is/are correct regarding JavaScript?,,,mcq,
+80,15,What will be the output of the following program?,code,"const obj = {
+  name: 'Rohit',
+  changeName: function (name) {
+    this.name = name
+  },
+}
+
+obj.changeName('Mohit')
+console.log(obj.name)",mcq,
+81,15,Consider the following code snippet. What will be the output of console.log(x.name)?,code,"const x = { name: 'rohit' }
+x.name = 'Mohit'",mcq,
+82,15,What will be the output of the following program?,code,"const obj = {
+  name: 'Rohit',
+  changeName: (name) => {
+    this.name = name
+  },
+}
+
+obj.changeName('Mohit')
+console.log(obj.name)",mcq,
+83,15,What will be the output of the following program?,code,"const obj = {
+  name: 'Rohit',
+  arrowFunction: null,
+  normalfunction: function () {
+    this.arrowFunction = () => {
+      console.log(this.name)
+    }
+  },
+}
+
+obj.normalfunction()
+obj.arrowFunction()",mcq,
+84,15,Which of the following is correct output for the following code snippet?,code,"setTimeout(() => console.log('hello from setTimeOut one'), 0)
+console.log('hello for main one')
+setTimeout(() => console.log('hello from setTimeOut two'), 0)
+console.log('hello from main two')",mcq,
+85,15,Consider the following HTML document. What will be the background color of an element having ID 'div1' in the rendered webpage corresponding to this document?,code,"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+  <meta charset=""UTF-8"" />
+  <script>
+    setTimeout(() => {
+      document.getElementById('div1').style.backgroundColor = 'yellow'
+    }, 0)
+  </script>
+  <title>Document</title>
+</head>
+<body>
+  <div
+    id=""div1""
+    style=""height: 100px; width: 100px; background-color: red""
+  ></div>
+</body>
+</html>",mcq,
+86,15,Consider the following JavaScript program. What will be the last value shown on the console after 4 seconds?,code,"let startNamePrinter = (name) => {
+  let x = name.split('').reverse()
+  let handler = setInterval(() => {
+    let y = x.pop()
+    console.log(y)
+  }, 1000)
+
+  setTimeout(() => {
+    clearInterval(handler)
+  }, (name.length + 1) * 1000)
+}
+
+startNamePrinter('orange')",mcq,
+87,16,What are some of the most important types of data that machine learning models deal with?,,,mcq,
+88,16,Map the dataset on the left to the domain on the right:,,"| Dataset | Domain |
+| :--- | :--- |
+| (1) Record of all IPL matches played so far | (a) Finance |
+| (2) Credit profile of customers | (b) E-Commerce |
+| (3) 3D structure of proteins | (c) Bioinformatics |
+| (4) Click-stream data of Amazon consumers | (d) Sports analytics |
+
+We could define a machine learning problem associated with each dataset on the left.",mcq,
+89,16,"E-commerce recommendations were discussed briefly in the lecture. When a customer visits a website to buy a product, which of the following are important features that a recommendation system should take into account while making its recommendation?",,,mcq,
+90,16,Can you think of domains other than e-commerce where recommendations play an important role?,,,mcq,
+91,16,You are given the data of marks scored by students in a class in a csv file. Your task is to find the class topper. Is this a machine learning problem?,,,mcq,
+92,16,"In the previous problem, you have access to a dataset. Consider the following claim: ""Data is an important aspect of any machine learning problem. So, every problem that has a dataset associated with it can be classified as a machine learning problem."" What is wrong with this claim?",,,mcq,
+93,17,What are some of the broad paradigms of machine learning discussed in the lecture?,,,mcq,
+94,17,Which of the following scenarios can be modeled as a binary classification problem?,,,mcq,
+95,17,"For every mail that comes to your inbox, you have to design an algorithm that can assign exactly one of these four labels to it:
+- family
+- friends
+- work
+- spam
+
+What type of machine learning problem does this correspond to?",,,mcq,
+96,17,"Assume that you find yourself in the following scenarios:
+
+* **Scenario-1:** You are given a bucket of red and blue balls. Someone commands you to separate them into two separate buckets of uniform color.
+* **Scenario-2:** You are given a bucket of black balls that look identical, but weigh differently. There is no one around you to tell you what to do. However, you try to separate the balls into different buckets, such that balls in a given bucket have more or less the same weight.
+
+If a machine were to be trained to do these actions, what paradigms of machine learning would they correspond to?",,,mcq,
+97,18,"Is the following statement true or false:
+Compression is the act of throwing away a fraction of data-points from the dataset.",,,mcq,
+98,18,"Consider the following dataset:
+
+$$ \left\{ \begin{bmatrix} 1 \\ 2 \\ 3 \\ 4 \end{bmatrix}, \begin{bmatrix} 1 \\ 5 \\ 3 \\ 0 \end{bmatrix}, \begin{bmatrix} -1 \\ -2 \\ 0 \\ 0 \end{bmatrix}, \begin{bmatrix} -1 \\ 2 \\ -3 \\ 4 \end{bmatrix}, \begin{bmatrix} -1 \\ 5 \\ 9 \\ -4 \end{bmatrix} \right\} $$
+
+If $$n$$ represents the number of data-points and $$d$$ represents the number of features, what are the values of $$n$$ and $$d$$?",,,mcq,
+99,18,"Consider the following dataset?
+
+$$ \left\{ \begin{bmatrix} 3 \\ 6 \\ -3 \end{bmatrix}, \begin{bmatrix} 5 \\ 10 \\ -5 \end{bmatrix}, \begin{bmatrix} -2 \\ -4 \\ 2 \end{bmatrix}, \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix} \right\} $$
+
+Which of the following vectors could be chosen as a representative for the above dataset?",,,mcq,
+100,18,"Consider the following dataset in $$\mathbb{R}^2$$:
+
+$$ \left\{ \begin{bmatrix} 1 \\ 2 \end{bmatrix}, \begin{bmatrix} 2 \\ 4 \end{bmatrix}, \begin{bmatrix} -3 \\ -6 \end{bmatrix}, \begin{bmatrix} 0 \\ 0 \end{bmatrix} \right\} $$
+
+If we use a representative and the corresponding coefficients to come up with an alternative representation of the points, what would be the reconstruction error for this dataset?",,,numerical,0
+101,18,You have a dataset of $$100$$ points in $$\mathbb{R}^3$$ where all of them lie on a line passing through the origin. You wish to choose a representative $$w$$ for this dataset such that $$||w||=1$$. How many representatives can be chosen?,,,mcq,
+102,18,Let $$w$$ be a vector that represents a line $$L$$ passing through the origin. What is the projection of a point $$x$$ onto this line? Note that $$||w||$$ is not necessarily equal to $$1$$.,,,mcq,
+109,19,"Consider the following dataset and two lines $$L_1$$ and $$L_2$$:
+
+Which of the two lines is a good choice for a compressed representation of the dataset and why?",image,pic/img_004.png,mcq,
+110,19,"Which of the following expressions is the reconstruction error for a dataset of $$n$$ points, with respect to a line passing through the origin represented by the vector $$w$$. Note that $$||w||=1$$. (Select all that apply)",,,mcq,
+111,19,"Is the following statement true or false?
+The reconstruction error is always a non-negative scalar quantity.",,,mcq,
+112,19,"Select all formulations of the optimization problem that are equivalent to the one given below:
+
+$$ \min_{w, ||w||=1} \frac{1}{n} \sum_{i=1}^{n} -(x_i^T w)^2 $$",,,mcq,
+113,19,"Given a dataset of $$n$$ points in $$\mathbb{R}^d$$, what is the dimension of the covariance matrix?",,,mcq,
+114,19,What is the optimal value of $$w$$ for the optimization problem posed towards the end of the lecture?,,,mcq,
+115,20,"Consider the following figure:
+
+The line shown in the figure is obtained after one round of running the ""possible algorithm"". Does a second round seem necessary here?",image,pic/img_005.png,mcq,
+116,20,"Which of the following represents the expression for the residue of a point $$x$$ after projecting it onto a line passing through the origin, represented by $$w$$? Note that $$||w||=1$$.",,,mcq,
+117,20,"We are given a dataset of $$n$$ points in $$\mathbb{R}^d$$ and a line passing through the origin that is represented by $$w$$.
+
+**S1:** The residue corresponding to every point is perpendicular to $$w$$.
+**S2:** All the residues are collinear, that is, they lie on a line (passing through the origin).",,,mcq,
+118,20,"Is the following dataset centered?
+
+$$ \left\{ \begin{bmatrix} 1 \\ 2 \\ -1 \end{bmatrix}, \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix}, \begin{bmatrix} -1 \\ -2 \\ 1 \end{bmatrix}, \begin{bmatrix} 0 \\ 1 \\ 2 \end{bmatrix}, \begin{bmatrix} 1 \\ -1 \\ -2 \end{bmatrix}, \begin{bmatrix} -1 \\ 0 \\ 0 \end{bmatrix} \right\} $$",,,mcq,
+119,21,$$w_1$$ is the line which minimizes the reconstruction error of a set of points and $$w_2$$ is the line which minimizes the reconstruction error of the residues. What is the value of $$w_1^T w_2$$?,,,numerical,0
+120,21,"$$B=\{w_1, \dots, w_d\}$$ is a set of $$d$$ orthonormal vectors in $$\mathbb{R}^d$$ that are obtained by running the algorithm for $$d$$ rounds on some centered dataset. Select all correct statements.",,,mcq,
+121,21,"Consider a dataset of $$1000$$ points, each of which belongs to $$\mathbb{R}^5$$. If you know nothing else about the dataset to begin with, what is the number of rounds of the algorithm after which the residues completely vanish?",,,numerical,5
+122,21,"Consider a dataset of $$1000$$ points, each of which belongs to $$\mathbb{R}^{10}$$. Upon running the algorithm on this dataset, the residues completely vanish after $$4$$ rounds. Which of the following statements is true?",,,mcq,
+123,22,What is the best line one can obtain in the $$k^{\text{th}}$$ round of the algorithm?,,,mcq,
+124,22,"What is the value of the following expression if $$\lambda_k$$ is an eigenvalue of the covariance matrix $$C$$ for eigenvector $$w_k$$?
+
+$$ w_k^T C w_k $$",,,mcq,
+125,22,"Given a dataset of $$n$$ points, $$x_1, \dots, x_n$$, the $$k^{\text{th}}$$ eigenvector and the corresponding eigenvalue of the covariance matrix are $$w_k$$ and $$\lambda_k$$ respectively. Consider the following statements:
+
+**S1:** $$ \lambda_k = \frac{1}{n} \sum_{i=1}^{n} (x_i^T w_k)^2 $$
+**S2:** $$ \lambda_k $$ is non-negative",,,mcq,
+126,22,"Given a centered dataset of $$n$$ points, $$x_1, \dots, x_n$$, and a line $$w$$ that passes through the origin, consider the following set of quantities:
+
+$$ \{x_1^T w, \dots, x_n^T w\} $$
+
+What is the average of the quantities in the above set?",,,numerical,0
+127,22,"Consider the following dataset and two lines $$L_1$$ and $$L_2$$:
+
+Which of the two lines is a good direction for a compressed representation of the dataset and why?",image,pic/img_006.png,mcq,
+141,23,"An image is a collection of pixels. A pixel is stored as a float value and typically occupies 4 bytes of memory. Consider a dataset of $$1000$$ images, where each image has dimensions $$100 \times 100$$. Approximately, how much memory does the entire dataset occupy?",,,mcq,
+142,23,"Consider a dataset that has $$100$$ points that belong to $$\mathbb{R}^3$$. All of them are found to lie on a line that passes through the origin. We use a unit vector along the line as a representative and the coefficients with respect to it to represent the individual data-points. Compute the percentage decrease in the size of the dataset if we move to this new representation. Assume that it takes one unit of space to store one feature. Enter your answer correct to two decimal places; it should be in the range $$[0, 100]$$.",,,numerical,"65,66"
+143,23,"Consider the following dataset that has four points, all of which lie on a line:
+    
+$$ S = \left\{ \begin{bmatrix} 0 \\ 0 \end{bmatrix}, \begin{bmatrix} 3 \\ 4 \end{bmatrix}, \begin{bmatrix} 6 \\ 8 \end{bmatrix}, \begin{bmatrix} 1/5 \\ 4/15 \end{bmatrix} \right\} $$
+
+Among the vectors given below, choose a representative that has unit length.",,,mcq,
+144,23,"Consider the following dataset that has four points, all of which lie on a line:
+
+$$ S = \left\{ \begin{bmatrix} 0 \\ 0 \end{bmatrix}, \begin{bmatrix} 3 \\ 4 \end{bmatrix}, \begin{bmatrix} 6 \\ 8 \end{bmatrix}, \begin{bmatrix} 1/5 \\ 4/15 \end{bmatrix} \right\} $$
+
+Using the unit length representative vector $$ \begin{bmatrix} 3/5 \\ 4/5 \end{bmatrix} $$, compute the coefficients for these four points. The $$i^{\text{th}}$$ element from the left in each option is the coefficient for the $$i^{\text{th}}$$ element from the left in the set $$S$$.",,,mcq,
+145,23,"Consider the following image. $$P$$ is a point in 2D space. $$Q$$ is a proxy for this point on a line passing through the origin. The image is drawn to scale.
+
+Which of the following is the error vector?",image,pic/img_007.png,mcq,
+146,23,"Consider the following image. $$P$$ is a point in 2D space. $$Q$$ is a proxy for this point on a line passing through the origin. The image is drawn to scale.
+
+Is $$Q$$ the ""best"" representation of $$P$$ on the line?",image,pic/img_007.png,mcq,
+147,23,"Consider the following image. $$P$$ is a point in 2D space. $$Q$$ is a proxy for this point on a line passing through the origin. The image is drawn to scale.
+
+If $$Q'$$ is the ""best"" representation of $$P$$ on the line, then which of the following statements are true? Notation: $$|\vec{AB}|$$ is the length of the vector $$\vec{AB}$$.",image,pic/img_007.png,mcq,
+148,23,"Is the following statement true or false?
+
+The projection of $$x$$ onto $$w$$ was derived to be $$(x^T w)w$$, where $$w$$ is a unit vector. Since this derivation was done for the special case of 2D vectors, this formula is not applicable in the general case of $$d$$-dimensional vectors.",,,mcq,
+149,23,"Consider a mean-centered dataset of $$n$$ points where each point belongs to $$\mathbb{R}^d$$. $$w_1, \dots, w_k$$ are the first $$k$$ principal components obtained by running PCA on the dataset, where $$k < d$$. The following relationship is observed:
+    
+$$ x_i - \left[ \sum_{j=1}^{k} (x_i^T w_j)w_j \right] = 0, \quad 1 \leq i \leq n $$
+
+Which of the following statement about the dataset is true?",,,mcq,
+150,23,"In the context of PCA, given $$n$$ data-points in $$\mathbb{R}^d$$ that are mean-centered, after estimating $$w_1$$ in the first round, what is the mean of the residues?",,,mcq,
+151,23,"Consider two ways of representing $$n$$ datapoints that belong to $$\mathbb{R}^d$$ in the form of a matrix:
+* **Approach-1:** A matrix $$X_1$$ of dimension $$n \times d$$
+* **Approach-2:** A matrix $$X_2$$ of dimension $$d \times n$$
+
+Assume that the dataset is mean-centered. Select all correct expressions for the covariance matrix.",,,mcq,
+152,23,"Consider a mean-centered dataset obtained from the banking domain that has $$100$$ data-points, each of which is described by $$7$$ features. The dataset is represented as a $$100 \times 7$$ matrix, $$X$$. You run PCA on this dataset and observe that the residues vanish completely after $$k$$ iterations.
+
+A little later, a domain expert makes the following observations. If $$c_i$$ represents the $$i^{\text{th}}$$ column of $$X$$, then:
+
+(1) The set of vectors $$c_1, c_2, c_3, c_4$$ are linearly independent.
+
+(2) The following relations are satisfied:
+
+* (a) $$c_5 = c_1 + c_3$$
+* (b) $$c_6 = 2c_3 - 3c_4$$
+* (c) $$c_7 = c_2 + 3c_4$$
+
+What is the value of $$k$$? Assume that the dataset is already mean-centered.",,,numerical,4
+153,23,"Consider the following image:
+
+Here, $$w$$ is a vector and $$L$$ is a line perpendicular to $$w$$ that passes through the origin. $$R_1$$ and $$R_2$$ are two regions on either side of the line $$L$$. If $$x$$ is an arbitrary vector in the plane, select all correct statements.",image,pic/img_008.png,mcq,
+154,24,What is the type of the following expression?,code,1 + 4 / 2,mcq,
+155,24,What is the type of the following expression?,code,(1 > 0) and (-1 < 0) and (1 == 1),mcq,
+156,24,"Convert the following mathematical statement into a Python expression.
+
+10³ + 9³ = 12³ + 1³ = 1729",,,mcq,
+157,24,"E_1 and E_2 are Boolean values. Consider the following expression.
+What can you say about the value printed by the code given above?",code,"E_3 = not (E_1 or E_2)
+E_4 = (not E_1) and (not E_2)
+E_3 == E_4",mcq,
+158,24,"E is a boolean variable. Consider the following sequence of expressions:
+
+This pattern keeps repeating for a thousand lines. If line number 500 evaluates to False, what is the value of E?",code,"not E
+not not E
+not not not E
+not not not not E
+.
+.
+.",mcq,
+159,24,"For what values of a and b does the following expression evaluate to True? Assume that both a and b are positive integers.
+
+Enter the value of a.",code,"word = '138412345678901938'
+word[a:b] == '123456789'",numerical,4
+160,24,"For what values of a and b does the following expression evaluate to True? Assume that both a and b are positive integers.
+
+Enter the value of b.",code,"word = '138412345678901938'
+word[a:b] == '123456789'",numerical,13
+161,24,"We need to write a program that performs this task: accept two names (strings) as input. Print True if the first name comes before the second in alphabetical order, and False otherwise.
+
+**Sample test cases:**
+
+| Input 1 | Input 2 | Output |
+| :--- | :--- | :--- |
+| sachin | rohit | False |
+| saina | sindhu | True |
+
+For example, sachin comes after rohit, so the expected output is False. Assume that all names consist of just one word and will be entered in lower case during the time of input. Select all correct implementations of this program.",,,mcq,
+162,24,What is the output of the following snippet of code?,code,"x = 2 ** 5
+x1 = x // 2
+x2 = x1 // 2
+x3 = x2 // 2
+x4 = x3 // 2
+x5 = x4 // 2
+print(x1 + x2 + x3 + x4 + x5)",numerical,31
+163,25,What will be the output of the following statement?,code,print('15 % 3 * 2 + 2'),mcq,
+164,25,What will be the output of the following statement?,code,"print(""a + 'b' + c + '' + d"")",mcq,
+165,25,A snippet of code gives the following output when executed:,,"
+```1 2 3 4 5```
+
+There is exactly one space between any two consecutive integers. Which of the following options correspond to the correct code snippet?",mcq,
+166,25,"What will be the type of the following expressions?
+
+(A) float
+
+(B) int
+
+(C) str
+
+(D) bool",code,"13 % 5 // 2 * 30 ** 5
+""@Python""
+20 ** 10 / 2 + 25 - 70
+(5 > 3) and False
+20 * 100.0 // 11 % 5",mcq,
+167,25,"Given a string variable `word` that stores some word in the English language, we wish to create a new string with just two characters:
+
+- The first character in the new string is the first letter in `word`.
+- The second character in the new string is the last letter in `word`.
+
+Assume that `word` has at least three characters. Which of the following lines of code can be used to create the new string?",,,mcq,
+168,25,"Consider the following snippet of code. 
+What is the output of the code for the following input?
+```
+10
+11
+12
+
+",code,"x = int(input())
+y = int(input())
+z = int(input())
+avg = (x + y + z) / 3
+print(avg)",mcq,
+169,25,"Consider the following snippet of code. 
+What is the output of the code for the following input?
+```
+10
+20",code,"w1 = input()
+w2 = input()
+print(w1 + w2)",numerical,1020
+170,25,What is the output? What do you think is happening here?,code,2 ** 3 ** 0,numerical,2
+179,26,Which of the following are valid names for variables in Python?,,,mcq,
+180,26,"Execute the the following code-block. Assume that `word1` and `word2` are strings that have already been defined.
+
+Select the statement that accurately describes the two lines in the output.",code,"# word1, word2 are two strings
+print(word1 + word2)
+word = word1
+word1 = word2
+word2 = word
+print(word2 + word1)",mcq,
+181,26,"Assume that `a`, `b` and `c` are three distinct integers. The following code runs without any error.
+
+Select all statements that evaluate to `True` at the end of execution of the code given above. ",code,"x, y, z = a, b, c
+x = y = z",mcq,
+182,26,"`x` is a variable of type `float` and is of the form `a.bcd`, where `a, b, c, d` are all positive integers less than 10. What is the output of the following snippet of code?",code,"print(int(x))
+print(int(-x))",mcq,
+183,26,"Consider the following code blocks:
+
+Two blocks of code are said to be equivalent if they produce the same output for a given input. Are the two blocks equivalent?",code,"#Block-1
+flag = True
+if flag == True:
+    print('works')
+
+#Block-2
+flag = True
+if flag:
+    print('works')",mcq,
+184,26,Consider the following code-blocks. `E` is a Boolean expression. Two blocks of code are said to be equivalent if they produce the same output for a given input. Select all true statements.,code,"#Block-1
+if E:
+    print('good')
+else:
+    print('bad')
+
+#Block-2
+if E:
+    print('good')
+print('bad')
+
+#Block-3
+print('good')
+print('bad')",mcq,
+185,26,"`bool_var` is a variable of type `bool`. `x` is a variable of type `int`. Assume that both these variables have already been defined. Now, consider the following code-block:
+
+Which of the following statements are true at the end of execution of the code-block given above? ",code,"if bool_var:
+    x = x + 1
+    bool_var = not bool_var
+    if bool_var:
+        x = x + 1
+    else:
+        x = x - 1
+print(x)",mcq,
+186,26,"Consider the following code-block. `E_1`, `E_2` and `E_3` are all Boolean variables that have already been defined. `x` is a variable that has NOT been defined before. 
+
+When will this code throw an error?",code,"if E_1:
+    x = 1
+if E_2:
+    x = 2
+if E_3:
+    x = 3
+print(x)",mcq,
+187,26,"Consider the following code-block. `E_1`, `E_2` and `E_3` are all Boolean variables that have already been defined. `x` is a variable that has NOT been defined before. 
+
+If the code throws an error, in which line will it occur? Enter an integer between 1 and 7, both endpoints included.",code,"if E_1:
+    x = 1
+if E_2:
+    x = 2
+if E_3:
+    x = 3
+print(x)",numerical,7
+188,26,Select the correct code snippet that prints a backslash character to the console.,,,mcq,
+189,26,"Consider the following snippet of code:
+
+If the output of this code is the string `This is a valid name`, select all possible inputs to the program.",code,"# Warning! This code may not make complete sense for certain inputs!
+name = input()
+if name.isalpha():
+    print('This is a valid name')
+else:
+    print('This is not a valid name')",mcq,
+190,26,What is the output?,code,"alphabets = 'abcdefghijklmnopqrstuvwxyz'
+even = alphabets[0: 10: 2]
+print(even)",mcq,
+191,26,"Consider the following snippet of code. What is the output of this code for the following input?
+
+**Input:**
+`1234`",code,"a, b, c, d = input()
+print(a)
+print(b)
+print(c)
+print(d)",mcq,
+332,37,"A word is termed valid if the output of the following code is `True` when the word is given as the input to the code. 
+
+Select all valid words from the options given below. ",code,"word = input()
+valid = False
+# both 'a' and 'z' are in lower case
+if 'a' <= word[0] <= 'z':
+    if word[0] == word[-1]:
+        valid = True
+print(valid)",mcq,
+333,37,"A word is termed valid if the output of the following code is `True` when the word is given as the input to the code. 
+
+Going by the code given, under what conditions can a word be termed valid?",code,"word = input()
+valid = False
+# both 'a' and 'z' are in lower case
+if 'a' <= word[0] <= 'z':
+    if word[0] == word[-1]:
+        valid = True
+print(valid)",mcq,
+334,37,"Consider the following snippet of code. Assume that `L` is a positive integer that has already been defined at this stage.
+
+The code is run twice, with two different input words. Each input word is a string that consists only of letters without any spaces in them.
+
+**Output-1:**
+`short good`
+
+**Output-2:**
+`long goodnessme`
+
+With just this data given to you, what is the value of `L`? ",code,"# L is a positive integer that has already been defined at this stage
+word = input()
+space = ' ' # there is a single space
+if len(word) < L:
+    word = 'short' + space + word
+elif L <= len(word) < 2 * L:
+    word = 'medium' + space + word
+else:
+    word = 'long' + space + word
+print(word)",numerical,5
+335,37,"A three digit number is called a sandwich number if the sum of its first and last digit is equal to its middle digit. Accept a three digit number as input and print `sandwich` if the number is a sandwich number. Print `plain` if the number is not a sandwich number. 
+
+Select the correct implementation of the code that achieves this.",,,mcq,
+336,37,"Consider the following snippet of code. What will be the value of **X** in the output for the given input? 
+
+**Input:**
+```
+-1
+4
+1
+```
+
+**Output:**
+```
+PX
+NY
+```",code,"x = int(input())
+y = int(input())
+z = int(input())
+
+# Block-1 Start
+if x > 0 or y > 0 or z > 0:
+    if (x > 0 and y > 0) or (y > 0 and z > 0) or (z > 0 and x > 0):
+        if x > 0 and y > 0 and z > 0:
+            print('P3')
+        else:
+            print('P2')
+    else:
+        print('P1')
+# Block-1 End
+
+# Block-2 Start
+if x < 0 or y < 0 or z < 0:
+    if (x < 0 and y < 0) or (y < 0 and z < 0) or (z < 0 and x < 0):
+        if x < 0 and y < 0 and z < 0:
+            print('N3')
+        else:
+            print('N2')
+    else:
+        print('N1')
+# Block-2 End",numerical,2
+337,37,"Consider the following snippet of code. What will be the value of **Y** in the output for the given input? 
+
+**Input:**
+```
+-1
+4
+1
+```
+
+**Output:**
+```
+PX
+NY
+```",code,"x = int(input())
+y = int(input())
+z = int(input())
+
+# Block-1 Start
+if x > 0 or y > 0 or z > 0:
+    if (x > 0 and y > 0) or (y > 0 and z > 0) or (z > 0 and x > 0):
+        if x > 0 and y > 0 and z > 0:
+            print('P3')
+        else:
+            print('P2')
+    else:
+        print('P1')
+# Block-1 End
+
+# Block-2 Start
+if x < 0 or y < 0 or z < 0:
+    if (x < 0 and y < 0) or (y < 0 and z < 0) or (z < 0 and x < 0):
+        if x < 0 and y < 0 and z < 0:
+            print('N3')
+        else:
+            print('N2')
+    else:
+        print('N1')
+# Block-2 End",numerical,1
+338,37,Consider the following snippet of code. When does the code given print no value?,code,"x = int(input())
+y = int(input())
+z = int(input())
+
+# Block-1 Start
+if x > 0 or y > 0 or z > 0:
+    if (x > 0 and y > 0) or (y > 0 and z > 0) or (z > 0 and x > 0):
+        if x > 0 and y > 0 and z > 0:
+            print('P3')
+        else:
+            print('P2')
+    else:
+        print('P1')
+# Block-1 End
+
+# Block-2 Start
+if x < 0 or y < 0 or z < 0:
+    if (x < 0 and y < 0) or (y < 0 and z < 0) or (z < 0 and x < 0):
+        if x < 0 and y < 0 and z < 0:
+            print('N3')
+        else:
+            print('N2')
+    else:
+        print('N1')
+# Block-2 End",mcq,
+339,37,"Consider the following snippet of code. Is the following statement True or False?
+
+For any combination of inputs x, y and z at least one `else` statement will be executed.",code,"x = int(input())
+y = int(input())
+z = int(input())
+
+# Block-1 Start
+if x > 0 or y > 0 or z > 0:
+    if (x > 0 and y > 0) or (y > 0 and z > 0) or (z > 0 and x > 0):
+        if x > 0 and y > 0 and z > 0:
+            print('P3')
+        else:
+            print('P2')
+    else:
+        print('P1')
+# Block-1 End
+
+# Block-2 Start
+if x < 0 or y < 0 or z < 0:
+    if (x < 0 and y < 0) or (y < 0 and z < 0) or (z < 0 and x < 0):
+        if x < 0 and y < 0 and z < 0:
+            print('N3')
+        else:
+            print('N2')
+    else:
+        print('N1')
+# Block-2 End",mcq,
+340,37,"Select the correct implementation of a piece of code that accepts a sentence as input and prints the number of words in it. 
+
+A sentence is just a sequence of words with a space between consecutive words. You can assume that the sentence will not have any other punctuation marks. You can also assume that the input string will have at least one word.",,,mcq,
+341,37,"Consider the following snippet of code. What should be the input to this code to get the following output?
+
+**Output:**
+```text
+Student record: 
+    Dept: ABC
+    Name: MR FNAME LNAME
+    Roll No: 999
+    Library Card No: AX999
+```",code,"dept    = input()
+course  = input()
+prefix  = input()
+name    = input()
+roll_no = input()
+name = prefix + "" "" + name.upper() # one space
+lib_id = dept[0] + course[0] + roll_no
+print(""Student record:"")
+indent = '    ' # four spaces
+print(indent + ""Dept:"", dept)
+print(indent + ""Name:"", name)
+print(indent + ""Roll No:"", roll_no)
+print(indent + ""Library Card No:"", lib_id)",mcq,
+342,37,Consider the following snippet of code. Select all possible inputs for which this code prints `PERFECT!` as output.,code,"word = input()
+match = False
+if word.count('(') == word.count(')'):
+    if word.count('[') == word.count(']'):
+        if word.count('{') == word.count('}'):
+            match = True
+if match:
+    print('PERFECT!')
+else:
+    print('IMPERFECT!')",mcq,
+434,45,What will be the output of the following program?,code,"const obj = {
+  x: 1,
+  y: 1,
+  set nums(xCommay) {
+    numbers = xCommay.split(', ')
+    this.x = numbers[0]
+    this.y = numbers[1]
+  },
+  get nums() {
+    return this.x + ', ' + this.y
+  },
+  xPowery: function () {
+    let result = 1
+    for (let i = 1; i <= this.y; i++) {
+      result = result * this.x
+    }
+    return result
+  },
+}
+obj.nums = '2,3'
+console.log(obj.xPowery())",mcq,

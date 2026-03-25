@@ -1,0 +1,12 @@
+'''
+if 'mermaid_theme' not in st.session_state:
+    st.session_state.mermaid_theme = "Light"
+mermaid_theme = st.sidebar.radio(
+    "Mermaid Theme", 
+    ["Light", "Dark"], 
+    index=0 if st.session_state.mermaid_theme == "Light" else 1,
+    horizontal=True
+)
+st.session_state.mermaid_theme = mermaid_theme
+'''
+

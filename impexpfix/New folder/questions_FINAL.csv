@@ -1,0 +1,749 @@
+id,assessment_id,heading,media_type,media_content,q_type,correct_answer
+1,1,What does JAMStack stand for?,,,mcq,
+2,1,Who coined the term “JAMStack”?,,,mcq,
+3,1,What does PWA stand for in the context of an app?,,,mcq,
+4,1,What does SPA stand for in the context of an app?,,,mcq,
+5,1,What is the default port number used by a flask application?,,,mcq,
+6,2,"Which of the following is the correct way to embed an applet in an HTML document, assuming that the java byte code file “appletdemo.class” is kept in the same directory as the HTML document?",,,mcq,
+7,2,Which of the following is the correct usage of “alt” attribute in the <applet> tag in an HTML document?,,,mcq,
+8,2,Which of the following statements is true regarding JavaScript?,,,mcq,
+9,2,Which of the following can be considered as advantage(s) of JavaScript language?,,,mcq,
+10,2,Which of the following is true regarding java applet?,,,mcq,
+11,2,"Which of the following web browsers, evolved from Netscape Navigator?",,,mcq,
+12,3,Which of the following statements is not true regarding JavaScript?,,,mcq,
+13,3,What will be the output on console if the following JavaScript program is executed using command line?,code,"{ 
+    let x = 5 ;
+}
+console.log(x)",mcq,
+14,3,What is AJAX?,,,mcq,
+15,3,Consider the following variable declaration. What will be printed on console for console.log(x)?,code,let x,mcq,
+16,3,Consider the following code snippet. What will be the output of console.log(x)?,code," const x = 14
+x  = 15",mcq,
+17,3,"Consider the following JavaScript program, What will be the output of the statement: console.log(obj.color)?",code," const obj =  {
+    color: 'red',
+    changeColor: function (color) {
+        this. color = color
+     },
+}
+
+obj.changeColor('Yellow')",mcq,
+18,3,Which of the following $is/are$ correct way(s) to define a function in JavaScript?,,,mcq,
+19,3,Consider the following HTML document. What will be the background color of an element having ID ‘div1’ in the rendered webpage corresponding to this document?,code,"<!DOCTYPE html>
+<html lang=""""en"""">
+<head>
+    <meta charset=""""UTF-8"""" />
+    <script>
+        document.getElementById('div1').style. backgroundColor =  'yellow';
+    </script>
+    <title>Document</title>
+</head>
+<body>
+    <div
+        id=""""div1""""
+        style=""""height: 100px; width: 100px; background-color: red""""
+    ></div>
+</body>
+</html>""
+",mcq,
+20,3,Consider the following HTML document. What will be the background color of an element having ID ‘div’ after 6 seconds?,code,"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"" />
+    <title>Document</title>
+</head>
+<body>
+    <div
+        id=""div""
+        style=""background-color: black; height: 50px; width: 50px""
+    ></div>
+    <script> 
+        const colors =  {
+            color1: 'red',
+            color2: 'green',
+            color3: 'yellow',
+        } 
+        let i = 1
+        let color  = null
+        setInterval(() => {
+            if (i % 2 != 0) { 
+                color = colors .color1
+            }
+            else if (i % 4 == 0) { 
+                color = colors .color2
+            }
+            else { 
+                color = colors .color3
+            }
+            document.getElementById('div').style. backgroundColor = color
+            i++
+         }, 1000)
+    </script>
+</body>
+</html>",mcq,
+21,4,Which of the following encoding does a JavaScript engine use in general?,,,mcq,
+22,4,What will be the output on console if the following JavaScript program is executed using command line?,code,"{ 
+    var x = 5 ;
+}
+console.log(x)",mcq,
+23,4,Which of the following operators is used to avoid coercion in JavaScript language?,,,mcq,
+24,4,Which of the following have a $block-level$ scope in JavaScript language?,,,mcq,
+25,4,What is ECMAScript?,,,mcq,
+26,5,Which of the following is not a reserve word in JavaScript language?,,,mcq,
+27,5,Which of the following is not a valid literal in JavaScript?,,,mcq,
+28,5,Which of the following is not a primitive data type in the JavaScript language?,,,mcq,
+29,5,Which of the following is not a reserved word in JavaScript?,,,mcq,
+30,5,Which of the following is true regarding primitive data types in JavaScript?,,,mcq,
+31,6,Consider the following variable declaration. What will be printed on console for console.log(x)?,code, let x =  {},mcq,
+32,6,Consider the following variable declaration. What will be printed on console for console.log(x.value)?,code, let x =  {},mcq,
+33,6,"What will be the output, if the JavaScript program written below is executed?",code,"const x
+console.log(x)",mcq,
+34,6,Consider the following code snippet. What will be the output of console.log(x)?,code," let x = 14
+x  = 15",mcq,
+35,6,Consider the following JavaScript program. What will be the output for the statement: console.log(obj.color)?,code," const obj =  {color: 'red'}
+
+obj. changeColor = function (color)  {this. color = color }
+
+obj.changeColor('green')",mcq,
+36,7,Which of the following is not a frontend framework for web development?,,,mcq,
+37,7,Which of the following is not a backend framework for web development?,,,mcq,
+38,7,Which of the following is correct regarding JavaScript?,,,mcq,
+39,7,What does AJAX stand for?,,,mcq,
+40,8,Which of the following is true about machine learning?,,,mcq,
+41,8,Which of the following tasks is more suitable for traditional programming than machine learning?,,,mcq,
+42,8,Which among these is not a machine learning problem?,,,mcq,
+43,8,The traditional programming approach for a given task may fail in cases where:,,,mcq,
+44,9,Which of these is better suited to be solved using regression?,,,mcq,
+45,9,Regression is used when the output variable is:,,,mcq,
+46,10,Which of the following $is/are$ type(s) of supervised learning techniques?,,,mcq,
+47,10,Regression is a type of:,,,mcq,
+48,10,Which of the following functions corresponds to a regression model?,,,mcq,
+49,10,"In supervised learning, the training labels are available.",,,mcq,
+50,10,Supervised learning is essentially,,,mcq,
+51,11,Classification models are _______,,,mcq,
+52,11,Which of the following loss functions can be applied to a classification model?,,,mcq,
+53,11,We evaluate our model on which of the following data?,,,mcq,
+54,11,Model selection is done using which of the following data?,,,mcq,
+55,12,Unsupervised learning is essentially,,,mcq,
+56,12,Let f: \mathbb{R}^d \to \mathbb{R}^{d'} be an encoder function for dimensionality reduction. What is the typical relation between d and d'?,,,mcq,
+57,12,Let f: \mathbb{R}^{d'} \to \mathbb{R}^d be a decoder function for dimensionality reduction. What is the typical relation between d and d'?,,,mcq,
+58,12,"For the data \{X_1, X_2, \dots, X_n\} where X_i \in \mathbb{R}^d, f: \mathbb{R}^d \to \mathbb{R}^{d'} (encoder), and g: \mathbb{R}^{d'} \to \mathbb{R}^d (decoder), which of the following is the correct loss function?",,,mcq,
+59,12,Which of the following come under unsupervised learning?,,,mcq,
+60,13,"The input data for an unsupervised learning algorithm is of the form (Note: X_i and Y_i are vectors, y_i are scalars):",,,mcq,
+61,13,Which of the following gives a probabilistic model?,,,mcq,
+62,13,Which of the following is the correct loss function for density estimation?,,,mcq,
+63,13,"During parameter estimation for a density estimation method such as Gaussian Mixture Model, which of the following is minimized?",,,mcq,
+64,14,Which of the following is true about a model?,,,mcq,
+65,14,Identify which of the following problem requires regression algorithm.,,,mcq,
+66,14,"For spam detection, if we use traditional programming rather than a machine learning approach, which problems may be faced?",,,mcq,
+67,14,"In a regression model, the parameters w and b are:",,,mcq,
+68,14,Identify classification problem(s) in the following statements,,,mcq,
+69,14,Identify task that needs the use of regression in the following,,,mcq,
+70,14,Which of the following are examples of unsupervised learning problems?,,,mcq,
+71,14,Which of the following $is/are$ incorrect?,,,mcq,
+72,14,Which of the following functions corresponds to a classification model?,,,mcq,
+73,14,Which of the following can form a good encoder decoder pair for d dimensional data?,,,mcq,
+74,14,Consider Scenario 1 (Cancer detection) and Scenario 2 (Mobile Sales).,,,mcq,
+75,14,"Consider the data set in the image where each data point has features x_1, x_2, x_3. We want to reduce dimension from 3 to 1.
+
+**Pair 1:**
+f(x_1, x_2, x_$$   3) = x   $$_1 - x_2 + x_$$ 3
+  g(u) =    $$[u, u, u]
+
+Calculate the reconstruction loss for Pair 1.",image,pic/image_6edda2.png,numerical,"2.95,3.05"
+76,14,"Consider the data set in the image where each data point has features x_1, x_2, x_3. We want to reduce dimension from 3 to 1.
+
+**Pair 2:**
+\tilde{f}(x_1, x_2, x_$$   3) =    $$\frac{x_1 + x_2 + x_3}{3}
+\tilde{g}$$   (u) =    $$[u, u, u]
+
+Calculate the reconstruction loss for Pair 2.",image,pic/image_6edda2.png,numerical,"0.63,0.7"
+77,15,Which of the following keywords can be used to declare a variable with global scope?,,,mcq,
+78,15,Which of the following statements is true regarding JavaScript language?,,,mcq,
+79,15,Which of the following statement(s) $is/are$ correct regarding JavaScript?,,,mcq,
+80,15,What will be the output of the following program?,code," const obj =  {
+  name: 'Rohit',
+  changeName: function (name) {
+    this. name = name
+   },
+}
+
+obj.changeName('Mohit')
+console.log(obj.name)",mcq,
+81,15,Consider the following code snippet. What will be the output of console.log(x.name)?,code," const x =  { name: 'rohit' }
+x. name =  'Mohit'",mcq,
+82,15,What will be the output of the following program?,code," const obj =  {
+  name: 'Rohit',
+  changeName: (name) => {
+    this. name = name
+   },
+}
+
+obj.changeName('Mohit')
+console.log(obj.name)",mcq,
+83,15,What will be the output of the following program?,code," const obj =  {
+  name: 'Rohit',
+  arrowFunction: null,
+  normalfunction: function () {
+    this. arrowFunction = ()  => {
+      console.log(this.name)
+    }
+  },
+}
+
+obj.normalfunction()
+obj.arrowFunction()",mcq,
+84,15,Which of the following is correct output for the following code snippet?,code,"setTimeout(() => console.log('hello from setTimeOut one'), 0)
+console.log('hello for main one')
+setTimeout(() => console.log('hello from setTimeOut two'), 0)
+console.log('hello from main two')",mcq,
+85,15,Consider the following HTML document. What will be the background color of an element having ID 'div1' in the rendered webpage corresponding to this document?,code,"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+  <meta charset=""UTF-8"" />
+  <script>
+    setTimeout(() => {
+      document.getElementById('div1').style. backgroundColor =  'yellow'
+    }, 0)
+  </script>
+  <title>Document</title>
+</head>
+<body>
+  <div
+    id=""div1""
+    style=""height: 100px; width: 100px; background-color: red""
+  ></div>
+</body>
+</html>",mcq,
+86,15,Consider the following JavaScript program. What will be the last value shown on the console after 4 seconds?,code," let startNamePrinter = (name)  => { 
+  let x = name .split(''). reverse()
+  let handler = setInterval(()  => { 
+    let y = x .pop()
+    console.log(y)
+  }, 1000)
+
+  setTimeout(() => {
+    clearInterval(handler)
+  }, (name.length + 1) * 1000)
+}
+
+startNamePrinter('orange')",mcq,
+87,16,What are some of the most important types of data that machine learning models deal with?,,,mcq,
+88,16,Map the dataset on the left to the domain on the right:,,"| Dataset | Domain |
+| :--- | :--- |
+| (1) Record of all IPL matches played so far | (a) Finance |
+| (2) Credit profile of customers | (b) $E-Commerce$ |
+| (3) $3D$ structure of proteins | (c) Bioinformatics |
+| (4) $Click-stream$ data of Amazon consumers | (d) Sports analytics |
+
+We could define a machine learning problem associated with each dataset on the left.",mcq,
+89,16,"$E-commerce$ recommendations were discussed briefly in the lecture. When a customer visits a website to buy a product, which of the following are important features that a recommendation system should take into account while making its recommendation?",,,mcq,
+90,16,Can you think of domains other than $e-commerce$ where recommendations play an important role?,,,mcq,
+91,16,You are given the data of marks scored by students in a class in a csv file. Your task is to find the class topper. Is this a machine learning problem?,,,mcq,
+92,16,"In the previous problem, you have access to a dataset. Consider the following claim: ""Data is an important aspect of any machine learning problem. So, every problem that has a dataset associated with it can be classified as a machine learning problem."" What is wrong with this claim?",,,mcq,
+93,17,What are some of the broad paradigms of machine learning discussed in the lecture?,,,mcq,
+94,17,Which of the following scenarios can be modeled as a binary classification problem?,,,mcq,
+95,17,"For every mail that comes to your inbox, you have to design an algorithm that can assign exactly one of these four labels to it:
+- $family
+- friends$
+- $work
+- spam$
+
+What type of machine learning problem does this correspond to?",,,mcq,
+96,17,"Assume that you find yourself in the following scenarios:
+
+* **$Scenario-1$:** You are given a bucket of red and blue balls. Someone commands you to separate them into two separate buckets of uniform color.
+* **$Scenario-2$:** You are given a bucket of black balls that look identical, but weigh differently. There is no one around you to tell you what to do. However, you try to separate the balls into different buckets, such that balls in a given bucket have more or less the same weight.
+
+If a machine were to be trained to do these actions, what paradigms of machine learning would they correspond to?",,,mcq,
+97,18,"Is the following statement true or false:
+Compression is the act of throwing away a fraction of $data-points$ from the dataset.",,,mcq,
+98,18,"Consider the following dataset:
+
+ \left\{ \begin{bmatrix} 1 \\ 2 \\ 3 \\ 4 \end{bmatrix}, \begin{bmatrix} 1 \\ 5 \\ 3 \\ 0 \end{bmatrix}, \begin{bmatrix} -1 \\ -2 \\ 0 \\ 0 \end{bmatrix}, \begin{bmatrix} -1 \\ 2 \\ -3 \\ 4 \end{bmatrix}, \begin{bmatrix} -1 \\ 5 \\ 9 \\ -4 \end{bmatrix} \right\} 
+
+If n represents the number of $data-points$ and d represents the number of features, what are the values of n and d?",,,mcq,
+99,18,"Consider the following dataset?
+
+ \left\{ \begin{bmatrix} 3 \\ 6 \\ -3 \end{bmatrix}, \begin{bmatrix} 5 \\ 10 \\ -5 \end{bmatrix}, \begin{bmatrix} -2 \\ -4 \\ 2 \end{bmatrix}, \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix} \right\} 
+
+Which of the following vectors could be chosen as a representative for the above dataset?",,,mcq,
+100,18,"Consider the following dataset in \mathbb{R}^2:
+
+ \left\{ \begin{bmatrix} 1 \\ 2 \end{bmatrix}, \begin{bmatrix} 2 \\ 4 \end{bmatrix}, \begin{bmatrix} -3 \\ -6 \end{bmatrix}, \begin{bmatrix} 0 \\ 0 \end{bmatrix} \right\} 
+
+If we use a representative and the corresponding coefficients to come up with an alternative representation of the points, what would be the reconstruction error for this dataset?",,,numerical,0
+101,18,You have a dataset of 100 points in \mathbb{R}^3 where all of them lie on a line passing through the origin. You wish to choose a representative w for this dataset such that ||w||=1. How many representatives can be chosen?,,,mcq,
+102,18,Let w be a vector that represents a line L passing through the origin. What is the projection of a point x onto this line? Note that ||w|| is not necessarily equal to 1.,,,mcq,
+103,19,"Consider the following dataset and two lines L_1 and L_2:
+
+Which of the two lines is a good choice for a compressed representation of the dataset and why?",image,pic/img_004.png,mcq,
+104,19,"Which of the following expressions is the reconstruction error for a dataset of n points, with respect to a line passing through the origin represented by the vector w. Note that ||w||=1. (Select all that apply)",,,mcq,
+105,19,"Is the following statement true or false?
+The reconstruction error is always a $non-negative$ scalar quantity.",,,mcq,
+106,19,"Select all formulations of the optimization problem that are equivalent to the one given below:
+
+ \min_{w, ||w||=1} \frac{1}{n} \sum_{$$   i=1   $$}^{n} -(x_i^T w)^2 ",,,mcq,
+107,19,"Given a dataset of n points in \mathbb{R}^d, what is the dimension of the covariance matrix?",,,mcq,
+108,19,What is the optimal value of w for the optimization problem posed towards the end of the lecture?,,,mcq,
+109,20,"Consider the following figure:
+
+The line shown in the figure is obtained after one round of running the ""possible algorithm"". Does a second round seem necessary here?",image,pic/img_005.png,mcq,
+110,20,"Which of the following represents the expression for the residue of a point x after projecting it onto a line passing through the origin, represented by w? Note that ||w||=1.",,,mcq,
+111,20,"We are given a dataset of n points in \mathbb{R}^d and a line passing through the origin that is represented by w.
+
+**S1:** The residue corresponding to every point is perpendicular to w.
+**S2:** All the residues are collinear, that is, they lie on a line (passing through the origin).",,,mcq,
+112,20,"Is the following dataset centered?
+
+ \left\{ \begin{bmatrix} 1 \\ 2 \\ -1 \end{bmatrix}, \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix}, \begin{bmatrix} -1 \\ -2 \\ 1 \end{bmatrix}, \begin{bmatrix} 0 \\ 1 \\ 2 \end{bmatrix}, \begin{bmatrix} 1 \\ -1 \\ -2 \end{bmatrix}, \begin{bmatrix} -1 \\ 0 \\ 0 \end{bmatrix} \right\} ",,,mcq,
+113,21,w_1 is the line which minimizes the reconstruction error of a set of points and w_2 is the line which minimizes the reconstruction error of the residues. What is the value of w_1^T w_2?,,,numerical,0
+114,21,"B=\{w_1, \dots, w_d\} is a set of d orthonormal vectors in \mathbb{R}^d that are obtained by running the algorithm for d rounds on some centered dataset. Select all correct statements.",,,mcq,
+115,21,"Consider a dataset of 1000 points, each of which belongs to \mathbb{R}^5. If you know nothing else about the dataset to begin with, what is the number of rounds of the algorithm after which the residues completely vanish?",,,numerical,5
+116,21,"Consider a dataset of 1000 points, each of which belongs to \mathbb{R}^{10}. Upon running the algorithm on this dataset, the residues completely vanish after 4 rounds. Which of the following statements is true?",,,mcq,
+117,22,What is the best line one can obtain in the k^{\text{th}} round of the algorithm?,,,mcq,
+118,22,"What is the value of the following expression if \lambda_k is an eigenvalue of the covariance matrix C for eigenvector w_k?
+
+ w_k^T C w_k ",,,mcq,
+119,22,"Given a dataset of n points, x_1, \dots, x_n, the k^{\text{th}} eigenvector and the corresponding eigenvalue of the covariance matrix are w_k and \lambda_k respectively. Consider the following statements:
+
+**S1:**  \lambda_$$   k =    $$\frac{1}{n} \sum_{$$   i=1   $$}^{n} (x_i^T w_k)^$2 
+**S2$:**  \lambda_k  is $non-negative$",,,mcq,
+120,22,"Given a centered dataset of n points, x_1, \dots, x_n, and a line w that passes through the origin, consider the following set of quantities:
+
+ \{x_1^T w, \dots, x_n^T w\} 
+
+What is the average of the quantities in the above set?",,,numerical,0
+121,22,"Consider the following dataset and two lines L_1 and L_2:
+
+Which of the two lines is a good direction for a compressed representation of the dataset and why?",image,pic/img_006.png,mcq,
+122,23,"An image is a collection of pixels. A pixel is stored as a float value and typically occupies 4 bytes of memory. Consider a dataset of 1000 images, where each image has dimensions 100 \times 100. Approximately, how much memory does the entire dataset occupy?",,,mcq,
+123,23,"Consider a dataset that has 100 points that belong to \mathbb{R}^3. All of them are found to lie on a line that passes through the origin. We use a unit vector along the line as a representative and the coefficients with respect to it to represent the individual $data-points$. Compute the percentage decrease in the size of the dataset if we move to this new representation. Assume that it takes one unit of space to store one feature. Enter your answer correct to two decimal places; it should be in the range [0, 100].",,,numerical,"65,66"
+124,23,"Consider the following dataset that has four points, all of which lie on a line:$$ 
+    
+   S =    $$\left\{ \begin{bmatrix} 0 \\ 0 \end{bmatrix}, \begin{bmatrix} 3 \\ 4 \end{bmatrix}, \begin{bmatrix} 6 \\ 8 \end{bmatrix}, \begin{bmatrix} $1/5$ \\ $4/15$ \end{bmatrix} \right\} 
+
+Among the vectors given below, choose a representative that has unit length.",,,mcq,
+125,23,"Consider the following dataset that has four points, all of which lie on a line:$$ 
+
+   S =    $$\left\{ \begin{bmatrix} 0 \\ 0 \end{bmatrix}, \begin{bmatrix} 3 \\ 4 \end{bmatrix}, \begin{bmatrix} 6 \\ 8 \end{bmatrix}, \begin{bmatrix} $1/5$ \\ $4/15$ \end{bmatrix} \right\} 
+
+Using the unit length representative vector  \begin{bmatrix} $3/5$ \\ $4/5$ \end{bmatrix} , compute the coefficients for these four points. The i^{\text{th}} element from the left in each option is the coefficient for the i^{\text{th}} element from the left in the set S.",,,mcq,
+126,23,"Consider the following image. P is a point in $2D$ space. Q is a proxy for this point on a line passing through the origin. The image is drawn to scale.
+
+Which of the following is the error vector?",image,pic/img_007.png,mcq,
+127,23,"Consider the following image. P is a point in $2D$ space. Q is a proxy for this point on a line passing through the origin. The image is drawn to scale.
+
+Is Q the ""best"" representation of P on the line?",image,pic/img_007.png,mcq,
+128,23,"Consider the following image. P is a point in $2D$ space. Q is a proxy for this point on a line passing through the origin. The image is drawn to scale.
+
+If Q' is the ""best"" representation of P on the line, then which of the following statements are true? Notation: |\vec{AB}| is the length of the vector \vec{AB}.",image,pic/img_007.png,mcq,
+129,23,"Is the following statement true or false?
+
+The projection of x onto w was derived to be ($x^T$ w)w, where w is a unit vector. Since this derivation was done for the special case of $2D$ vectors, this formula is not applicable in the general case of $d-dimensional$ vectors.",,,mcq,
+130,23,"Consider a $mean-centered$ dataset of n points where each point belongs to \mathbb{R}^d. w_1, \dots, w_k are the first k principal components obtained by running PCA on the dataset, where k < d. The following relationship is observed:
+    
+ x_i - \left[ \sum_{$$   j=1   $$}^{k} (x_i^T w_j)w_j \right]$$    = 0   $$, \quad 1 \leq i \leq n 
+
+Which of the following statement about the dataset is true?",,,mcq,
+131,23,"In the context of PCA, given n $data-points$ in \mathbb{R}^d that are $mean-centered$, after estimating w_1 in the first round, what is the mean of the residues?",,,mcq,
+132,23,"Consider two ways of representing n datapoints that belong to \mathbb{R}^d in the form of a matrix:
+* **$Approach-1$:** A matrix X_1 of dimension n \times $d
+* **Approach-2$:** A matrix X_2 of dimension d \times n
+
+Assume that the dataset is $mean-centered$. Select all correct expressions for the covariance matrix.",,,mcq,
+133,23,"Consider a $mean-centered$ dataset obtained from the banking domain that has 100 $data-points$, each of which is described by 7 features. The dataset is represented as a 100 \times 7 matrix, X. You run PCA on this dataset and observe that the residues vanish completely after k iterations.
+
+A little later, a domain expert makes the following observations. If c_i represents the i^{\text{th}} column of X, then:
+
+(1) The set of vectors c_1, c_2, c_3, c_4 are linearly independent.
+
+(2) The following relations are satisfied:
+
+* (a) c_$$   5 = c   $$_1 + c_3
+* (b) c_$$   6 =  $2c$  $$_3 - 3c_4
+* (c) c_$$   7 = c   $$_2 + 3c_4
+
+What is the value of k? Assume that the dataset is already $mean-centered$.",,,numerical,4
+134,23,"Consider the following image:
+
+Here, w is a vector and L is a line perpendicular to w that passes through the origin. R_1 and R_2 are two regions on either side of the line L. If x is an arbitrary vector in the plane, select all correct statements.",image,pic/img_008.png,mcq,
+135,24,What is the type of the following expression?,code,1 + 4 / 2,mcq,
+136,24,What is the type of the following expression?,code,(1 > 0) and (-1 < 0) and (1 == 1),mcq,
+137,24,"Convert the following mathematical statement into a Python expression.
+
+10³ + 9³$$    = 12   $$³ + 1³$$    = 1729   $$",,,mcq,
+138,24,"E_1 and E_2 are Boolean values. Consider the following expression.
+What can you say about the value printed by the code given above?",code,"E_ 3 = not (E _1 or E_2)
+E_ 4 = (not E _1) and (not E_2)
+E_3 == E_4",mcq,
+139,24,"E is a boolean variable. Consider the following sequence of expressions:
+
+This pattern keeps repeating for a thousand lines. If line number 500 evaluates to False, what is the value of E?",code,"not E
+not not E
+not not not E
+not not not not E
+.
+.
+.",mcq,
+140,24,"For what values of a and b does the following expression evaluate to True? Assume that both a and b are positive integers.
+
+Enter the value of a.",code," word =  '138412345678901938'
+word[a:b] == '123456789'",numerical,4
+141,24,"For what values of a and b does the following expression evaluate to True? Assume that both a and b are positive integers.
+
+Enter the value of b.",code," word =  '138412345678901938'
+word[a:b] == '123456789'",numerical,13
+142,24,"We need to write a program that performs this task: accept two names (strings) as input. Print True if the first name comes before the second in alphabetical order, and False otherwise.
+
+**Sample test cases:**
+
+| Input 1 | Input 2 | Output |
+| :--- | :--- | :--- |
+| sachin | rohit | False |
+| saina | sindhu | True |
+
+For example, sachin comes after rohit, so the expected output is False. Assume that all names consist of just one word and will be entered in lower case during the time of input. Select all correct implementations of this program.",,,mcq,
+143,24,What is the output of the following snippet of code?,code," x = 2 ** 5
+x1  =  x // 2
+x2 = x1 // 2
+x3  =  x2 // 2
+x4 = x3 // 2
+x5  = x4 // 2
+print(x1 + x2 + x3 + x4 + x5)",numerical,31
+144,25,What will be the output of the following statement?,code,print('15 % 3 * 2 + 2'),mcq,
+145,25,What will be the output of the following statement?,code,"print(""a + 'b' + c + '' + d"")",mcq,
+146,25,A snippet of code gives the following output when executed:,,"
+```1 2 3 4 5```
+
+There is exactly one space between any two consecutive integers. Which of the following options correspond to the correct code snippet?",mcq,
+147,25,"What will be the type of the following expressions?
+
+(A) float
+
+(B) int
+
+(C) str
+
+(D) bool",code,"13 % 5 // 2 * 30 ** 5
+""@Python""
+20 ** 10 / 2 + 25 - 70
+(5 > 3) and False
+20 * 100.0 // 11 % 5",mcq,
+148,25,"Given a string variable `word` that stores some word in the English language, we wish to create a new string with just two characters:
+
+- The first character in the new string is the first letter in `word`.
+- The second character in the new string is the last letter in `word`.
+
+Assume that `word` has at least three characters. Which of the following lines of code can be used to create the new string?",,,mcq,
+149,25,"Consider the following snippet of code. 
+What is the output of the code for the following input?
+```
+10
+11
+12
+
+",code," x = int(input())
+y  =  int(input())
+z = int(input())
+avg  = (x + y + z) / 3
+print(avg)",mcq,
+150,25,"Consider the following snippet of code. 
+What is the output of the code for the following input?
+```
+10
+20",code," w1 = input()
+w2  = input()
+print(w1 + w2)",numerical,1020
+151,25,What is the output? What do you think is happening here?,code,2 ** 3 ** 0,numerical,2
+152,26,Which of the following are valid names for variables in Python?,,,mcq,
+153,26,"Execute the the following code-block. Assume that `word1` and `word2` are strings that have already been defined.
+
+Select the statement that accurately describes the two lines in the output.",code,"# word1,  word2 are two strings
+print(word1 + word2)
+word = word1
+word1  =  word2
+word2 = word
+print(word2 + word1) ",mcq,
+154,26,"Assume that `a`, `b` and `c` are three distinct integers. The following code runs without any error.
+
+Select all statements that evaluate to `True` at the end of execution of the code given above. ",code,"x, y,  z = a , b,  c
+x = y  = z",mcq,
+155,26,"`x` is a variable of type `float` and is of the form `a.bcd`, where `a, b, c, d` are all positive integers less than 10. What is the output of the following snippet of code?",code,"print(int(x))
+print(int(-x))",mcq,
+156,26,"Consider the following code blocks:
+
+Two blocks of code are said to be equivalent if they produce the same output for a given input. Are the two blocks equivalent?",code,"# Block-1
+flag = True
+if flag  == True:
+    print('works')
+
+# Block-2
+flag = True
+if flag :
+    print('works')",mcq,
+157,26,Consider the following code-blocks. `E` is a Boolean expression. Two blocks of code are said to be equivalent if they produce the same output for a given input. Select all true statements.,code,"#Block-1
+if E:
+    print('good')
+else:
+    print('bad')
+
+#Block-2
+if E:
+    print('good')
+print('bad')
+
+#Block-3
+print('good')
+print('bad')",mcq,
+158,26,"`bool_var` is a variable of type `bool`. `x` is a variable of type `int`. Assume that both these variables have already been defined. Now, consider the following code-block:
+
+Which of the following statements are true at the end of execution of the code-block given above? ",code,"if bool_var: 
+    x = x + 1
+    bool _ var = not bool _var
+    if bool_var: 
+        x = x + 1
+    else : 
+        x = x - 1
+print(x) ",mcq,
+159,26,"Consider the following code-block. `E_1`, `E_2` and `E_3` are all Boolean variables that have already been defined. `x` is a variable that has NOT been defined before. 
+
+When will this code throw an error?",code,"if E_1: 
+    x = 1
+if E _2: 
+    x = 2
+if E _3: 
+    x = 3
+print(x) ",mcq,
+160,26,"Consider the following code-block. `E_1`, `E_2` and `E_3` are all Boolean variables that have already been defined. `x` is a variable that has NOT been defined before. 
+
+If the code throws an error, in which line will it occur? Enter an integer between 1 and 7, both endpoints included.",code,"if E_1: 
+    x = 1
+if E _2: 
+    x = 2
+if E _3: 
+    x = 3
+print(x) ",numerical,7
+161,26,Select the correct code snippet that prints a backslash character to the console.,,,mcq,
+162,26,"Consider the following snippet of code:
+
+If the output of this code is the string `This is a valid name`, select all possible inputs to the program.",code,"# Warning! This code may not make complete sense for certain inputs! 
+name = input()
+if name .isalpha():
+    print('This is a valid name')
+else:
+    print('This is not a valid name')",mcq,
+163,26,What is the output?,code," alphabets =  'abcdefghijklmnopqrstuvwxyz' 
+even = alphabets [0: 10: 2]
+print(even)",mcq,
+164,26,"Consider the following snippet of code. What is the output of this code for the following input?
+
+**Input:**
+`1234`",code,"a, b, c,  d = input()
+print(a)
+print(b)
+print(c)
+print(d) ",mcq,
+165,27,"A word is termed valid if the output of the following code is `True` when the word is given as the input to the code. 
+
+Select all valid words from the options given below. ",code," word = input()
+valid  = False
+# both 'a' and 'z' are in lower case
+if 'a' <= word[0] <= 'z':
+    if word[0] == word[-1]: 
+        valid = True
+print(valid) ",mcq,
+166,27,"A word is termed valid if the output of the following code is `True` when the word is given as the input to the code. 
+
+Going by the code given, under what conditions can a word be termed valid?",code," word = input()
+valid  = False
+# both 'a' and 'z' are in lower case
+if 'a' <= word[0] <= 'z':
+    if word[0] == word[-1]: 
+        valid = True
+print(valid) ",mcq,
+167,27,"Consider the following snippet of code. Assume that `L` is a positive integer that has already been defined at this stage.
+
+The code is run twice, with two different input words. Each input word is a string that consists only of letters without any spaces in them.
+
+**Output-1:**
+`short good`
+
+**Output-2:**
+`long goodnessme`
+
+With just this data given to you, what is the value of `L`? ",code,"#  L is a positive integer that has already been defined at this stage
+word = input()
+space  = ' ' # there is a single space
+if len(word) < L: 
+    word =  'short' + space + word
+elif L <= len(word) < 2 * L: 
+    word =  'medium' + space + word
+else: 
+    word =  'long' + space + word
+print(word)",numerical,5
+168,27,"A three digit number is called a sandwich number if the sum of its first and last digit is equal to its middle digit. Accept a three digit number as input and print `sandwich` if the number is a sandwich number. Print `plain` if the number is not a sandwich number. 
+
+Select the correct implementation of the code that achieves this.",,,mcq,
+169,27,"Consider the following snippet of code. What will be the value of **X** in the output for the given input? 
+
+**Input:**
+```
+-1
+4
+1
+```
+
+**Output:**
+```
+PX
+NY
+```",code," x = int(input())
+y  =  int(input())
+z = int(input())
+
+ # Block-1 Start
+if x > 0 or y > 0 or z > 0:
+    if (x > 0 and y > 0) or (y > 0 and z > 0) or (z > 0 and x > 0):
+        if x > 0 and y > 0 and z > 0:
+            print('P3')
+        else:
+            print('P2')
+    else:
+        print('P1')
+# Block-1 End
+
+# Block-2 Start
+if x < 0 or y < 0 or z < 0:
+    if (x < 0 and y < 0) or (y < 0 and z < 0) or (z < 0 and x < 0):
+        if x < 0 and y < 0 and z < 0:
+            print('N3')
+        else:
+            print('N2')
+    else:
+        print('N1')
+# Block-2 End",numerical,2
+170,27,"Consider the following snippet of code. What will be the value of **Y** in the output for the given input? 
+
+**Input:**
+```
+-1
+4
+1
+```
+
+**Output:**
+```
+PX
+NY
+```",code," x = int(input())
+y  =  int(input())
+z = int(input())
+
+ # Block-1 Start
+if x > 0 or y > 0 or z > 0:
+    if (x > 0 and y > 0) or (y > 0 and z > 0) or (z > 0 and x > 0):
+        if x > 0 and y > 0 and z > 0:
+            print('P3')
+        else:
+            print('P2')
+    else:
+        print('P1')
+# Block-1 End
+
+# Block-2 Start
+if x < 0 or y < 0 or z < 0:
+    if (x < 0 and y < 0) or (y < 0 and z < 0) or (z < 0 and x < 0):
+        if x < 0 and y < 0 and z < 0:
+            print('N3')
+        else:
+            print('N2')
+    else:
+        print('N1')
+# Block-2 End",numerical,1
+171,27,Consider the following snippet of code. When does the code given print no value?,code," x = int(input())
+y  =  int(input())
+z = int(input())
+
+ # Block-1 Start
+if x > 0 or y > 0 or z > 0:
+    if (x > 0 and y > 0) or (y > 0 and z > 0) or (z > 0 and x > 0):
+        if x > 0 and y > 0 and z > 0:
+            print('P3')
+        else:
+            print('P2')
+    else:
+        print('P1')
+# Block-1 End
+
+# Block-2 Start
+if x < 0 or y < 0 or z < 0:
+    if (x < 0 and y < 0) or (y < 0 and z < 0) or (z < 0 and x < 0):
+        if x < 0 and y < 0 and z < 0:
+            print('N3')
+        else:
+            print('N2')
+    else:
+        print('N1')
+# Block-2 End",mcq,
+172,27,"Consider the following snippet of code. Is the following statement True or False?
+
+For any combination of inputs x, y and z at least one `else` statement will be executed.",code," x = int(input())
+y  =  int(input())
+z = int(input())
+
+ # Block-1 Start
+if x > 0 or y > 0 or z > 0:
+    if (x > 0 and y > 0) or (y > 0 and z > 0) or (z > 0 and x > 0):
+        if x > 0 and y > 0 and z > 0:
+            print('P3')
+        else:
+            print('P2')
+    else:
+        print('P1')
+# Block-1 End
+
+# Block-2 Start
+if x < 0 or y < 0 or z < 0:
+    if (x < 0 and y < 0) or (y < 0 and z < 0) or (z < 0 and x < 0):
+        if x < 0 and y < 0 and z < 0:
+            print('N3')
+        else:
+            print('N2')
+    else:
+        print('N1')
+# Block-2 End",mcq,
+173,27,"Select the correct implementation of a piece of code that accepts a sentence as input and prints the number of words in it. 
+
+A sentence is just a sequence of words with a space between consecutive words. You can assume that the sentence will not have any other punctuation marks. You can also assume that the input string will have at least one word.",,,mcq,
+174,27,"Consider the following snippet of code. What should be the input to this code to get the following output?
+
+**Output:**
+```text
+Student record: 
+    Dept: ABC
+    Name: MR FNAME LNAME
+    Roll No: 999
+    Library Card No: AX999
+```",code," dept    = input()
+course   =  input()
+prefix  = input()
+name     = input()
+roll_ no = input()
+name  = prefix + "" "" + name.upper() # one space
+lib_ id = dept [0] + course[0] + roll_no
+print(""Student record:"" )
+indent =  '    ' # four spaces
+print(indent + ""Dept:"", dept)
+print(indent + ""Name:"", name)
+print(indent + ""Roll No:"", roll_no)
+print(indent + ""Library Card No:"", lib_id)",mcq,
+175,27,Consider the following snippet of code. Select all possible inputs for which this code prints `PERFECT!` as output.,code," word = input()
+match  = False
+if word.count('(') == word.count(')'):
+    if word.count('[') == word.count(']'):
+        if word.count('{') == word.count('}'): 
+            match = True
+if match :
+    print('PERFECT!')
+else:
+    print('IMPERFECT!')",mcq,
