@@ -1,10 +1,9 @@
-# Ignore Streamlit Secrets
-.streamlit/secrets.toml
-
-# Ignore Python Cache
+.streamlit/
+.idea/
 __pycache__/
 *.pyc
-
-# Ignore local virtual environments (if you use one)
 venv/
 env/
+files/
+impexpfix/
+variables.md
