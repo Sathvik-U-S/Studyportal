@@ -145,10 +145,11 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
     5. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags (NO <u>, NO <span>, NO <ul>, NO <li>).
     6. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
     7. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
-    8. MERMAID BULLETPROOF SYNTAX: Use `graph TD`. All nodes MUST be wrapped in double quotes: `A["Your Text"]`. 
-       - CRITICAL: Inside the double quotes, use ONLY plain English words and spaces. NEVER use double quotes `"`, brackets `[]`, parentheses `()` INSIDE the text. 
-       - NEVER use LaTeX, Math symbols ($$), or backslashes (\\).
-       - NEVER use semicolons `;`. Use simple arrows `-->`.
+    8. MERMAID BULLETPROOF SYNTAX: You MUST use `graph TD`. 
+       - CRITICAL: You are STRICTLY FORBIDDEN from using parentheses `()`, curly braces, single quotes `'`, or brackets `[]` ANYWHERE inside the node labels.
+       - NO MATH/CODE SYMBOLS: You cannot use `<`, `>`, `<=`, `>=`, `==`, `!=`, or `$$`. Translate them to plain English (e.g., write "x is greater than y" instead of "x > y").
+       - SHAPES: Every single node MUST be formatted as `NodeID["Plain English Text"]`. Do not use any other shape syntax.
+       - SUBGRAPHS: Format as `subgraph Title` and close with `end`. DO NOT use curly braces.
     9. JSON SAFETY: Escape internal double quotes with \\". Use \\n for newlines.
     """
 
@@ -330,19 +331,48 @@ def render_ai_tutor_response(data, ai_key):
             # 7. Mermaid Diagrams
             if data.get("mermaid_diagram") and data["mermaid_diagram"] != "N/A":
                 st.markdown("#### Visual Architecture")
+                # 1. Clean up markdown wrappers
                 raw_mermaid = data["mermaid_diagram"].replace('```mermaid', '').replace('```', '').strip()
                 clean_mermaid = raw_mermaid.replace('\xa0', ' ')
                 
-                # Strip unsupported arrow labels
+                # 2. Strip unsupported arrow labels (Kroki/Mermaid fix)
                 clean_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', clean_mermaid)
                 clean_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', clean_mermaid)
                 clean_mermaid = clean_mermaid.replace(';', '')
                 
                 final_mermaid = clean_mermaid
-                # --- BULLETPROOF MERMAID AUTO-CORRECTOR ---
+                
+                # --- SUPER BULLETPROOF AUTO-CORRECTOR ---
+                
+                # Strip LaTeX and math backslashes
                 final_mermaid = final_mermaid.replace('$$', '').replace('\\', '')
-                final_mermaid = re.sub(r'(?<!\[)"(?!\])', "'", final_mermaid)
-                final_mermaid = re.sub(r"subgraph\s+['](.*?)[']", r'subgraph "\1"', final_mermaid)
+                
+                # Replace dangerous logic symbols with English (Prevents HTML-tag errors)
+                final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
+                final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
+                final_mermaid = final_mermaid.replace('!=', ' not equal to ')
+                final_mermaid = final_mermaid.replace('==', ' equals ')
+                
+                # Safe replacement for isolated < and > (using lookahead/lookbehind to avoid breaking arrows)
+                final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
+                final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
+                
+                # Strip characters that break Mermaid's internal node structure
+                final_mermaid = final_mermaid.replace('(', '').replace(')', '')
+                final_mermaid = final_mermaid.replace('{', '').replace('}', '')
+                final_mermaid = final_mermaid.replace("'", "")
+                final_mermaid = re.sub(r'<br\s*/?>', ' ', final_mermaid, flags=re.IGNORECASE)
+
+                # Prevent "Double Quote" collision errors
+                final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
+                
+                # Fix Subgraph syntax - Handles both quoted and unquoted titles
+                final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", r"subgraph \1", final_mermaid)
+                
+                # THE SAFETY NET: Ensure every node is wrapped in double quotes
+                # This fixes "A[Some text]" into "A["Some text"]" which is much more stable
+                final_mermaid = re.sub(r'([A-Za-z0-9_]+)\[([^"\]]+)\]', r'\1["\2"]', final_mermaid)
+                final_mermaid = re.sub(r'([A-Za-z0-9_]+)\{([^"\}]+)\}', r'\1["\2"]', final_mermaid)
 
                 try:
                     compressed = zlib.compress(final_mermaid.encode('utf-8'), 9)

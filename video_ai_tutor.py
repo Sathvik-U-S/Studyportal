@@ -260,30 +260,49 @@ def render_video_notes(data, video_id):
         # 7. Mermaid Diagrams
         if data.get("mermaid_diagram") and data["mermaid_diagram"] != "N/A":
             st.markdown("#### Visual Architecture")
+            # Strip unsupported arrow labels
+            # 1. Clean up markdown wrappers
             raw_mermaid = data["mermaid_diagram"].replace('```mermaid', '').replace('```', '').strip()
             clean_mermaid = raw_mermaid.replace('\xa0', ' ')
             
-            # Strip unsupported arrow labels
+            # 2. Strip unsupported arrow labels (Kroki/Mermaid fix)
             clean_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', clean_mermaid)
             clean_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', clean_mermaid)
             clean_mermaid = clean_mermaid.replace(';', '')
-
-            #is_dark = st.session_state.get('mermaid_theme', 'Light') == "Dark"
-            #theme_directive = "%%{init: {'theme': 'dark'} }%%" if is_dark else "%%{init: {'theme': 'default'} }%%"
             
-            #final_mermaid = f"{theme_directive}\n{clean_mermaid}"
             final_mermaid = clean_mermaid
-            # --- BULLETPROOF MERMAID AUTO-CORRECTOR ---
-            # 1. Strip LaTeX math delimiters and backslashes that crash Kroki
+            
+            # --- SUPER BULLETPROOF AUTO-CORRECTOR ---
+            
+            # Strip LaTeX and math backslashes
             final_mermaid = final_mermaid.replace('$$', '').replace('\\', '')
             
-            # 2. Fix rogue double quotes (Turns inner " into ' to prevent node crashes)
-            final_mermaid = re.sub(r'(?<!\[)"(?!\])', "'", final_mermaid)
+            # Replace dangerous logic symbols with English (Prevents HTML-tag errors)
+            final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
+            final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
+            final_mermaid = final_mermaid.replace('!=', ' not equal to ')
+            final_mermaid = final_mermaid.replace('==', ' equals ')
             
-            # 3. FIX FOR BROKEN SUBGRAPHS (The Video Fix)
-            # Mermaid completely fails if subgraphs use single quotes for titles with spaces. 
-            # The line below forces any single-quoted subgraphs back into valid double-quoted subgraphs.
-            final_mermaid = re.sub(r"subgraph\s+['](.*?)[']", r'subgraph "\1"', final_mermaid)
+            # Safe replacement for isolated < and > (using lookahead/lookbehind to avoid breaking arrows)
+            final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
+            final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
+            
+            # Strip characters that break Mermaid's internal node structure
+            final_mermaid = final_mermaid.replace('(', '').replace(')', '')
+            final_mermaid = final_mermaid.replace('{', '').replace('}', '')
+            final_mermaid = final_mermaid.replace("'", "")
+            final_mermaid = re.sub(r'<br\s*/?>', ' ', final_mermaid, flags=re.IGNORECASE)
+
+            # Prevent "Double Quote" collision errors
+            final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
+            
+            # Fix Subgraph syntax - Handles both quoted and unquoted titles
+            final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", r"subgraph \1", final_mermaid)
+            
+            # THE SAFETY NET: Ensure every node is wrapped in double quotes
+            # This fixes "A[Some text]" into "A["Some text"]" which is much more stable
+            final_mermaid = re.sub(r'([A-Za-z0-9_]+)\[([^"\]]+)\]', r'\1["\2"]', final_mermaid)
+            final_mermaid = re.sub(r'([A-Za-z0-9_]+)\{([^"\}]+)\}', r'\1["\2"]', final_mermaid)
 
             try:
                 compressed = zlib.compress(final_mermaid.encode('utf-8'), 9)
