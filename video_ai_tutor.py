@@ -21,17 +21,24 @@ def extract_youtube_id(url):
     return None
 
 def fetch_transcript(video_url):
+    """Silently fetches the video transcript. This data is NEVER returned to the UI."""
     video_id = extract_youtube_id(video_url)
     if not video_id:
         return "Error: Invalid YouTube URL."
     
     try:
-        # THE FIX: Use the static method get_transcript instead of ytt_api.fetch()
-        # This is guaranteed to return a list of dictionaries: [{'text': '...', ...}]
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+        # 1. Initialize the new API object
+        ytt_api = YouTubeTranscriptApi()
         
-        # Now dictionary brackets ['text'] will work perfectly!
-        full_text = " ".join([entry['text'] for entry in transcript_list])
+        # 2. Fetch the transcript object
+        transcript = ytt_api.fetch(video_id)
+        
+        # 3. Convert it safely to a list of dictionaries
+        raw_data = transcript.to_raw_data()
+        
+        # 4. Extract the text perfectly
+        full_text = " ".join([entry['text'] for entry in raw_data])
+        
         return full_text
     except Exception as e:
         return f"Error fetching transcript: {str(e)}"
