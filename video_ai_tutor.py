@@ -7,14 +7,6 @@ import streamlit as st # type: ignore
 import base64
 import zlib
 import streamlit.components.v1 as components # type: ignore
-#❌ Labels were written after the arrow instead of inside it.
-
-#❌ The vertical bars | label | were separated from the arrow syntax.
-
-#Mermaid only recognizes labels in the form:
-
-#A -->|Label Text| B
-# --- IMPORT MISSING CACHE FUNCTIONS ---
 
 from cache_manager import save_video_cache, delete_video_cache
 
@@ -29,17 +21,16 @@ def extract_youtube_id(url):
     return None
 
 def fetch_transcript(video_url):
-    """Silently fetches the video transcript. This data is NEVER returned to the UI."""
     video_id = extract_youtube_id(video_url)
     if not video_id:
         return "Error: Invalid YouTube URL."
     
     try:
-        # --- NEW SYNTAX FOR LATEST API VERSION ---
-        ytt_api = YouTubeTranscriptApi()
-        transcript_list = ytt_api.fetch(video_id)
-        # Join the text chunks into one massive string
-        # THE FIX: Use object dot notation (.text) instead of dictionary brackets (['text'])
+        # THE FIX: Use the static method get_transcript instead of ytt_api.fetch()
+        # This is guaranteed to return a list of dictionaries: [{'text': '...', ...}]
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+        
+        # Now dictionary brackets ['text'] will work perfectly!
         full_text = " ".join([entry['text'] for entry in transcript_list])
         return full_text
     except Exception as e:
