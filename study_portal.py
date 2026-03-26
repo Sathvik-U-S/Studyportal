@@ -12,9 +12,6 @@ from database import *
 from cache_manager import *
 from mcq_ai_tutor import *
 
-CACHE_FILE = "ai_cache.json"
-VIDEO_CACHE_FILE = "video_notes_cache.json"
-
 # ==========================================
 # 0. GLOBAL SECURITY LOCK
 # ==========================================
@@ -22,7 +19,7 @@ if 'global_auth' not in st.session_state:
     st.session_state.global_auth = False
 
 if not st.session_state.global_auth:
-    st.markdown("<h2 style='text-align: center;'>🔒 Private Portal</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center;'>Private Portal</h2>", unsafe_allow_html=True)
     with st.form("global_login_form"):
         pwd = st.text_input("Enter Access Key", type="password")
         if st.form_submit_button("Unlock", use_container_width=True):
@@ -32,9 +29,6 @@ if not st.session_state.global_auth:
             else:
                 st.error("Access Denied.")
     st.stop() # This prevents the rest of the app from loading!
-
-# ... (The rest of your navigation and app mode logic goes here) ...
-
 
 # ==========================================
 # 1. CONFIGURATION & STYLING
@@ -438,7 +432,7 @@ elif app_mode == "Edit Content":
         st.session_state.admin_auth = False
         st.rerun()
 
-    tab_edit_q, tab_edit_v, tab_edit_hier = st.tabs(["Edit Questions", "Edit Week Videos", "Edit Hierarchy"])
+    tab_edit_q, tab_edit_v, tab_edit_hier, tab_health, tab_sql  = st.tabs(["Edit Questions", "Edit Week Videos", "Edit Hierarchy", "Content Health", "Custom SQL"])
 
     # ==========================================
     # TAB 1: EDIT QUESTIONS
@@ -749,6 +743,67 @@ elif app_mode == "Edit Content":
                         st.warning("Add a week to this subject first.")
                 else:
                     st.warning("Add a subject first.")
+    
+    # ==========================================
+    # TOOL 4: Content Health Inspector (NEW)
+    # ==========================================
+    with tab_health:
+        st.markdown("##### Content Health Inspector")
+        st.info("This visual tool scans your database for potential data entry errors or incomplete questions.")
+        
+        # Audit 1: MCQs with 0 options
+        st.markdown("**Potential Orphaned Questions (No Options)**")
+        orphans = fetch_data("""
+            SELECT q.id, q.heading, a.name as assessment 
+            FROM questions q 
+            JOIN assessments a ON q.assessment_id = a.id
+            WHERE q.q_type IS NULL OR q.q_type != 'numerical'
+            AND q.id NOT IN (SELECT DISTINCT question_id FROM options)
+        """)
+        if orphans:
+            st.error(f"Found {len(orphans)} Multiple Choice questions with NO options!")
+            st.dataframe(pd.DataFrame(orphans), use_container_width=True, hide_index=True)
+        else:
+            st.success("All MCQ questions have at least one option. Looking good!")
+
+        # Audit 2: MCQs with NO correct answer marked
+        st.markdown("**Unsolvable Questions (No Correct Option)**")
+        unsolvable = fetch_data("""
+            SELECT q.id, q.heading
+            FROM questions q
+            WHERE (q.q_type IS NULL OR q.q_type != 'numerical')
+            AND q.id NOT IN (SELECT DISTINCT question_id FROM options WHERE is_correct = TRUE)
+        """)
+        if unsolvable:
+            st.warning(f"Found {len(unsolvable)} questions where NO option is marked as 'is_correct=True'.")
+            st.dataframe(pd.DataFrame(unsolvable), use_container_width=True, hide_index=True)
+        else:
+            st.success("All MCQ questions have a correct answer marked. Looking good!")
+
+    # ==========================================
+    # TOOL 7: Custom SQL Executor
+    # ==========================================
+    with tab_sql:
+        st.markdown("#### Run Custom SQL")
+        query = st.text_area("Enter SQL Query", height="content", placeholder="SELECT * FROM questions WHERE id = 1;")
+        if st.button("Execute Query", type="primary"):
+            if query.strip() == "":
+                st.error("Please enter a query.")
+            elif query.strip().upper().startswith("SELECT"):
+                try:
+                    res = fetch_data(query)
+                    if res:
+                        st.dataframe(res, use_container_width=True)
+                        st.success(f"Returned {len(res)} rows.")
+                    else:
+                        st.info("Query returned no results.")
+                except Exception as e:
+                    st.error(f"SQL Error: {e}")
+            else:
+                if execute_query(query):
+                    st.success("Query executed and committed successfully.")
+                else:
+                    st.error("Failed to execute query. Check syntax and constraints.")
 
 # ------------------------------------------
 # VIEW DATABASE (Protected Admin Area)
@@ -791,18 +846,15 @@ elif app_mode == "View Database":
 
     # ---------------- DATABASE TOOLS TABS ----------------
     tabs = st.tabs([
-        "Explorer", 
-        "Visual Dashboard",
-        "Media Explorer",
-        "Content Health",
-        "Global Search", 
+        "Explorer",
         "Table Browser", 
-        "Custom SQL", 
+        "Global Search",
+        "Visual Dashboard",                
         "Schema Viewer", 
         "DB Stats", 
         "Export Hub"
     ])
-    tab_hier, tab_viz, tab_media, tab_health, tab_search, tab_browse, tab_sql, tab_schema, tab_stats, tab_export = tabs
+    tab_hier, tab_browse, tab_search, tab_viz, tab_schema, tab_stats, tab_export = tabs
     
     # ==========================================
     # TOOL 1: Hierarchy Explorer (With Option Drill-down)
@@ -940,12 +992,6 @@ elif app_mode == "View Database":
             # Scatter chart shows density of question complexity over the weeks
             st.scatter_chart(df_scatter, x="Week", y="Options Count", color="#ff0055", size=50)
 
-    # ==========================================
-    # TOOL 3: Media & Code Explorer (NEW)
-    # ==========================================
-    with tab_media:
-        st.markdown("##### Media & Code Usage")
-        
         m_col1, m_col2 = st.columns(2)
         
         with m_col1:
@@ -960,41 +1006,7 @@ elif app_mode == "View Database":
             if o_media:
                 st.bar_chart(pd.DataFrame(o_media).set_index("media"), color="#82ca9d")
 
-    # ==========================================
-    # TOOL 4: Content Health Inspector (NEW)
-    # ==========================================
-    with tab_health:
-        st.markdown("##### Content Health Inspector")
-        st.info("This visual tool scans your database for potential data entry errors or incomplete questions.")
-        
-        # Audit 1: MCQs with 0 options
-        st.markdown("**Potential Orphaned Questions (No Options)**")
-        orphans = fetch_data("""
-            SELECT q.id, q.heading, a.name as assessment 
-            FROM questions q 
-            JOIN assessments a ON q.assessment_id = a.id
-            WHERE q.q_type IS NULL OR q.q_type != 'numerical'
-            AND q.id NOT IN (SELECT DISTINCT question_id FROM options)
-        """)
-        if orphans:
-            st.error(f"Found {len(orphans)} Multiple Choice questions with NO options!")
-            st.dataframe(pd.DataFrame(orphans), use_container_width=True, hide_index=True)
-        else:
-            st.success("All MCQ questions have at least one option. Looking good!")
 
-        # Audit 2: MCQs with NO correct answer marked
-        st.markdown("**Unsolvable Questions (No Correct Option)**")
-        unsolvable = fetch_data("""
-            SELECT q.id, q.heading
-            FROM questions q
-            WHERE (q.q_type IS NULL OR q.q_type != 'numerical')
-            AND q.id NOT IN (SELECT DISTINCT question_id FROM options WHERE is_correct = TRUE)
-        """)
-        if unsolvable:
-            st.warning(f"Found {len(unsolvable)} questions where NO option is marked as 'is_correct=True'.")
-            st.dataframe(pd.DataFrame(unsolvable), use_container_width=True, hide_index=True)
-        else:
-            st.success("All MCQ questions have a correct answer marked. Looking good!")
 
     # ==========================================
     # TOOL 5: Global Keyword Search
@@ -1032,30 +1044,7 @@ elif app_mode == "View Database":
                 else:
                     st.info(f"The `{selected_table}` table is currently empty.")
 
-    # ==========================================
-    # TOOL 7: Custom SQL Executor
-    # ==========================================
-    with tab_sql:
-        st.markdown("#### Run Custom SQL")
-        query = st.text_area("Enter SQL Query", height="content", placeholder="SELECT * FROM questions WHERE id = 1;")
-        if st.button("Execute Query", type="primary"):
-            if query.strip() == "":
-                st.error("Please enter a query.")
-            elif query.strip().upper().startswith("SELECT"):
-                try:
-                    res = fetch_data(query)
-                    if res:
-                        st.dataframe(res, use_container_width=True)
-                        st.success(f"Returned {len(res)} rows.")
-                    else:
-                        st.info("Query returned no results.")
-                except Exception as e:
-                    st.error(f"SQL Error: {e}")
-            else:
-                if execute_query(query):
-                    st.success("Query executed and committed successfully.")
-                else:
-                    st.error("Failed to execute query. Check syntax and constraints.")
+    
 
     # ==========================================
     # TOOL 8: Schema Viewer
