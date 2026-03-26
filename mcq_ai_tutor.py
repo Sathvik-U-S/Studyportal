@@ -333,20 +333,22 @@ def render_ai_tutor_response(data, ai_key):
                 st.markdown("#### Visual Architecture")
                 # 1. Clean up markdown wrappers
                 # 1. Clean up markdown wrappers and invisible characters
+                # 1. Clean up markdown wrappers and invisible characters
+            # 1. Clean up markdown wrappers and invisible characters
                 raw_mermaid = data["mermaid_diagram"].replace('```mermaid', '').replace('```', '').strip()
                 clean_mermaid = raw_mermaid.replace('\xa0', ' ').replace(';', '')
                 
-                # 2. Strip unsupported arrow labels (Kroki fix)
+                # 2. Strip unsupported arrow labels (Kroki/Mermaid fix)
                 clean_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', clean_mermaid)
                 clean_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', clean_mermaid)
                 
                 final_mermaid = clean_mermaid
                 
                 # --- THE UNIVERSAL MASTER CLEANER ---
-                # Remove LaTeX and math backslashes
+                # Remove LaTeX and math backslashes (Crucial for MATHS 2 / MLF)
                 final_mermaid = final_mermaid.replace('$$', '').replace('\\', '')
                 
-                # Translate dangerous symbols to English (Prevents HTML-tag errors in MLF/Maths)
+                # Translate dangerous symbols to English (Prevents HTML-tag errors)
                 final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
                 final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
                 final_mermaid = final_mermaid.replace('!=', ' not equal to ')
@@ -356,14 +358,17 @@ def render_ai_tutor_response(data, ai_key):
                 final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
                 final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
                 
-                # Strip structural characters that break internal labels (JAVA/Python code fix)
-                final_mermaid = final_mermaid.replace('(', '').replace(')', '').replace("'", "")
-                final_mermaid = final_mermaid.replace('{', '').replace('}', '').replace('<br>', ' ')
+                # Strip single quotes and HTML breaks
+                final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
 
-                # Force all double quotes out EXCEPT those at the very start/end of a label
+                # THE SAFETY NET: Convert Diamond {}, Round (), and Square [] nodes into ID["Text"]
+                # This makes every node type 100% stable
+                final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"\}\]\)]+)"?[\}\)\]]', r'\1["\2"]', final_mermaid)
+                
+                # Force all rogue internal double quotes out
                 final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
                 
-                # Fix Subgraph syntax - handles all your subject architectures
+                # Fix Subgraph syntax
                 final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", r"subgraph \1", final_mermaid)
                 
                 # THE SAFETY NET: Ensure every node (Diamond, Square, Round) is forced to ID["Text"] safely
