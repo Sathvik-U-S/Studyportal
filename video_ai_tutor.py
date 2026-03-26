@@ -40,7 +40,7 @@ def fetch_transcript(video_url):
         transcript_list = ytt_api.fetch(video_id)
         # Join the text chunks into one massive string
         # THE FIX: Use object dot notation (.text) instead of dictionary brackets (['text'])
-        full_text = " ".join([entry.text for entry in transcript_list])
+        full_text = " ".join([entry['text'] for entry in transcript_list])
         return full_text
     except Exception as e:
         return f"Error fetching transcript: {str(e)}"
@@ -262,47 +262,44 @@ def render_video_notes(data, video_id):
             st.markdown("#### Visual Architecture")
             # Strip unsupported arrow labels
             # 1. Clean up markdown wrappers
+            # 1. Clean up markdown wrappers and invisible characters
             raw_mermaid = data["mermaid_diagram"].replace('```mermaid', '').replace('```', '').strip()
-            clean_mermaid = raw_mermaid.replace('\xa0', ' ')
+            clean_mermaid = raw_mermaid.replace('\xa0', ' ').replace(';', '')
             
-            # 2. Strip unsupported arrow labels (Kroki/Mermaid fix)
+            # 2. Strip unsupported arrow labels (Kroki fix)
             clean_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', clean_mermaid)
             clean_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', clean_mermaid)
-            clean_mermaid = clean_mermaid.replace(';', '')
             
             final_mermaid = clean_mermaid
             
-            # --- SUPER BULLETPROOF AUTO-CORRECTOR ---
-            
-            # Strip LaTeX and math backslashes
+            # --- THE UNIVERSAL MASTER CLEANER ---
+            # Remove LaTeX and math backslashes
             final_mermaid = final_mermaid.replace('$$', '').replace('\\', '')
             
-            # Replace dangerous logic symbols with English (Prevents HTML-tag errors)
+            # Translate dangerous symbols to English (Prevents HTML-tag errors in MLF/Maths)
             final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
             final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
             final_mermaid = final_mermaid.replace('!=', ' not equal to ')
             final_mermaid = final_mermaid.replace('==', ' equals ')
             
-            # Safe replacement for isolated < and > (using lookahead/lookbehind to avoid breaking arrows)
+            # Safe replacement for isolated < and >
             final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
             final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
             
-            # Strip characters that break Mermaid's internal node structure
-            final_mermaid = final_mermaid.replace('(', '').replace(')', '')
-            final_mermaid = final_mermaid.replace('{', '').replace('}', '')
-            final_mermaid = final_mermaid.replace("'", "")
-            final_mermaid = re.sub(r'<br\s*/?>', ' ', final_mermaid, flags=re.IGNORECASE)
+            # Strip structural characters that break internal labels (JAVA/Python code fix)
+            final_mermaid = final_mermaid.replace('(', '').replace(')', '').replace("'", "")
+            final_mermaid = final_mermaid.replace('{', '').replace('}', '').replace('<br>', ' ')
 
-            # Prevent "Double Quote" collision errors
+            # Force all double quotes out EXCEPT those at the very start/end of a label
             final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
             
-            # Fix Subgraph syntax - Handles both quoted and unquoted titles
+            # Fix Subgraph syntax - handles all your subject architectures
             final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", r"subgraph \1", final_mermaid)
             
-            # THE SAFETY NET: Ensure every node is wrapped in double quotes
-            # This fixes "A[Some text]" into "A["Some text"]" which is much more stable
-            final_mermaid = re.sub(r'([A-Za-z0-9_]+)\[([^"\]]+)\]', r'\1["\2"]', final_mermaid)
-            final_mermaid = re.sub(r'([A-Za-z0-9_]+)\{([^"\}]+)\}', r'\1["\2"]', final_mermaid)
+            # THE SAFETY NET: Ensure every node (Diamond, Square, Round) is forced to ID["Text"] safely
+            final_mermaid = re.sub(r'([A-Za-z0-9_]+)\["?([^"\]]+)"?\]', r'\1["\2"]', final_mermaid)
+            final_mermaid = re.sub(r'([A-Za-z0-9_]+)\{"?([^"\}]+)"?\}', r'\1["\2"]', final_mermaid)
+            final_mermaid = re.sub(r'([A-Za-z0-9_]+)\("?([^"\)]+)"?\)', r'\1["\2"]', final_mermaid)
 
             try:
                 compressed = zlib.compress(final_mermaid.encode('utf-8'), 9)
