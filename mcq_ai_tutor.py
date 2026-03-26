@@ -7,6 +7,7 @@ import base64
 import zlib
 import streamlit.components.v1 as components # type: ignore
 from cache_manager import save_ai_cache, delete_ai_cache
+import mimetypes
 
 def detect_language(code_str):
     """A heuristic text classifier to auto-detect the programming language for syntax highlighting."""
@@ -113,7 +114,25 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
         elif media_type == 'text':
             media_context = f"\nContextual Text:\n{media_content}\n"
         elif media_type == 'image':
-            media_context = f"\n[The question refers to an image named {media_content}.]\n"
+            media_context = f"\n[Please physically analyze the attached image to answer this question.]\n"
+            # Find the physical image file
+            img_path = f"pic/{media_content}" if not media_content.startswith("pic/") else media_content
+            if os.path.exists(img_path):
+                # 1. Figure out if it is a png, jpeg, etc.
+                mime_type, _ = mimetypes.guess_type(img_path)
+                if not mime_type: mime_type = "image/png"
+                # 2. Read the image and convert it to Base64
+                with open(img_path, "rb") as f:
+                    encoded_img = base64.b64encode(f.read()).decode('utf-8')
+                # 3. Create the specific JSON structure Gemini requires for images
+                image_part = {
+                    "inlineData": {
+                        "mimeType": mime_type,
+                        "data": encoded_img
+                    }
+                }
+            else:
+                media_context += f"\n[Warning: The image file {media_content} was missing from the server.]\n"
 
     sub_l = subject.strip().lower() if subject else ""
     SUBJECT_GUIDANCE = {
@@ -152,9 +171,14 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
        - SUBGRAPHS: Format as `subgraph Title` and close with `end`. DO NOT use curly braces.
     9. JSON SAFETY: Escape internal double quotes with \\". Use \\n for newlines.
     """
-
+    # Build the parts list dynamically. Always include the text prompt.
+    api_parts = [{"text": prompt_text}]
+    
+    # If we successfully loaded and encoded an image, attach it to the API request!
+    if image_part:
+        api_parts.append(image_part)
     payload = {
-        "contents": [{"parts": [{"text": prompt_text}]}],
+        "contents": [{"parts": api_parts}],
         "generationConfig": { 
             "responseMimeType": "application/json",
             "responseSchema": {
