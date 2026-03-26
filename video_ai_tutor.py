@@ -90,7 +90,11 @@ def ask_video_ai(subject, video_url, api_keys):
     10. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags (NO <u>, NO <span>, NO <ul>, NO <li>).
     11. CONDITIONAL RELEVANCE: If a section is irrelevant to the video, output EXACTLY "N/A".
     12. MATH & EXECUTION TRACES: Use well-formatted Markdown Tables for traces. Use LaTeX delimiters (`$` for inline, `$$` for block) for mathematical proofs. 
-    13. MERMAID BULLETPROOF SYNTAX: Use `graph TD`. All nodes MUST be wrapped in double quotes: `A["Your Text"]`. Inside quotes, use ONLY plain English words and spaces. NEVER use LaTeX, Math symbols ($$), brackets `[]`, parentheses `()`, or backslashes. NEVER use semicolons. Use simple arrows `-->`. Use `| label|` for edge labels, but keep them extremely concise (1-3 words). Mermaid diagrams are often very long, so the fewer characters you use, the better.
+    8. MERMAID BULLETPROOF SYNTAX: You MUST use `graph TD`. 
+       - CRITICAL: You are STRICTLY FORBIDDEN from using parentheses `()`, curly braces, single quotes `'`, or brackets `[]` ANYWHERE inside the node labels.
+       - NO MATH/CODE SYMBOLS: You cannot use `<`, `>`, `<=`, `>=`, `==`, `!=`, or `$$`. Translate them to plain English (e.g., write "x is greater than y" instead of "x > y").
+       - SHAPES: Every single node MUST be formatted as `NodeID["Plain English Text"]`. Do not use any other shape syntax.
+       - SUBGRAPHS: Format as `subgraph Title` and close with `end`. DO NOT use curly braces.
     14. JSON SAFETY: Escape internal double quotes with \\". Use \\n for newlines.
     """
 
@@ -274,9 +278,11 @@ def render_video_notes(data, video_id):
             
             # --- THE UNIVERSAL MASTER CLEANER ---
             # Remove LaTeX and math backslashes (Crucial for MATHS 2 / MLF)
+            # --- THE UNIVERSAL MASTER CLEANER (V3 - MATH FIX) ---
+            # Remove LaTeX and math backslashes
             final_mermaid = final_mermaid.replace('$$', '').replace('\\', '')
             
-            # Translate dangerous symbols to English (Prevents HTML-tag errors)
+            # Translate dangerous symbols to English
             final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
             final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
             final_mermaid = final_mermaid.replace('!=', ' not equal to ')
@@ -289,14 +295,15 @@ def render_video_notes(data, video_id):
             # Strip single quotes and HTML breaks
             final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
 
-            # THE SAFETY NET: Convert Diamond {}, Round (), and Square [] nodes into ID["Text"]
-            # This makes every node type 100% stable
-            final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"\}\]\)]+)"?[\}\)\]]', r'\1["\2"]', final_mermaid)
-            
-            # Force all rogue internal double quotes out
+            # 1. THE QUOTE STRIPPER: Runs FIRST to clear out rogue internal quotes.
+            # Safely turns A{"Text"} into A{Text} so the Safety Net can process it cleanly.
             final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
             
-            # Fix Subgraph syntax
+            # 2. THE SAFETY NET: Convert Diamond {}, Round (), and Square [] nodes into ID["Text"]
+            # The new lookahead (?=\s*[-=\.%]|\s*$|\s*\n) guarantees it won't aggressively chop internal parentheses like (A*)
+            final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
+            
+            # 3. Fix Subgraph syntax
             final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", r"subgraph \1", final_mermaid)
 
             try:

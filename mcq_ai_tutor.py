@@ -370,9 +370,11 @@ def render_ai_tutor_response(data, ai_key):
                 
                 # --- THE UNIVERSAL MASTER CLEANER ---
                 # Remove LaTeX and math backslashes (Crucial for MATHS 2 / MLF)
+                # --- THE UNIVERSAL MASTER CLEANER (V3 - MATH FIX) ---
+                # Remove LaTeX and math backslashes
                 final_mermaid = final_mermaid.replace('$$', '').replace('\\', '')
                 
-                # Translate dangerous symbols to English (Prevents HTML-tag errors)
+                # Translate dangerous symbols to English
                 final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
                 final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
                 final_mermaid = final_mermaid.replace('!=', ' not equal to ')
@@ -385,20 +387,16 @@ def render_ai_tutor_response(data, ai_key):
                 # Strip single quotes and HTML breaks
                 final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
 
-                # THE SAFETY NET: Convert Diamond {}, Round (), and Square [] nodes into ID["Text"]
-                # This makes every node type 100% stable
-                final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"\}\]\)]+)"?[\}\)\]]', r'\1["\2"]', final_mermaid)
-                
-                # Force all rogue internal double quotes out
+                # 1. THE QUOTE STRIPPER: Runs FIRST to clear out rogue internal quotes.
+                # Safely turns A{"Text"} into A{Text} so the Safety Net can process it cleanly.
                 final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
                 
-                # Fix Subgraph syntax
-                final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", r"subgraph \1", final_mermaid)
+                # 2. THE SAFETY NET: Convert Diamond {}, Round (), and Square [] nodes into ID["Text"]
+                # The new lookahead (?=\s*[-=\.%]|\s*$|\s*\n) guarantees it won't aggressively chop internal parentheses like (A*)
+                final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
                 
-                # THE SAFETY NET: Ensure every node (Diamond, Square, Round) is forced to ID["Text"] safely
-                final_mermaid = re.sub(r'([A-Za-z0-9_]+)\["?([^"\]]+)"?\]', r'\1["\2"]', final_mermaid)
-                final_mermaid = re.sub(r'([A-Za-z0-9_]+)\{"?([^"\}]+)"?\}', r'\1["\2"]', final_mermaid)
-                final_mermaid = re.sub(r'([A-Za-z0-9_]+)\("?([^"\)]+)"?\)', r'\1["\2"]', final_mermaid)
+                # 3. Fix Subgraph syntax
+                final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", r"subgraph \1", final_mermaid)
 
                 try:
                     compressed = zlib.compress(final_mermaid.encode('utf-8'), 9)
