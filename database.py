@@ -1,16 +1,27 @@
-import psycopg2 # type: ignore
-from psycopg2.extras import RealDictCursor # type: ignore
-import streamlit as st # type: ignore
-import streamlit.components.v1 as components # type: ignore
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import streamlit as st
+import streamlit.components.v1 as components
+
 # ==========================================
 # 2. DATABASE & UTILS
 # ==========================================
-DB_HOST = "localhost"; DB_NAME = "postgres"; DB_USER = "postgres"; DB_PASS = "123456"
 
 @st.cache_resource
 def get_db_connection():
-    try: return psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASS)
-    except Exception as e: st.error(f"DB Error: {e}"); return None
+    # Force it to use the Secret URL
+    db_url = st.secrets.get("DATABASE_URL")
+    
+    if not db_url:
+        st.error("Missing DATABASE_URL in Streamlit Secrets!")
+        return None
+        
+    try: 
+        return psycopg2.connect(db_url)
+    except Exception as e: 
+        st.error(f"Neon Connection Error: {e}")
+        return None
+
 
 def fetch_data(query, params=None):
     conn = get_db_connection()
