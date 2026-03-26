@@ -15,7 +15,25 @@ from mcq_ai_tutor import *
 CACHE_FILE = "ai_cache.json"
 VIDEO_CACHE_FILE = "video_notes_cache.json"
 
+# ==========================================
+# 0. GLOBAL SECURITY LOCK
+# ==========================================
+if 'global_auth' not in st.session_state:
+    st.session_state.global_auth = False
 
+if not st.session_state.global_auth:
+    st.markdown("<h2 style='text-align: center;'>🔒 Private Portal</h2>", unsafe_allow_html=True)
+    with st.form("global_login_form"):
+        pwd = st.text_input("Enter Access Key", type="password")
+        if st.form_submit_button("Unlock", use_container_width=True):
+            if pwd == st.secrets.get("APP_PASSWORD", "fallback_local_password"):
+                st.session_state.global_auth = True
+                st.rerun()
+            else:
+                st.error("Access Denied.")
+    st.stop() # This prevents the rest of the app from loading!
+
+# ... (The rest of your navigation and app mode logic goes here) ...
 
 
 # ==========================================
