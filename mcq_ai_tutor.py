@@ -101,13 +101,17 @@ def check_numerical_answer(user_val, correct_key):
     except: return False
 
 def ask_ai_tutor(subject, question, media_type, media_content, all_options, correct_answer, retry_count=0):
-    # Fetch the list of API keys from secrets.toml (falls back to single key if list not found)
+    # Fetch the list of API keys from secrets.toml
     if "GEMINI_KEYS" in st.secrets:
         api_keys = st.secrets["GEMINI_KEYS"]
     else:
         api_keys = [st.secrets.get("GEMINI_KEY")]
         
+    # --- THESE TWO LINES MUST BE OUTSIDE THE IF BLOCK ---
     media_context = ""
+    image_part = None 
+    # ----------------------------------------------------
+
     if media_content:
         if media_type == 'code':
             media_context = f"\nCode Provided:\n```\n{media_content}\n```\n"
@@ -115,16 +119,18 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
             media_context = f"\nContextual Text:\n{media_content}\n"
         elif media_type == 'image':
             media_context = f"\n[Please physically analyze the attached image to answer this question.]\n"
+            
             # Find the physical image file
             img_path = f"pic/{media_content}" if not media_content.startswith("pic/") else media_content
+            
             if os.path.exists(img_path):
-                # 1. Figure out if it is a png, jpeg, etc.
+                import mimetypes # Ensure this is imported!
                 mime_type, _ = mimetypes.guess_type(img_path)
                 if not mime_type: mime_type = "image/png"
-                # 2. Read the image and convert it to Base64
+                
                 with open(img_path, "rb") as f:
                     encoded_img = base64.b64encode(f.read()).decode('utf-8')
-                # 3. Create the specific JSON structure Gemini requires for images
+                
                 image_part = {
                     "inlineData": {
                         "mimeType": mime_type,
@@ -133,6 +139,9 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
                 }
             else:
                 media_context += f"\n[Warning: The image file {media_content} was missing from the server.]\n"
+
+    # ... (The rest of your SUBJECT_GUIDANCE code goes here) ...
+
 
     sub_l = subject.strip().lower() if subject else ""
     SUBJECT_GUIDANCE = {
