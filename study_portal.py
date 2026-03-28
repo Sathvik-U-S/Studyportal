@@ -17,6 +17,7 @@ from streamlit_google_auth import Authenticate # <-- NEW IMPORT
 # ==========================================
 # 0. GOOGLE AUTH GATEKEEPER & ROLE SETUP
 # ==========================================
+json_path = 'google_credentials.json'
 if "GOOGLE_CREDENTIALS_JSON" in st.secrets:
     try:
         with open(json_path, "w") as f:
