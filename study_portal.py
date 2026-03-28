@@ -104,7 +104,7 @@ if app_mode == "Take Assessment":
     
     for i, q in enumerate(questions):
         with st.container(border=True):
-            st.markdown(f"##### Q{i+1}. {q['heading']}")    
+            st.markdown(f"Q{i+1}. {q['heading']}")    
             render_content(q['media_type'], q['media_content'])
             
             # --- NUMERICAL LOGIC ---
@@ -255,7 +255,7 @@ elif app_mode == "Take Test":
         q, opts = st.session_state.test_data[st.session_state.curr_idx]
         total = len(st.session_state.test_data)
         
-        st.markdown(f"##### Q{st.session_state.curr_idx + 1}. {q['heading']}")
+        st.markdown(f"Q{st.session_state.curr_idx + 1}. {q['heading']}")
         render_content(q['media_type'], q['media_content'])
         
         st.markdown("<br>", unsafe_allow_html=True)
