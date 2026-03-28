@@ -178,14 +178,21 @@ if app_mode == "Take Assessment":
                         else:
                             if st.button(f"Ask AI Tutor for Q{i+1}", key=f"ai_btn_{q['id']}", width="stretch", type="secondary"):
                                 with st.spinner("Consulting AI Tutor..."):
-                                    # The restored logic is now in the correct place!
-                                    opt_texts = [o['option_text'] or "Media Content" for o in options]
+                                    # Identify images in options and wrap them in a tag for the AI payload
+                                    opt_texts = []
+                                    for o in options:
+                                        if o['media_type'] == 'image' and o['media_content']:
+                                            opt_texts.append(f"[IMAGE: {o['media_content']}]")
+                                        else:
+                                            opt_texts.append(o['option_text'] or o['media_content'] or "No Content")
+
                                     if is_multi:
                                         u_choice = [opt_texts[idx] for idx in sel_idxs]
-                                        c_ans = [o['option_text'] for o in options if o['is_correct']]
+                                        c_ans = [opt_texts[i] for i, o in enumerate(options) if o['is_correct']]
                                     else:
                                         u_choice = opt_texts[int(choice) - 1] if choice else "No Answer"
-                                        c_ans = next((o['option_text'] for o in options if o['is_correct']), "Unknown")
+                                        c_ans_list = [opt_texts[i] for i, o in enumerate(options) if o['is_correct']]
+                                        c_ans = c_ans_list[0] if c_ans_list else "Unknown"
                                     
                                     explanation = ask_ai_tutor(s_sel, q['heading'], q['media_type'], q['media_content'], opt_texts, c_ans)
                                     save_ai_cache(ai_key, explanation) 

@@ -55,25 +55,29 @@ def render_content(media_type, content):
                 st.code(block.strip(), language=lang, line_numbers=True)
                 
     elif media_type == 'image':
-        img_path = f"pic/{content}" if not content.startswith("pic/") else content
-        if os.path.exists(img_path): st.image(img_path)
-        else: st.warning(f"Image not found: {img_path}")
+        # --- MULTIPLE IMAGE RENDERING LOGIC ---
+        raw_media = str(content).replace('\\uE000', 'uE000').replace('\ue000', 'uE000')
+        image_filenames = [img.strip() for img in raw_media.split('uE000') if img.strip()]
+        for img_name in image_filenames:
+            img_path = f"pic/{img_name}" if not img_name.startswith("pic/") else img_name
+            if os.path.exists(img_path): st.image(img_path)
+            else: st.warning(f"Image not found: {img_path}")
     else: 
         st.markdown(content)
 
 def render_option_card(label, content, media_type, status=None):
     """Renders an option. If a status is provided, it changes color to success or error."""
-    #st.markdown(f'<span class="option-label">{label}</span>', unsafe_allow_html=True)
-    
     if media_type == 'image':
-        img_path = f"pic/{content}" if not content.startswith("pic/") else content
-        if os.path.exists(img_path): 
-            # Add a colored label above the image if selected
-            if status == 'correct': st.success("✅ Selected Image is Correct")
-            elif status == 'incorrect': st.error("❌ Selected Image is Incorrect")
-            st.image(img_path)
-        else: 
-            st.warning(f"Image missing: {img_path}")
+        raw_media = str(content).replace('\\uE000', 'uE000').replace('\ue000', 'uE000')
+        image_filenames = [img.strip() for img in raw_media.split('uE000') if img.strip()]
+        
+        if status == 'correct': st.success("Selected Image(s) Correct")
+        elif status == 'incorrect': st.error("Selected Image(s) Incorrect")
+        
+        for img_name in image_filenames:
+            img_path = f"pic/{img_name}" if not img_name.startswith("pic/") else img_name
+            if os.path.exists(img_path): st.image(img_path)
+            else: st.warning(f"Image missing: {img_path}")
             
     elif media_type == 'code':
         blocks = str(content).split("uE000")
@@ -81,12 +85,10 @@ def render_option_card(label, content, media_type, status=None):
             if block.strip():
                 lang = detect_language(block)
                 st.caption(f"_{lang.upper()}_", text_alignment="right")
-                # Wrap the code block in a colored status box
                 if status == 'correct': st.success(f"```{lang}\n{block.strip()}\n```")
                 elif status == 'incorrect': st.error(f"```{lang}\n{block.strip()}\n```")
                 else: st.code(block.strip(), language=lang, line_numbers=True)
     else:
-        # Standard text options
         if status == 'correct': st.success(content)
         elif status == 'incorrect': st.error(content)
         else: st.info(content)
@@ -101,47 +103,44 @@ def check_numerical_answer(user_val, correct_key):
     except: return False
 
 def ask_ai_tutor(subject, question, media_type, media_content, all_options, correct_answer, retry_count=0):
-    # Fetch the list of API keys from secrets.toml
     if "GEMINI_KEYS" in st.secrets:
         api_keys = st.secrets["GEMINI_KEYS"]
     else:
         api_keys = [st.secrets.get("GEMINI_KEY")]
         
-    # --- THESE TWO LINES MUST BE OUTSIDE THE IF BLOCK ---
     media_context = ""
-    image_part = None 
-    # ----------------------------------------------------
+    image_parts = [] 
 
+    def extract_and_encode_images(image_string):
+        raw_media = str(image_string).replace('\\uE000', 'uE000').replace('\ue000', 'uE000')
+        filenames = [img.strip() for img in raw_media.split('uE000') if img.strip()]
+        for img_name in filenames:
+            img_path = f"pic/{img_name}" if not img_name.startswith("pic/") else img_name
+            if os.path.exists(img_path):
+                import mimetypes
+                mime_type, _ = mimetypes.guess_type(img_path)
+                if not mime_type: mime_type = "image/png"
+                with open(img_path, "rb") as f:
+                    encoded_img = base64.b64encode(f.read()).decode('utf-8')
+                image_parts.append({
+                    "inlineData": {"mimeType": mime_type, "data": encoded_img}
+                })
+
+    # 1. Process Question Images
     if media_content:
         if media_type == 'code':
             media_context = f"\nCode Provided:\n```\n{media_content}\n```\n"
         elif media_type == 'text':
             media_context = f"\nContextual Text:\n{media_content}\n"
         elif media_type == 'image':
-            media_context = f"\n[Please physically analyze the attached image to answer this question.]\n"
-            
-            # Find the physical image file
-            img_path = f"pic/{media_content}" if not media_content.startswith("pic/") else media_content
-            
-            if os.path.exists(img_path):
-                import mimetypes # Ensure this is imported!
-                mime_type, _ = mimetypes.guess_type(img_path)
-                if not mime_type: mime_type = "image/png"
-                
-                with open(img_path, "rb") as f:
-                    encoded_img = base64.b64encode(f.read()).decode('utf-8')
-                
-                image_part = {
-                    "inlineData": {
-                        "mimeType": mime_type,
-                        "data": encoded_img
-                    }
-                }
-            else:
-                media_context += f"\n[Warning: The image file {media_content} was missing from the server.]\n"
+            media_context = f"\n[Please physically analyze the attached image(s) to answer this question.]\n"
+            extract_and_encode_images(media_content)
 
-    # ... (The rest of your SUBJECT_GUIDANCE code goes here) ...
-
+    # 2. Process Option Images (Extracted via Regex from the tags we added in study_portal.py)
+    all_options_str = str(all_options)
+    option_images = re.findall(r'\[IMAGE:\s*(.*?)\]', all_options_str)
+    for opt_img in option_images:
+        extract_and_encode_images(opt_img)
 
     sub_l = subject.strip().lower() if subject else ""
     SUBJECT_GUIDANCE = {
@@ -180,12 +179,12 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
        - SUBGRAPHS: Format as `subgraph Title` and close with `end`. DO NOT use curly braces.
     9. JSON SAFETY: Escape internal double quotes with \\". Use \\n for newlines.
     """
-    # Build the parts list dynamically. Always include the text prompt.
     api_parts = [{"text": prompt_text}]
     
-    # If we successfully loaded and encoded an image, attach it to the API request!
-    if image_part:
-        api_parts.append(image_part)
+    # Send all encoded images (from questions and options) dynamically to Gemini
+    if image_parts:
+        api_parts.extend(image_parts)
+        
     payload = {
         "contents": [{"parts": api_parts}],
         "generationConfig": { 
@@ -214,13 +213,11 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
     
     last_error_code = None
 
-    # Loop through the API keys in the pool
     for key in api_keys:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key}"
         
         try:
             response = requests.post(url, json=payload, timeout=60)
-            
             if response.status_code == 200:
                 res_json = response.json()
                 if "candidates" not in res_json or not res_json["candidates"]:
@@ -233,11 +230,9 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
                 clean = re.sub(r'^```json\s*|\s*```$', '', raw, flags=re.MULTILINE)
                 clean = re.sub(r',\s*([\]}])', r'\1', clean) 
                 
-                parsed_data = json.loads(clean, strict=False)
-                return parsed_data
+                return json.loads(clean, strict=False)
                 
             elif response.status_code == 429:
-                # Rate limit hit, record it and let the loop try the next key
                 last_error_code = 429
                 continue
             else:
@@ -246,8 +241,7 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
         except Exception as e:
             return {"choice_analysis": f"Request Error: {str(e)}"}
             
-    # If the loop finishes without returning, all keys in the pool are exhausted
-    return {"choice_analysis": f"API Error: {last_error_code}. All API keys have hit their rate limits. Please wait a minute before trying again."}
+    return {"choice_analysis": f"API Error: {last_error_code}. All API keys exhausted."}
 
 def render_ai_tutor_response(data, ai_key):
     """Dynamically renders the structured JSON from the AI Tutor into beautiful UI components."""
