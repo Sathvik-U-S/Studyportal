@@ -12,24 +12,76 @@ from video_ai_tutor import *
 from database import *
 from cache_manager import *
 from mcq_ai_tutor import *
+from streamlit_google_auth import Authenticate # <-- NEW IMPORT
 
 # ==========================================
-# 0. GLOBAL SECURITY LOCK
+# 0. GOOGLE AUTH GATEKEEPER & ROLE SETUP
 # ==========================================
-if 'global_auth' not in st.session_state:
-    st.session_state.global_auth = False
+# Add your email here. You can add more emails separated by commas in the future.
+ADMIN_EMAILS = [
+    "sathvikus571@gmail.com"
+]
 
-if not st.session_state.global_auth:
-    st.markdown("<h2 style='text-align: center;'>Private Portal</h2>", unsafe_allow_html=True)
-    with st.form("global_login_form"):
-        pwd = st.text_input("Enter Access Key", type="password")
-        if st.form_submit_button("Unlock", width="stretch"):
-            if pwd == st.secrets.get("APP_PASSWORD", "fallback_local_password"):
-                st.session_state.global_auth = True
-                st.rerun()
-            else:
-                st.error("Access Denied.")
-    st.stop() # This prevents the rest of the app from loading!
+authenticator = Authenticate(
+    secret_credentials_path='google_credentials.json',
+    cookie_name='study_portal_cookie',
+    cookie_key=st.secrets["COOKIE_SECRET"], # Add a random string to your secrets.toml
+    redirect_uri=st.secrets["REDIRECT_URI"], # Your streamlit cloud URL
+)
+
+authenticator.check_authentification()
+
+if not st.session_state.get('connected'):
+    st.markdown("<h2 style='text-align: center;'>Academic Portal Login</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>Please sign in with your Google account to continue.</p>", unsafe_allow_html=True)
+    authenticator.login()
+    st.stop() # Halts the app until they log in
+
+# Store the logged-in user's email
+user_info = st.session_state.get('user_info', {})
+st.session_state['user_email'] = user_info.get('email')
+
+# ==========================================
+# 1. CONFIGURATION & STYLING
+# ==========================================
+st.set_page_config(layout="wide", page_title="Academic Portal", initial_sidebar_state="collapsed")
+
+# --- MOBILE SCROLL FIX FOR TABLES & CODE ---
+st.markdown("""
+<style>
+[data-testid="stMarkdownContainer"] table { display: block !important; overflow-x: auto !important; white-space: nowrap !important; }
+[data-testid="stMarkdownContainer"] pre { overflow-x: auto !important; }
+</style>
+""", unsafe_allow_html=True)
+
+try:
+    with open("styles.css", "r") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+except FileNotFoundError:
+    pass
+
+st.markdown("""
+<div class="scroll-btn" onclick="const container = document.querySelector('[data-testid=\\'stAppViewContainer\\']'); if (container) { container.scrollTo({ top: 0, behavior: 'smooth' }); }"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5l-7 7h4v7h6v-7h4z"/></svg></div><div id="top"></div><a href="#top" class="scroll-btn">↑</a>
+""", unsafe_allow_html=True)
+
+# ==========================================
+# NAVIGATION (Smart Routing)
+# ==========================================
+st.sidebar.markdown(f"**User:**\n{st.session_state['user_email']}")
+if st.sidebar.button("Log Out"):
+    authenticator.logout()
+
+st.sidebar.markdown("### Menu")
+
+# Base options for all students
+nav_options = ["Take Assessment", "Take Test", "View Videos"]
+
+# If the logged-in email matches the Admin list, reveal the hidden tabs!
+if st.session_state['user_email'] in ADMIN_EMAILS:
+    nav_options.insert(2, "Edit Content")
+    nav_options.insert(3, "View Database")
+
+app_mode = st.sidebar.radio("Nav", nav_options, label_visibility="collapsed")
 
 # ==========================================
 # 1. CONFIGURATION & STYLING
@@ -417,31 +469,7 @@ elif app_mode == "Take Test":
 # ------------------------------------------
 elif app_mode == "Edit Content":
     st.markdown("## Add")
-    # ---------------- AUTH ----------------
-    if 'admin_auth' not in st.session_state:
-        st.session_state.admin_auth = False
-    if not st.session_state.admin_auth:
-        st.info("Log in:")
-        with st.form("login_form"):
-            pwd = st.text_input("Admin Password", type="password")
-            submitted = st.form_submit_button("Login", icon=":material/login:")
-
-            if submitted:
-                if pwd == st.secrets.get("ADMIN_PASS", ""):
-                    st.session_state.admin_auth = True
-                    st.rerun()
-                else:
-                    st.error("Access Denied.")
-        st.stop()
-
-    col_logout, col_title = st.columns([0.20, 0.80])
-    col_title.markdown("### Edit Content", text_alignment="right")
-    if col_logout.button("Logout", icon=":material/logout:"):
-        st.session_state.admin_auth = False
-        st.rerun()
-
     tab_edit_q, tab_edit_v, tab_edit_hier, tab_health, tab_sql  = st.tabs(["Edit Questions", "Edit Week Videos", "Edit Hierarchy", "Content Health", "Custom SQL"])
-
     # ==========================================
     # TAB 1: EDIT QUESTIONS
     # ==========================================
@@ -883,28 +911,6 @@ elif app_mode == "Edit Content":
 # ------------------------------------------
 elif app_mode == "View Database":
     st.markdown("## Add")
-    # ---------------- AUTH ----------------
-    if 'admin_auth' not in st.session_state:
-        st.session_state.admin_auth = False
-
-    if not st.session_state.admin_auth:
-        st.info("Log in :")
-        with st.form("db_login_form"):
-            pwd = st.text_input("Admin Password", type="password")
-            if st.form_submit_button("Login", icon=":material/login:"):
-                if pwd == st.secrets.get("ADMIN_PASS", ""):
-                    st.session_state.admin_auth = True
-                    st.rerun()
-                else:
-                    st.error("Access Denied.")
-        st.stop()
-
-    col_logout, col_title = st.columns([0.2, 0.8])
-    col_title.markdown("### Database ", text_alignment="right")
-    if col_logout.button("Logout", key="db_logout", width="content", icon=":material/logout:"):
-        st.session_state.admin_auth = False
-        st.rerun()
-
     # Fetch global table list
     tables = fetch_data("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
     table_names = [t['table_name'] for t in tables] if tables else []
