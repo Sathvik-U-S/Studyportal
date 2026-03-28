@@ -674,15 +674,15 @@ elif app_mode == "Edit Content":
                         else:
                             st.error("Failed to save videos.")
     # ==========================================
-    # TAB 3: MANAGE STRUCTURE
+    # TAB 3: MANAGE STRUCTURE (Upgraded with Edit Capabilities)
     # ==========================================
     with tab_edit_hier:
         st.markdown("##### Manage Database Structure")
-        #st.info("Add new Subjects, Weeks, or Activities to your database hierarchy.")
-
+        
+        # --- ROW 1: ADD NEW STRUCTURE ---
         c_sub, c_week, c_act = st.columns(3)
 
-        # --- 1. Add Subject ---
+        # 1. Add Subject
         with c_sub:
             with st.container(border=True):
                 st.markdown("**Add Subject**")
@@ -698,20 +698,18 @@ elif app_mode == "Edit Content":
                         else:
                             st.warning("Please enter a name.")
 
-        # --- 2. Add Week ---
+        hier_subs = fetch_data("SELECT * FROM subjects ORDER BY name ASC")
+
+        # 2. Add Week
         with c_week:
             with st.container(border=True):
                 st.markdown("**Add Week**")
-                hier_subs = fetch_data("SELECT * FROM subjects ORDER BY name ASC")
                 if hier_subs:
-                    sub_sel_w = st.selectbox("Select Subject", [s['name'] for s in hier_subs])
-
+                    sub_sel_w = st.selectbox("Select Subject", [s['name'] for s in hier_subs], key="add_w_sub")
                     with st.form("add_week_form"):
                         sub_id_w = next(s['id'] for s in hier_subs if s['name'] == sub_sel_w)
                         new_week_num = st.number_input("Week Number", min_value=1, max_value=50, step=1)
-                        
                         if st.form_submit_button("Add Week", type="primary", width="stretch"):
-                            # Try inserting into the weeks table
                             if execute_query("INSERT INTO weeks (subject_id, week_number) VALUES (%s, %s)", (sub_id_w, new_week_num)):
                                 st.success(f"Added Week {new_week_num} to {sub_sel_w}")
                                 st.rerun()
@@ -720,21 +718,18 @@ elif app_mode == "Edit Content":
                 else:
                     st.warning("Add a subject first.")
 
-        # --- 3. Add Activity (Assessment) ---
+        # 3. Add Activity
         with c_act:
             with st.container(border=True):
                 st.markdown("**Add Activity**")
                 if hier_subs:
-                    # Select subject outside the form so the week dropdown can update dynamically
                     sub_sel_a = st.selectbox("Select Subject", [s['name'] for s in hier_subs], key="act_sub_sel")
                     sub_id_a = next(s['id'] for s in hier_subs if s['name'] == sub_sel_a)
-                    
                     weeks_a = fetch_data("SELECT week_number FROM weeks WHERE subject_id=%s ORDER BY week_number ASC", (sub_id_a,))
                     if weeks_a:
-                        week_sel_a = st.selectbox("Select Week", [w['week_number'] for w in weeks_a])
+                        week_sel_a = st.selectbox("Select Week", [w['week_number'] for w in weeks_a], key="add_a_week")
                         with st.form("add_act_form"):
                             new_act_name = st.text_input("Activity Name")
-                            
                             if st.form_submit_button("Add Activity", type="primary", width="stretch"):
                                 if new_act_name.strip():
                                     if execute_query("INSERT INTO assessments (subject_id, week_number, name) VALUES (%s, %s, %s)", (sub_id_a, week_sel_a, new_act_name.strip())):
@@ -748,6 +743,76 @@ elif app_mode == "Edit Content":
                         st.warning("Add a week to this subject first.")
                 else:
                     st.warning("Add a subject first.")
+
+        # --- ROW 2: EDIT EXISTING STRUCTURE ---
+        st.divider()
+        st.markdown("##### Edit Existing Structure")
+        ce_sub, ce_week, ce_act = st.columns(3)
+
+        # 1. Rename Subject
+        with ce_sub:
+            with st.container(border=True):
+                st.markdown("**Rename Subject**")
+                if hier_subs:
+                    edit_sub_sel = st.selectbox("Select Subject to Rename", [s['name'] for s in hier_subs], key="edit_sub_sel")
+                    edit_sub_id = next(s['id'] for s in hier_subs if s['name'] == edit_sub_sel)
+                    with st.form("rename_sub_form"):
+                        new_sub_name = st.text_input("New Name", value=edit_sub_sel)
+                        if st.form_submit_button("Rename Subject", type="primary", width="stretch"):
+                            if new_sub_name.strip() and new_sub_name.strip() != edit_sub_sel:
+                                if execute_query("UPDATE subjects SET name = %s WHERE id = %s", (new_sub_name.strip(), edit_sub_id)):
+                                    st.success(f"Renamed to '{new_sub_name}'")
+                                    st.rerun()
+                else:
+                    st.info("No subjects available.")
+
+        # 2. Change Week Number
+        with ce_week:
+            with st.container(border=True):
+                st.markdown("**Change Week Number**")
+                if hier_subs:
+                    e_w_sub_sel = st.selectbox("Select Subject", [s['name'] for s in hier_subs], key="e_w_sub_sel")
+                    e_w_sub_id = next(s['id'] for s in hier_subs if s['name'] == e_w_sub_sel)
+                    e_weeks = fetch_data("SELECT * FROM weeks WHERE subject_id=%s ORDER BY week_number ASC", (e_w_sub_id,))
+                    if e_weeks:
+                        e_w_sel = st.selectbox("Select Week", [w['week_number'] for w in e_weeks], key="e_w_sel")
+                        e_w_id = next(w['id'] for w in e_weeks if w['week_number'] == e_w_sel)
+                        with st.form("edit_week_form"):
+                            new_week_num = st.number_input("New Week Number", min_value=1, max_value=100, value=e_w_sel)
+                            if st.form_submit_button("Update Week", type="primary", width="stretch"):
+                                if new_week_num != e_w_sel:
+                                    # Update week table
+                                    execute_query("UPDATE weeks SET week_number = %s WHERE id = %s", (new_week_num, e_w_id))
+                                    # Cascade update to assessments table
+                                    execute_query("UPDATE assessments SET week_number = %s WHERE subject_id = %s AND week_number = %s", (new_week_num, e_w_sub_id, e_w_sel))
+                                    st.success(f"Updated week to {new_week_num}")
+                                    st.rerun()
+                    else:
+                        st.info("No weeks found.")
+
+        # 3. Rename Activity
+        with ce_act:
+            with st.container(border=True):
+                st.markdown("**Rename Activity**")
+                if hier_subs:
+                    e_a_sub_sel = st.selectbox("Select Subject", [s['name'] for s in hier_subs], key="e_a_sub_sel")
+                    e_a_sub_id = next(s['id'] for s in hier_subs if s['name'] == e_a_sub_sel)
+                    e_a_weeks = fetch_data("SELECT DISTINCT week_number FROM assessments WHERE subject_id=%s ORDER BY week_number ASC", (e_a_sub_id,))
+                    if e_a_weeks:
+                        e_a_w_sel = st.selectbox("Select Week", [w['week_number'] for w in e_a_weeks], key="e_a_w_sel")
+                        e_acts = fetch_data("SELECT * FROM assessments WHERE subject_id=%s AND week_number=%s ORDER BY name ASC", (e_a_sub_id, e_a_w_sel))
+                        if e_acts:
+                            e_a_act_sel = st.selectbox("Select Activity", [a['name'] for a in e_acts], key="e_a_act_sel")
+                            e_a_act_id = next(a['id'] for a in e_acts if a['name'] == e_a_act_sel)
+                            with st.form("rename_act_form"):
+                                new_act_name = st.text_input("New Activity Name", value=e_a_act_sel)
+                                if st.form_submit_button("Rename Activity", type="primary", width="stretch"):
+                                    if new_act_name.strip() and new_act_name.strip() != e_a_act_sel:
+                                        if execute_query("UPDATE assessments SET name = %s WHERE id = %s", (new_act_name.strip(), e_a_act_id)):
+                                            st.success(f"Renamed to '{new_act_name}'")
+                                            st.rerun()
+                        else:
+                            st.info("No activities found.")
     
     # ==========================================
     # TOOL 4: Content Health Inspector (NEW)
