@@ -17,17 +17,25 @@ from streamlit_google_auth import Authenticate # <-- NEW IMPORT
 # ==========================================
 # 0. GOOGLE AUTH GATEKEEPER & ROLE SETUP
 # ==========================================
-# Securely load Admin Emails from Streamlit Secrets
+json_path = 'google_credentials.json'
+
+if not os.path.exists(json_path) and "GOOGLE_CREDENTIALS_JSON" in st.secrets:
+    try:
+        with open(json_path, "w") as f:
+            f.write(st.secrets["GOOGLE_CREDENTIALS_JSON"])
+    except Exception as e:
+        st.error(f"Security Error: Could not create credentials file. {e}")
+
 if "ADMIN_EMAILS" in st.secrets:
     ADMIN_EMAILS = [email.strip() for email in st.secrets["ADMIN_EMAILS"].split(",")]
 else:
-    ADMIN_EMAILS = [] 
+    ADMIN_EMAILS = []
 
 authenticator = Authenticate(
-    secret_credentials_path='google_credentials.json',
+    secret_credentials_path=json_path,
     cookie_name='study_portal_cookie',
-    cookie_key=st.secrets.get("COOKIE_SECRET", "fallback_dev_cookie_123"), 
-    redirect_uri=st.secrets.get("REDIRECT_URI", "http://localhost:8501"), 
+    cookie_key=st.secrets.get("COOKIE_SECRET", "default_secret_key"),
+    redirect_uri=st.secrets.get("REDIRECT_URI", "http://localhost:8501"),
 )
 
 authenticator.check_authentification()
