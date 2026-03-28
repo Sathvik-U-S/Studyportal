@@ -17,9 +17,7 @@ from streamlit_google_auth import Authenticate # <-- NEW IMPORT
 # ==========================================
 # 0. GOOGLE AUTH GATEKEEPER & ROLE SETUP
 # ==========================================
-json_path = 'google_credentials.json'
-
-if not os.path.exists(json_path) and "GOOGLE_CREDENTIALS_JSON" in st.secrets:
+if "GOOGLE_CREDENTIALS_JSON" in st.secrets:
     try:
         with open(json_path, "w") as f:
             f.write(st.secrets["GOOGLE_CREDENTIALS_JSON"])
@@ -31,6 +29,7 @@ if "ADMIN_EMAILS" in st.secrets:
 else:
     ADMIN_EMAILS = []
 
+# --- IMPORTANT: Ensure REDIRECT_URI is in your Streamlit Secrets! ---
 authenticator = Authenticate(
     secret_credentials_path=json_path,
     cookie_name='study_portal_cookie',
@@ -39,16 +38,6 @@ authenticator = Authenticate(
 )
 
 authenticator.check_authentification()
-
-if not st.session_state.get('connected'):
-    st.markdown("<h2 style='text-align: center;'>Academic Portal Login</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center;'>Please sign in with your Google account to continue.</p>", unsafe_allow_html=True)
-    authenticator.login()
-    st.stop() # Halts the app until they log in
-
-# Store the logged-in user's email
-user_info = st.session_state.get('user_info', {})
-st.session_state['user_email'] = user_info.get('email')
 
 # ==========================================
 # 1. CONFIGURATION & STYLING
