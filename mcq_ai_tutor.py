@@ -276,8 +276,8 @@ def render_ai_tutor_response(data, ai_key):
                 new_pr = st.text_area("Practical Relevance", value=data.get("practical_relevance", ""), height="content")
 
                 col_save, col_cancel = st.columns([1, 1])
-                save_btn = col_save.form_submit_button("Save Changes", type="primary", use_container_width=True)
-                cancel_btn = col_cancel.form_submit_button("Cancel", use_container_width=True)
+                save_btn = col_save.form_submit_button("Save Changes", type="primary", width="stretch")
+                cancel_btn = col_cancel.form_submit_button("Cancel", width="stretch")
                 
                 if save_btn:
                     updated_data = {
@@ -627,10 +627,10 @@ def render_ai_tutor_response(data, ai_key):
             st.divider()
             c_edit, c_del = st.columns(2)
 
-            if c_edit.button("Edit AI Response", key=f"edit_{ai_key}", help="Manually correct or enhance the AI's analysis", use_container_width=True):
+            if c_edit.button("Edit AI Response", key=f"edit_{ai_key}", help="Manually correct or enhance the AI's analysis", width="stretch"):
                 st.session_state[edit_state_key] = True
                 st.rerun()
 
-            if c_del.button("Delete Cache for this Question", key=f"del_{ai_key}", help="Clear the saved AI response", use_container_width=True):
+            if c_del.button("Delete Cache for this Question", key=f"del_{ai_key}", help="Clear the saved AI response", width="stretch"):
                 delete_ai_cache(ai_key)
                 st.rerun()

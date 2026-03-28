@@ -7,6 +7,7 @@ import re
 import base64
 import zlib
 import streamlit.components.v1 as components # type: ignore
+import pandas as pd  # type: ignore
 from video_ai_tutor import *
 from database import *
 from cache_manager import *
@@ -22,7 +23,7 @@ if not st.session_state.global_auth:
     st.markdown("<h2 style='text-align: center;'>Private Portal</h2>", unsafe_allow_html=True)
     with st.form("global_login_form"):
         pwd = st.text_input("Enter Access Key", type="password")
-        if st.form_submit_button("Unlock", use_container_width=True):
+        if st.form_submit_button("Unlock", width="stretch"):
             if pwd == st.secrets.get("APP_PASSWORD", "fallback_local_password"):
                 st.session_state.global_auth = True
                 st.rerun()
@@ -121,7 +122,7 @@ if app_mode == "Take Assessment":
                     if cached_res:
                         render_ai_tutor_response(cached_res, ai_key)
                     else:
-                        if st.button(f"Ask AI Tutor for Q{i+1}", key=f"ai_btn_{q['id']}", use_container_width=True, type="secondary"):
+                        if st.button(f"Ask AI Tutor for Q{i+1}", key=f"ai_btn_{q['id']}", width="stretch", type="secondary"):
                             with st.spinner("Consulting AI Tutor..."):
                                 explanation = ask_ai_tutor(s_sel, q['heading'], q['media_type'], q['media_content'], "Numerical Input", q['correct_answer'])
                                 save_ai_cache(ai_key, explanation) 
@@ -175,7 +176,7 @@ if app_mode == "Take Assessment":
                         if cached_res:
                             render_ai_tutor_response(cached_res, ai_key)
                         else:
-                            if st.button(f"Ask AI Tutor for Q{i+1}", key=f"ai_btn_{q['id']}", use_container_width=True, type="secondary"):
+                            if st.button(f"Ask AI Tutor for Q{i+1}", key=f"ai_btn_{q['id']}", width="stretch", type="secondary"):
                                 with st.spinner("Consulting AI Tutor..."):
                                     # The restored logic is now in the correct place!
                                     opt_texts = [o['option_text'] or "Media Content" for o in options]
@@ -527,10 +528,7 @@ elif app_mode == "Edit Content":
 
                             # ---------------- NUMERICAL QUESTION ----------------
                             if q_data.get('q_type') == 'numerical':
-                                n_ans = st.text_input(
-                                    "Correct Answer", height="content",
-                                    value=q_data.get('correct_answer') or ""
-                                )
+                                n_ans = st.text_input("Correct Answer", value=q_data.get('correct_answer') or ""                                )
 
                                 if st.form_submit_button("Update Question"):
                                     final_q_mtype = n_mtype if n_mtype != "text" else None
@@ -683,7 +681,7 @@ elif app_mode == "Edit Content":
                 st.markdown("**Add Subject**")
                 with st.form("add_sub_form"):
                     new_sub_name = st.text_input("Subject Name")
-                    if st.form_submit_button("Add Subject", type="primary", use_container_width=True):
+                    if st.form_submit_button("Add Subject", type="primary", width="stretch"):
                         if new_sub_name.strip():
                             if execute_query("INSERT INTO subjects (name) VALUES (%s)", (new_sub_name.strip(),)):
                                 st.success(f"Added '{new_sub_name}'")
@@ -705,7 +703,7 @@ elif app_mode == "Edit Content":
                         sub_id_w = next(s['id'] for s in hier_subs if s['name'] == sub_sel_w)
                         new_week_num = st.number_input("Week Number", min_value=1, max_value=50, step=1)
                         
-                        if st.form_submit_button("Add Week", type="primary", use_container_width=True):
+                        if st.form_submit_button("Add Week", type="primary", width="stretch"):
                             # Try inserting into the weeks table
                             if execute_query("INSERT INTO weeks (subject_id, week_number) VALUES (%s, %s)", (sub_id_w, new_week_num)):
                                 st.success(f"Added Week {new_week_num} to {sub_sel_w}")
@@ -730,7 +728,7 @@ elif app_mode == "Edit Content":
                         with st.form("add_act_form"):
                             new_act_name = st.text_input("Activity Name")
                             
-                            if st.form_submit_button("Add Activity", type="primary", use_container_width=True):
+                            if st.form_submit_button("Add Activity", type="primary", width="stretch"):
                                 if new_act_name.strip():
                                     if execute_query("INSERT INTO assessments (subject_id, week_number, name) VALUES (%s, %s, %s)", (sub_id_a, week_sel_a, new_act_name.strip())):
                                         st.success(f"Added '{new_act_name}'")
@@ -762,7 +760,7 @@ elif app_mode == "Edit Content":
         """)
         if orphans:
             st.error(f"Found {len(orphans)} Multiple Choice questions with NO options!")
-            st.dataframe(pd.DataFrame(orphans), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(orphans), width="stretch", hide_index=True)
         else:
             st.success("All MCQ questions have at least one option. Looking good!")
 
@@ -776,7 +774,7 @@ elif app_mode == "Edit Content":
         """)
         if unsolvable:
             st.warning(f"Found {len(unsolvable)} questions where NO option is marked as 'is_correct=True'.")
-            st.dataframe(pd.DataFrame(unsolvable), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(unsolvable), width="stretch", hide_index=True)
         else:
             st.success("All MCQ questions have a correct answer marked. Looking good!")
 
@@ -793,7 +791,7 @@ elif app_mode == "Edit Content":
                 try:
                     res = fetch_data(query)
                     if res:
-                        st.dataframe(res, use_container_width=True)
+                        st.dataframe(res, width="stretch")
                         st.success(f"Returned {len(res)} rows.")
                     else:
                         st.info("Query returned no results.")
@@ -810,14 +808,6 @@ elif app_mode == "Edit Content":
 # ------------------------------------------
 elif app_mode == "View Database":
     st.markdown("## Add")
-    
-    # Ensure pandas is available for the visual graphs
-    try:
-        import pandas as pd # type: ignore
-    except ImportError:
-        st.error("Pandas is required for visual graphs. Please run: pip install pandas")
-        st.stop()
-
     # ---------------- AUTH ----------------
     if 'admin_auth' not in st.session_state:
         st.session_state.admin_auth = False
@@ -917,7 +907,7 @@ elif app_mode == "View Database":
                             
                             with col_drill_2:
                                 if opts:
-                                    st.dataframe(opts, use_container_width=True, hide_index=True)
+                                    st.dataframe(opts, width="stretch", hide_index=True)
                                 else:
                                     st.info("No options found. This is likely a Numerical question.")
                     else:
@@ -1022,10 +1012,10 @@ elif app_mode == "View Database":
             
             if q_res:
                 st.markdown("**Found in Questions:**")
-                st.dataframe(q_res, use_container_width=True, hide_index=True)
+                st.dataframe(q_res, width="stretch", hide_index=True)
             if o_res:
                 st.markdown("**Found in Options:**")
-                st.dataframe(o_res, use_container_width=True, hide_index=True)
+                st.dataframe(o_res, width="stretch", hide_index=True)
             if not q_res and not o_res:
                 st.info(f"No results found for '{kw}'.")
 
@@ -1040,7 +1030,7 @@ elif app_mode == "View Database":
                 limit = st.number_input("Row Limit", min_value=10, max_value=5000, value=100, step=50)
                 data = fetch_data(f"SELECT * FROM {selected_table} LIMIT {limit}")
                 if data:
-                    st.dataframe(data, use_container_width=True)
+                    st.dataframe(data, width="stretch")
                 else:
                     st.info(f"The `{selected_table}` table is currently empty.")
 
@@ -1060,7 +1050,7 @@ elif app_mode == "View Database":
             """
             schema_data = fetch_data(schema_query, (schema_table,))
             if schema_data:
-                st.dataframe(schema_data, use_container_width=True, hide_index=True)
+                st.dataframe(schema_data, width="stretch", hide_index=True)
 
     # ==========================================
     # TOOL 9: Database Statistics
@@ -1079,7 +1069,7 @@ elif app_mode == "View Database":
             
             st.metric("Total Database Records", total_db_records)
             if stat_data:
-                st.dataframe(stat_data, use_container_width=True, hide_index=True)
+                st.dataframe(stat_data, width="stretch", hide_index=True)
 
     # ==========================================
     # TOOL 10: Export Hub
@@ -1175,7 +1165,7 @@ elif app_mode == "View Videos":
                             btn_label = f"Lecture {idx + 1}" if is_active else f"Lecture {idx + 1}"
                             
                             # If a button is clicked, update the state and instantly refresh
-                            if st.button(btn_label, key=f"vid_btn_{week_id}_{idx}", type=btn_type, use_container_width=True):
+                            if st.button(btn_label, key=f"vid_btn_{week_id}_{idx}", type=btn_type, width="stretch"):
                                 st.session_state[state_key] = url.strip()
                                 st.rerun()
             with st.expander("AI Tutor: Generate Lecture Notes", expanded=False, icon=":material/model_training:"):
@@ -1193,7 +1183,7 @@ elif app_mode == "View Videos":
                         render_video_notes(cached_vid, vid_id)
                     else:
                         st.markdown("<br>", unsafe_allow_html=True)
-                        if st.button("Generate Deep-Dive Lecture Notes", key=f"gen_notes_{vid_id}", type="secondary", use_container_width=True):
+                        if st.button("Generate Deep-Dive Lecture Notes", key=f"gen_notes_{vid_id}", type="secondary", width="stretch"):
                             with st.spinner("Compiling elite notes..."):
                                 # --- UPDATED API KEY LOGIC ---
                                 # 1. Look for dedicated Video Keys first

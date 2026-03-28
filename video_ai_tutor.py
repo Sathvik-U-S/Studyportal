@@ -192,8 +192,8 @@ def render_video_notes(data, video_id):
             new_kw = st.text_area("Important Keywords (One per line)", value=kw_val, height="content")
 
             col_save, col_cancel = st.columns([1, 1])
-            save_btn = col_save.form_submit_button("Save Changes", type="primary", use_container_width=True)
-            cancel_btn = col_cancel.form_submit_button("Cancel", use_container_width=True)
+            save_btn = col_save.form_submit_button("Save Changes", type="primary", width="stretch")
+            cancel_btn = col_cancel.form_submit_button("Cancel", width="stretch")
             
             if save_btn:
                 updated_data = {
@@ -519,11 +519,11 @@ def render_video_notes(data, video_id):
         # --- CONTROL BUTTONS ---
         st.markdown("<br>", unsafe_allow_html=True)
         c_edit, c_del = st.columns(2)
-        if c_edit.button("Edit Notes", key=f"edit_btn_{video_id}", use_container_width=True):
+        if c_edit.button("Edit Notes", key=f"edit_btn_{video_id}", width="stretch"):
             st.session_state[edit_state_key] = True
             st.rerun()
             
-        if c_del.button("Delete Notes Cache", key=f"del_vid_{video_id}", help="Force the AI to regenerate these notes", use_container_width=True):
+        if c_del.button("Delete Notes Cache", key=f"del_vid_{video_id}", help="Force the AI to regenerate these notes", width="stretch"):
             # REPLACE WITH THIS 1 LINE:
             delete_video_cache(video_id)
             st.rerun()

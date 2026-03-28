@@ -1,7 +1,7 @@
-import psycopg2
-from psycopg2.extras import RealDictCursor
-import streamlit as st
-import streamlit.components.v1 as components
+import psycopg2 # type: ignore
+from psycopg2.extras import RealDictCursor # type: ignore
+import streamlit as st # type: ignore
+import streamlit.components.v1 as components # type: ignore
 
 # ==========================================
 # 2. DATABASE & UTILS
