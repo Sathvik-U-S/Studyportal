@@ -17,16 +17,17 @@ from streamlit_google_auth import Authenticate # <-- NEW IMPORT
 # ==========================================
 # 0. GOOGLE AUTH GATEKEEPER & ROLE SETUP
 # ==========================================
-# Add your email here. You can add more emails separated by commas in the future.
-ADMIN_EMAILS = [
-    "sathvikus571@gmail.com"
-]
+# Securely load Admin Emails from Streamlit Secrets
+if "ADMIN_EMAILS" in st.secrets:
+    ADMIN_EMAILS = [email.strip() for email in st.secrets["ADMIN_EMAILS"].split(",")]
+else:
+    ADMIN_EMAILS = [] 
 
 authenticator = Authenticate(
     secret_credentials_path='google_credentials.json',
     cookie_name='study_portal_cookie',
-    cookie_key=st.secrets["COOKIE_SECRET"], # Add a random string to your secrets.toml
-    redirect_uri=st.secrets["REDIRECT_URI"], # Your streamlit cloud URL
+    cookie_key=st.secrets.get("COOKIE_SECRET", "fallback_dev_cookie_123"), 
+    redirect_uri=st.secrets.get("REDIRECT_URI", "http://localhost:8501"), 
 )
 
 authenticator.check_authentification()
