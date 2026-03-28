@@ -47,7 +47,8 @@ def render_content(media_type, content):
     if not content or str(content).strip() == "": return
     
     if media_type == 'code':
-        blocks = str(content).split("uE000")
+        # Bulletproof regex split for code blocks
+        blocks = re.split(r'\\?u[eE]000', str(content))
         for block in blocks:
             if block.strip():
                 lang = detect_language(block)
@@ -55,32 +56,37 @@ def render_content(media_type, content):
                 st.code(block.strip(), language=lang, line_numbers=True)
                 
     elif media_type == 'image':
-        # --- MULTIPLE IMAGE RENDERING LOGIC ---
-        raw_media = str(content).replace('\\uE000', 'uE000').replace('\ue000', 'uE000')
-        image_filenames = [img.strip() for img in raw_media.split('uE000') if img.strip()]
+        # --- BULLETPROOF MULTIPLE IMAGE SPLIT ---
+        # This regex catches 'uE000', 'ue000', '\uE000', '\ue000' and any spacing
+        image_filenames = [img.strip() for img in re.split(r'\\?u[eE]000', str(content)) if img.strip()]
+        
         for img_name in image_filenames:
             img_path = f"pic/{img_name}" if not img_name.startswith("pic/") else img_name
-            if os.path.exists(img_path): st.image(img_path)
-            else: st.warning(f"Image not found: {img_path}")
+            if os.path.exists(img_path): 
+                st.image(img_path)
+            else: 
+                st.warning(f"Image not found: {img_path}")
     else: 
         st.markdown(content)
 
 def render_option_card(label, content, media_type, status=None):
     """Renders an option. If a status is provided, it changes color to success or error."""
     if media_type == 'image':
-        raw_media = str(content).replace('\\uE000', 'uE000').replace('\ue000', 'uE000')
-        image_filenames = [img.strip() for img in raw_media.split('uE000') if img.strip()]
+        # --- BULLETPROOF MULTIPLE IMAGE SPLIT ---
+        image_filenames = [img.strip() for img in re.split(r'\\?u[eE]000', str(content)) if img.strip()]
         
         if status == 'correct': st.success("Selected Image(s) Correct")
         elif status == 'incorrect': st.error("Selected Image(s) Incorrect")
         
         for img_name in image_filenames:
             img_path = f"pic/{img_name}" if not img_name.startswith("pic/") else img_name
-            if os.path.exists(img_path): st.image(img_path)
-            else: st.warning(f"Image missing: {img_path}")
-            
+            if os.path.exists(img_path): 
+                st.image(img_path)
+            else: 
+                st.warning(f"Image missing: {img_path}")
+                
     elif media_type == 'code':
-        blocks = str(content).split("uE000")
+        blocks = re.split(r'\\?u[eE]000', str(content))
         for block in blocks:
             if block.strip():
                 lang = detect_language(block)
