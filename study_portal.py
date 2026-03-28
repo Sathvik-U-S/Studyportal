@@ -367,7 +367,7 @@ elif app_mode == "Take Test":
                             for o in u_opts:
                                 content = o['media_content'] if o['media_type'] else o['option_text']
                                 if o['media_type'] == 'code':
-                                    blocks = str(content).split("\uE000")
+                                    blocks = str(content).split("uE000")
                                     formatted_blocks = []
                                     for b in blocks:
                                         if b.strip():

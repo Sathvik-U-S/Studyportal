@@ -76,7 +76,7 @@ def render_option_card(label, content, media_type, status=None):
             st.warning(f"Image missing: {img_path}")
             
     elif media_type == 'code':
-        blocks = str(content).split("\uE000")
+        blocks = str(content).split("uE000")
         for block in blocks:
             if block.strip():
                 lang = detect_language(block)
