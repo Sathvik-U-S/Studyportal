@@ -747,36 +747,39 @@ elif app_mode == "Edit Content":
     # ==========================================
     with tab_health:
         st.markdown("##### Content Health Inspector")
-        st.info("This visual tool scans your database for potential data entry errors or incomplete questions.")
         
+        # We use COALESCE and TRIM to make sure we don't accidentally flag 
+        # numerical questions that don't have options.
+        health_filter = "WHERE LOWER(TRIM(COALESCE(q.q_type, 'mcq'))) NOT IN ('numerical', 'nat')"
+
         # Audit 1: MCQs with 0 options
         st.markdown("**Potential Orphaned Questions (No Options)**")
-        orphans = fetch_data("""
+        orphans = fetch_data(f"""
             SELECT q.id, q.heading, a.name as assessment 
             FROM questions q 
             JOIN assessments a ON q.assessment_id = a.id
-            WHERE q.q_type IS NULL OR q.q_type != 'numerical'
+            {health_filter}
             AND q.id NOT IN (SELECT DISTINCT question_id FROM options)
         """)
+        
         if orphans:
             st.error(f"Found {len(orphans)} Multiple Choice questions with NO options!")
             st.dataframe(pd.DataFrame(orphans), width="stretch", hide_index=True)
         else:
-            st.success("All MCQ questions have at least one option. Looking good!")
+            st.success("Content Health: All MCQs have options.")
 
-        # Audit 2: MCQs with NO correct answer marked
+        # Audit 2: MCQs with NO correct answer
         st.markdown("**Unsolvable Questions (No Correct Option)**")
-        unsolvable = fetch_data("""
+        unsolvable = fetch_data(f"""
             SELECT q.id, q.heading
             FROM questions q
-            WHERE (q.q_type IS NULL OR q.q_type != 'numerical')
+            {health_filter}
             AND q.id NOT IN (SELECT DISTINCT question_id FROM options WHERE is_correct = TRUE)
         """)
+        
         if unsolvable:
-            st.warning(f"Found {len(unsolvable)} questions where NO option is marked as 'is_correct=True'.")
+            st.warning(f"Found {len(unsolvable)} MCQs with no correct answer marked.")
             st.dataframe(pd.DataFrame(unsolvable), width="stretch", hide_index=True)
-        else:
-            st.success("All MCQ questions have a correct answer marked. Looking good!")
 
     # ==========================================
     # TOOL 7: Custom SQL Executor
