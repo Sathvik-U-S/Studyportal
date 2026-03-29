@@ -240,44 +240,57 @@ elif app_mode == "Take Test":
     if st.session_state.test_state == 'setup':
         st.markdown("### Configure Test")
         subs = fetch_data("SELECT * FROM subjects ORDER BY name ASC")
-        if not subs: st.stop()
+        if not subs: 
+            st.warning("No subjects available.")
+            st.stop()
         
         c1, c2 = st.columns(2)
-        s_sel = c1.selectbox("1. Select Subject", [s['name'] for s in subs])
+        s_sel = c1.selectbox("Select Subject", [s['name'] for s in subs])
         s_id = next(s['id'] for s in subs if s['name'] == s_sel)
         
         weeks = fetch_data("SELECT DISTINCT week_number FROM assessments WHERE subject_id=%s ORDER BY week_number ASC", (s_id,))
-        if not weeks: st.warning("No data"); st.stop()
+        if not weeks: 
+            st.warning("No weeks found for this subject.")
+            st.stop()
         
-        w_sel = c2.multiselect("2. Select Weeks (Default: All)", [w['week_number'] for w in weeks])
+        w_sel = c2.multiselect("Select Weeks (Default: All)", [w['week_number'] for w in weeks])
         w_filter = tuple(w_sel) if w_sel else tuple([w['week_number'] for w in weeks])
         if len(w_filter) == 1: w_filter = f"({w_filter[0]})"
         else: w_filter = str(w_filter)
         
         ass_types = fetch_data(f"SELECT DISTINCT name FROM assessments WHERE subject_id=%s AND week_number IN {w_filter} ORDER BY name ASC", (s_id,))
         type_opts = [a['name'] for a in ass_types]
-        t_sel = st.multiselect("3. Types (Default: All)", type_opts)
+        t_sel = st.multiselect("Types (Default: All)", type_opts)
         t_filter = tuple(t_sel) if t_sel else tuple(type_opts)
         if len(t_filter) == 1: t_filter = f"('{t_filter[0]}')"
         else: t_filter = str(t_filter)
         
-        count = fetch_data(f"SELECT COUNT(*) as cnt FROM questions q JOIN assessments a ON q.assessment_id = a.id WHERE a.subject_id=%s AND a.week_number IN {w_filter} AND a.name IN {t_filter}", (s_id,))[0]['cnt']
-        st.info(f"Pool Size: {count}")
-        num_q = st.number_input("4. Question Count", min_value=1, max_value=max(1, count), value=min(20, count))
-        
-        if st.button("Start Test", type="secondary"):
-            q_query = f"SELECT q.* FROM questions q JOIN assessments a ON q.assessment_id = a.id WHERE a.subject_id=%s AND a.week_number IN {w_filter} AND a.name IN {t_filter} ORDER BY RANDOM() LIMIT %s"
-            questions = fetch_data(q_query, (s_id, num_q))
-            st.session_state.test_data = []
-            for q in questions:
-                opts = fetch_data("SELECT * FROM options WHERE question_id=%s ORDER BY id ASC", (q['id'],))
-                st.session_state.test_data.append((q, opts))
+        # --- THE SAFETY CHECK ---
+        count_res = fetch_data(f"SELECT COUNT(*) as cnt FROM questions q JOIN assessments a ON q.assessment_id = a.id WHERE a.subject_id=%s AND a.week_number IN {w_filter} AND a.name IN {t_filter}", (s_id,))
+        count = count_res[0]['cnt'] if count_res else 0
+
+        if count == 0:
+            st.error("No questions found for the selected criteria. Please change your filters.")
+        else:
+            st.info(f"Pool Size: {count} Questions")
             
-            st.session_state.responses = {} 
-            st.session_state.test_state = 'running'
-            st.session_state.curr_idx = 0
-            st.session_state.start_time = time.time()
-            st.rerun()
+            # The 'value' logic now has a safety floor of 1 to prevent the StreamlitValueBelowMinError
+            num_q = st.number_input("Question Count", min_value=1, max_value=count, value=min(20, count))
+
+        
+            if st.button("Start Test", type="secondary"):
+                q_query = f"SELECT q.* FROM questions q JOIN assessments a ON q.assessment_id = a.id WHERE a.subject_id=%s AND a.week_number IN {w_filter} AND a.name IN {t_filter} ORDER BY RANDOM() LIMIT %s"
+                questions = fetch_data(q_query, (s_id, num_q))
+                st.session_state.test_data = []
+                for q in questions:
+                    opts = fetch_data("SELECT * FROM options WHERE question_id=%s ORDER BY id ASC", (q['id'],))
+                    st.session_state.test_data.append((q, opts))
+                
+                st.session_state.responses = {} 
+                st.session_state.test_state = 'running'
+                st.session_state.curr_idx = 0
+                st.session_state.start_time = time.time()
+                st.rerun()
 
     elif st.session_state.test_state == 'running':
         q, opts = st.session_state.test_data[st.session_state.curr_idx]
