@@ -18,11 +18,15 @@ from yaml.loader import SafeLoader
 # ==========================================
 # 0. SECURE NATIVE AUTHENTICATION
 # ==========================================
-import json
+# Helper function to deeply convert Streamlit's read-only secrets into a normal, editable dictionary
+def make_mutable_dict(d):
+    if isinstance(d, dict):
+        return {k: make_mutable_dict(v) for k, v in d.items()}
+    return d
 
-# 1. DEEP COPY: Convert read-only secrets to mutable dictionaries (Fixes Logout Crash)
-credentials = json.loads(json.dumps(st.secrets["credentials"]))
-cookie_config = json.loads(json.dumps(st.secrets["cookie"]))
+# 1. Load and convert credentials
+credentials = make_mutable_dict(st.secrets["credentials"])
+cookie_config = make_mutable_dict(st.secrets["cookie"])
 
 # 2. Initialize the Authenticator
 authenticator = stauth.Authenticate(
@@ -32,7 +36,7 @@ authenticator = stauth.Authenticate(
     cookie_config['expiry_days']
 )
 
-# 3. Render the Login UI (Let the library handle hiding the widget natively to fix ghosting)
+# 3. Render the Login UI
 try:
     authenticator.login()
 except Exception as e:
