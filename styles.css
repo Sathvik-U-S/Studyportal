@@ -5,7 +5,10 @@
 /* ==========================================
    SECTION 1: LAYOUT & TYPOGRAPHY
    ========================================== */
-
+header[data-testid="stHeader"] {
+    background-color: transparent !important;
+    height: 0px !important; 
+}
 /* 1A. Global Font */
 .stApp {
     font-family: 'Segoe UI', sans-serif;
@@ -15,7 +18,12 @@
 .block-container {
     padding-top: 0rem !important;
     padding-bottom: 2rem !important;
-    margin-top: -9rem !important;
+}
+/* Create a buffer so the 'top' anchor lands below the header */
+#top {
+    scroll-margin-top: 0px; /* Adjust this (e.g., 70px to 120px) to your liking */
+    visibility: hidden;      /* Keeps the div invisible */
+    display: block;          /* Ensures it takes up space for the anchor to work */
 }
 
 /* 1C. Option Labels (e.g., "OPTION 1", "SELECT") */
@@ -28,7 +36,14 @@
     display: block;
 }
 
-/* 1D. Hide Streamlit Watermark Footer */
+/* ==========================================
+   SECTION 8: MOBILE SCROLL FIX FOR TABLES
+   ========================================== */
+[data-testid="stMarkdownContainer"] table { 
+    display: block !important; 
+    overflow-x: auto !important; 
+    white-space: nowrap !important; 
+}
 
 /* ==========================================
    SECTION 2: IMAGE RENDERING
@@ -71,42 +86,43 @@ div[data-testid="stAlert"] * {
     color: var(--text-color) !important; 
 }
 
-
-
-
 /* ==========================================
-   SECTION 4: CUSTOM SCROLL-TO-TOP BUTTON
+   SECTION 5: PURE CSS SCROLL-TO-TOP BUTTON
    ========================================== */
-
 .scroll-btn {
     position: fixed;
-    bottom: 60px;
-    right: 30px;
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
+    bottom: 55px;
+    right: 40px;
+    width: 45px;
+    height: 45px;
     border-radius: 35% !important;
-    background-color: #ff4b4b; /* Matched to Streamlit's Default Red */
-    color: white !important;
+    background-color: #ff4b4b !important; 
+    z-index: 99999;
+    /*box-shadow: 0 4px 10px rgba(0,0,0,0.3);*/
+    cursor: pointer;
+    text-decoration: none !important;
+    
+    /* Flexbox used to center the CSS arrow */
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
-    cursor: pointer;
-    border: none;
-    outline: none;
-    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
-    -webkit-tap-highlight-color: transparent;
+    
+    /* Always visible now! */
+    transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
 .scroll-btn:hover {
+    background-color: #ff3333 !important;
     transform: scale(1.08);
-    background-color: #ff3333; /* Slightly darker red on hover */
 }
 
-.scroll-btn svg {
-    width: 20px;
-    height: 20px;
+/* Drawing the arrow using CSS borders */
+.scroll-btn::after {
+    content: '';
+    width: 12px;
+    height: 12px;
+    border-top: 2.5px solid #ffffff; 
+    border-left: 2.5px solid #ffffff; 
+    transform: rotate(45deg); 
+    margin-top: 6px; 
 }
-

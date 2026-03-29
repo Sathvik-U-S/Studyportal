@@ -15,10 +15,33 @@ from mcq_ai_tutor import *
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
+
+# ==========================================
+# 1. ESSENTIAL CONFIG & STYLING (MUST BE FIRST)
+# ==========================================
+st.set_page_config(layout="wide", page_title="Academic Portal", initial_sidebar_state="collapsed")
+
+try:
+    with open("styles.css", "r") as f:
+        css_content = f.read()
+        
+        # The <svg> has been removed. Your CSS will automatically draw the white arrow inside this empty <a> tag!
+        html_payload = f"""
+        <style>{css_content}</style>
+
+        <div id="top" style="scroll-margin-top: 5rem; height: 0; visibility: hidden;"></div>
+
+        <a href="#top" class="scroll-btn" title="Go to top"></a>
+        """
+        st.html(html_payload)
+except FileNotFoundError:
+    pass
+
+
+
 # ==========================================
 # 0. SECURE NATIVE AUTHENTICATION
 # ==========================================
-
 # Helper function to deeply convert Streamlit's read-only secrets into a normal, editable dictionary
 def make_mutable_dict(d):
     # Use hasattr instead of isinstance(dict) because Streamlit Secrets act like dicts but aren't true dicts
@@ -57,28 +80,6 @@ if not st.session_state.get("authentication_status"):
 # If the code reaches here, the user is successfully logged in!
 current_user_role = credentials['usernames'][st.session_state["username"]]['role']
 current_user_email = credentials['usernames'][st.session_state["username"]]['email']
-# ==========================================
-# 1. CONFIGURATION & STYLING
-# ==========================================
-st.set_page_config(layout="wide", page_title="Academic Portal", initial_sidebar_state="collapsed")
-
-# --- MOBILE SCROLL FIX FOR TABLES & CODE ---
-st.markdown("""
-<style>
-[data-testid="stMarkdownContainer"] table { display: block !important; overflow-x: auto !important; white-space: nowrap !important; }
-[data-testid="stMarkdownContainer"] pre { overflow-x: auto !important; }
-</style>
-""", unsafe_allow_html=True)
-
-try:
-    with open("styles.css", "r") as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-except FileNotFoundError:
-    pass
-
-st.markdown("""
-<div class="scroll-btn" onclick="const container = document.querySelector('[data-testid=\\'stAppViewContainer\\']'); if (container) { container.scrollTo({ top: 0, behavior: 'smooth' }); }"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5l-7 7h4v7h6v-7h4z"/></svg></div><div id="top"></div><a href="#top" class="scroll-btn">↑</a>
-""", unsafe_allow_html=True)
 
 # ==========================================
 # NAVIGATION (Smart Routing)
@@ -98,47 +99,12 @@ if current_user_role == "admin":
 
 app_mode = st.sidebar.radio("Nav", nav_options, label_visibility="collapsed")
 
-# ==========================================
-# 1. CONFIGURATION & STYLING
-# ==========================================
-st.set_page_config(layout="wide", page_title="Academic Portal", initial_sidebar_state="collapsed")
-
-# --- MOBILE SCROLL FIX FOR TABLES & CODE ---
-# This guarantees that tables and code blocks will scroll horizontally on phones
-st.markdown("""
-<style>
-[data-testid="stMarkdownContainer"] table {
-    display: block !important;
-    overflow-x: auto !important;
-    white-space: nowrap !important;
-}
-[data-testid="stMarkdownContainer"] pre {
-    overflow-x: auto !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-try:
-    with open("styles.css", "r") as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-except FileNotFoundError:
-    st.warning("styles.css not found.")
-
-st.markdown("""
-<div class="scroll-btn" onclick="
-    const container = document.querySelector('[data-testid=\\'stAppViewContainer\\']');
-    if (container) { container.scrollTo({ top: 0, behavior: 'smooth' }); }
-">
-<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5l-7 7h4v7h6v-7h4z"/></svg>
-</div>
-<div id="top"></div><a href="#top" class="scroll-btn">↑</a>
-""", unsafe_allow_html=True)
 
 # ------------------------------------------
 # TAKE ASSESSMENT
 # ------------------------------------------
 if app_mode == "Take Assessment":
-    st.markdown("## Add")
+    #st.markdown("##  ")
     
     c1, c2, c3, c4 = st.columns([1, 0.6, 1.4, 0.8])
     
@@ -261,7 +227,7 @@ if app_mode == "Take Assessment":
 # TAKE TEST
 # ------------------------------------------
 elif app_mode == "Take Test":
-    st.markdown("## Add")
+    #st.markdown("## Add")
     if 'test_state' not in st.session_state:
         st.session_state.test_state = 'setup'
         st.session_state.test_data = [] 
@@ -475,7 +441,7 @@ elif app_mode == "Take Test":
 # EDIT CONTENT (Password Protected via Form)
 # ------------------------------------------
 elif app_mode == "Edit Content":
-    st.markdown("## Add")
+    #st.markdown("## Add")
     tab_edit_q, tab_edit_v, tab_edit_hier, tab_health, tab_sql  = st.tabs(["Edit Questions", "Edit Week Videos", "Edit Hierarchy", "Content Health", "Custom SQL"])
     # ==========================================
     # TAB 1: EDIT QUESTIONS
@@ -917,7 +883,7 @@ elif app_mode == "Edit Content":
 # VIEW DATABASE (Protected Admin Area)
 # ------------------------------------------
 elif app_mode == "View Database":
-    st.markdown("## Add")
+    #st.markdown("## Add")
     # Fetch global table list
     tables = fetch_data("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
     table_names = [t['table_name'] for t in tables] if tables else []
@@ -1190,7 +1156,7 @@ elif app_mode == "View Database":
 # VIEW VIDEOS
 # ------------------------------------------
 elif app_mode == "View Videos":
-    st.markdown("## Add")
+    #st.markdown("## Add")
     # ---------------- SUBJECT / WEEK ----------------
     c0, c1, c2 = st.columns([1, 1, 1])
     
