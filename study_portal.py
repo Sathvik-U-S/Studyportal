@@ -127,14 +127,6 @@ st.markdown("""
 <div id="top"></div><a href="#top" class="scroll-btn">↑</a>
 """, unsafe_allow_html=True)
 
-
-# ==========================================
-# NAVIGATION
-# ==========================================
-
-st.sidebar.markdown("### Menu")
-app_mode = st.sidebar.radio("Nav", ["Take Assessment", "Take Test", "Edit Content", "View Database", "View Videos"], label_visibility="collapsed") 
-
 # ------------------------------------------
 # TAKE ASSESSMENT
 # ------------------------------------------
