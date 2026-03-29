@@ -1166,6 +1166,50 @@ elif app_mode == "View Database":
                         )
                     else:
                         st.warning(f"`{export_table}` is empty.")
+        st.divider()
+
+        # --- SECTION B: EXPORT SCHEMA ---
+        st.write("##### 2. Download Database Schema (.sql)")
+        st.info("This will generate a single file containing the structure of all your tables.")
+        
+        if st.button("Generate Schema File", type="secondary"):
+            with st.spinner("Mapping database structure..."):
+                # Fetch all columns and types for all public tables
+                schema_query = """
+                    SELECT table_name, column_name, data_type, is_nullable
+                    FROM information_schema.columns 
+                    WHERE table_schema = 'public'
+                    ORDER BY table_name, ordinal_position;
+                """
+                all_columns = fetch_data(schema_query)
+                
+                if all_columns:
+                    schema_text = "-- ACADEMIC PORTAL DATABASE SCHEMA --\n"
+                    schema_text += f"-- Generated on: {time.strftime('%Y-%m-%d %H:%M:%S')} --\n\n"
+                    
+                    current_table = ""
+                    for col in all_columns:
+                        if col['table_name'] != current_table:
+                            if current_table != "": schema_text += ");\n\n"
+                            current_table = col['table_name']
+                            schema_text += f"CREATE TABLE {current_table} (\n"
+                            schema_text += f"    {col['column_name']} {col['data_type']}"
+                        else:
+                            schema_text += f",\n    {col['column_name']} {col['data_type']}"
+                        
+                        if col['is_nullable'] == "NO": schema_text += " NOT NULL"
+                    
+                    schema_text += "\n);"
+                    
+                    st.download_button(
+                        label="Download full_schema.sql",
+                        data=schema_text,
+                        file_name="academic_portal_schema.sql",
+                        mime="text/sql",
+                        type="primary"
+                    )
+                else:
+                    st.error("Could not retrieve schema information.")
 
 
 # ------------------------------------------
