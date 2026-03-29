@@ -1003,19 +1003,108 @@ elif app_mode == "View Database":
                 st.info(f"No results found for '{kw}'.")
 
     # ==========================================
-    # TOOL 6: Table Browser
+    # TOOL 6: Advanced Table Browser
     # ==========================================
     with tab_browse:
-        st.markdown("#### Raw Table Browser")
+        st.markdown("#### Advanced Table Browser")
         if table_names:
-            selected_table = st.selectbox("Select Table to View", table_names, key="browse_tab")
+            c_tbl, c_lim = st.columns([3, 1])
+            selected_table = c_tbl.selectbox("Select Table to View", table_names, key="browse_tab")
+            limit = c_lim.number_input("Row Limit", min_value=10, max_value=5000, value=100, step=50)
+            
             if selected_table:
-                limit = st.number_input("Row Limit", min_value=10, max_value=5000, value=100, step=50)
-                data = fetch_data(f"SELECT * FROM {selected_table} LIMIT {limit}")
-                if data:
-                    st.dataframe(data, width="stretch")
-                else:
-                    st.info(f"The `{selected_table}` table is currently empty.")
+                # 1. Fetch Columns for Dynamic Filters
+                col_info = fetch_data("""
+                    SELECT column_name, data_type 
+                    FROM information_schema.columns 
+                    WHERE table_name = %s
+                """, (selected_table,))
+                
+                col_names = [c['column_name'] for c in col_info] if col_info else []
+                
+                # 2. Build Dynamic Filters UI
+                st.markdown("##### Filters")
+                filters = {}
+                
+                # Group filters into a grid
+                f_cols = st.columns(4)
+                col_idx = 0
+                
+                # --- Dynamic Dropdown Filters ---
+                if 'subject_name' in col_names:
+                    unique_subs = fetch_data(f"SELECT DISTINCT subject_name FROM {selected_table} WHERE subject_name IS NOT NULL ORDER BY subject_name")
+                    sub_list = [s['subject_name'] for s in unique_subs] if unique_subs else []
+                    sel_subs = f_cols[col_idx % 4].multiselect("Subject Name", sub_list)
+                    if sel_subs: filters['subject_name'] = sel_subs
+                    col_idx += 1
+                    
+                if 'week_number' in col_names:
+                    unique_wks = fetch_data(f"SELECT DISTINCT week_number FROM {selected_table} WHERE week_number IS NOT NULL ORDER BY week_number")
+                    wk_list = [w['week_number'] for w in unique_wks] if unique_wks else []
+                    sel_wks = f_cols[col_idx % 4].multiselect("Week Number", wk_list)
+                    if sel_wks: filters['week_number'] = sel_wks
+                    col_idx += 1
+                    
+                if 'difficulty' in col_names:
+                    sel_diff = f_cols[col_idx % 4].multiselect("Difficulty", ["Easy", "Medium", "Hard"])
+                    if sel_diff: filters['difficulty'] = sel_diff
+                    col_idx += 1
+                    
+                if 'q_type' in col_names:
+                    sel_qty = f_cols[col_idx % 4].multiselect("Question Type", ["mcq", "numerical"])
+                    if sel_qty: filters['q_type'] = sel_qty
+                    col_idx += 1
+
+                # --- Dynamic Boolean Filters ---
+                for b_col in ['is_published', 'is_correct']:
+                    if b_col in col_names:
+                        sel_b = f_cols[col_idx % 4].selectbox(b_col.replace('_', ' ').title(), ["All", "True", "False"])
+                        if sel_b != "All":
+                            filters[b_col] = True if sel_b == "True" else False
+                        col_idx += 1
+
+                # --- Universal Text Search ---
+                st.markdown("<br>", unsafe_allow_html=True)
+                text_search = st.text_input("🔍 Search text columns (e.g., heading, names, option text)", placeholder="Enter a keyword...")
+                
+                # 3. Construct the Secure SQL Query
+                base_query = f"SELECT * FROM {selected_table}"
+                where_clauses = []
+                params = []
+                
+                for k, v in filters.items():
+                    if isinstance(v, list):
+                        # Use IN clause for multiselect dropdowns
+                        placeholders = ", ".join(["%s"] * len(v))
+                        where_clauses.append(f"{k} IN ({placeholders})")
+                        params.extend(v)
+                    elif isinstance(v, bool):
+                        where_clauses.append(f"{k} = %s")
+                        params.append(v)
+                        
+                if text_search:
+                    # Automatically find all text-based columns in the selected table to search through
+                    text_cols = [c['column_name'] for c in col_info if c['data_type'] in ('text', 'character varying')]
+                    if text_cols:
+                        search_clauses = [f"{c} ILIKE %s" for c in text_cols]
+                        where_clauses.append("(" + " OR ".join(search_clauses) + ")")
+                        params.extend([f"%{text_search}%"] * len(text_cols))
+                        
+                if where_clauses:
+                    base_query += " WHERE " + " AND ".join(where_clauses)
+                    
+                base_query += f" ORDER BY id ASC LIMIT {limit}"
+                
+                # 4. Execute and Display
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("Apply Filters & Fetch Data", type="primary", use_container_width=True):
+                    with st.spinner("Fetching filtered data..."):
+                        data = fetch_data(base_query, tuple(params))
+                        if data:
+                            st.success(f"**Showing {len(data)} matching rows.**")
+                            st.dataframe(data, width="stretch", hide_index=True)
+                        else:
+                            st.warning("No records matched your filters. Try removing some restrictions.")
 
     
 
