@@ -454,20 +454,22 @@ elif app_mode == "Take Test":
             st.rerun()
 
 # ------------------------------------------
-# EDIT CONTENT (Password Protected via Form)
+# EDIT CONTENT (Admin Area)
 # ------------------------------------------
 elif app_mode == "Edit Content":
-    #st.markdown("## Add")
-    tab_edit_q, tab_edit_v, tab_edit_hier, tab_health, tab_sql  = st.tabs(["Edit Questions", "Edit Week Videos", "Edit Hierarchy", "Content Health", "Custom SQL"])
+    # Renamed the second tab to reflect it handles more than just videos now
+    tab_edit_q, tab_edit_w, tab_edit_hier, tab_health, tab_sql = st.tabs([
+        "Edit Questions", "Edit Week Details", "Edit Hierarchy", "Content Health", "Custom SQL"
+    ])
+    
     # ==========================================
-    # TAB 1: EDIT QUESTIONS
+    # TAB 1: EDIT QUESTIONS (Upgraded with New Attributes)
     # ==========================================
     with tab_edit_q:
         c1, c2, c3 = st.columns([1, 0.5, 1.5])
 
         subjects = fetch_data("SELECT * FROM subjects ORDER BY name ASC")
 
-        # Use if/else instead of st.stop() to allow Tab 2 to render
         if not subjects:
             st.warning("No subjects found.")
         else:
@@ -506,7 +508,6 @@ elif app_mode == "Edit Content":
                     if not questions:
                         st.warning("No questions found.")
                     else:
-                        # Dropdown showing Q.No + ID
                         q_map = {}
                         for idx, q in enumerate(questions, start=1):
                             short_head = q['heading'][:60] + ("..." if len(q['heading']) > 60 else "")
@@ -520,57 +521,53 @@ elif app_mode == "Edit Content":
                         q_data = fetch_data("SELECT * FROM questions WHERE id = %s", (q_id,))[0]
                         opts_data = fetch_data("SELECT * FROM options WHERE question_id = %s ORDER BY id ASC", (q_id,))
 
-                        #st.divider()
-
                         st.markdown(f"#### Editing Question ID: `{q_id}`")
 
                         # ---------------- EDIT FORM ----------------
                         with st.form("edit_form"):
-                            st.markdown("#### Question Details")
+                            st.markdown("#### Core Details")
 
-                            # BIG RAW HEADING BOX
                             raw_heading = str(q_data['heading']) if q_data['heading'] is not None else ""
                             n_head = st.text_area("Heading (Raw DB Value)", value=raw_heading, height="content", key=f"heading_raw_{q_id}")
 
                             c_qm1, c_qm2 = st.columns([1, 4])
-
                             curr_q_mtype = q_data['media_type'] if q_data['media_type'] else "text"
-
                             n_mtype = c_qm1.selectbox(
                                 "Media Type",
                                 ["text", "code", "image"],
                                 index=["text", "code", "image"].index(curr_q_mtype)
                             )
-
                             raw_media = str(q_data['media_content']) if q_data['media_content'] is not None else ""
-                            n_cont = st.text_area(
-                                "Media Content (Raw DB Value)",
-                                value=raw_media,
-                                height="content",
-                                key=f"media_edit_{q_id}"
-                            )
+                            n_cont = c_qm2.text_area("Media Content", value=raw_media, height="content", key=f"media_edit_{q_id}")
 
-                            # ---------------- NUMERICAL QUESTION ----------------
+                            # --- NEW ATTRIBUTES SECTION ---
+                            st.markdown("#### Metadata & Explanations")
+                            c_meta1, c_meta2 = st.columns(2)
+                            curr_diff = q_data.get('difficulty') or "Medium"
+                            n_diff = c_meta1.selectbox("Difficulty", ["Easy", "Medium", "Hard"], index=["Easy", "Medium", "Hard"].index(curr_diff))
+                            n_pts = c_meta2.number_input("Points", min_value=1, value=int(q_data.get('points') or 1))
+                            
+                            n_exp = st.text_area("Manual Explanation / Tutor Note", value=q_data.get('manual_explanation') or "", height=100)
+
+                            # ---------------- NUMERICAL LOGIC ----------------
                             if q_data.get('q_type') == 'numerical':
-                                n_ans = st.text_input("Correct Answer", value=q_data.get('correct_answer') or ""                                )
+                                n_ans = st.text_input("Correct Answer", value=q_data.get('correct_answer') or "")
 
-                                if st.form_submit_button("Update Question"):
+                                if st.form_submit_button("Update Question", type="primary"):
                                     final_q_mtype = n_mtype if n_mtype != "text" else None
                                     execute_query(
                                         """
                                         UPDATE questions
-                                        SET heading=%s,
-                                            media_type=%s,
-                                            media_content=%s,
-                                            correct_answer=%s
+                                        SET heading=%s, media_type=%s, media_content=%s, correct_answer=%s,
+                                            difficulty=%s, points=%s, manual_explanation=%s
                                         WHERE id=%s
                                         """,
-                                        (n_head, final_q_mtype, n_cont, n_ans, q_id)
+                                        (n_head, final_q_mtype, n_cont, n_ans, n_diff, n_pts, n_exp, q_id)
                                     )
                                     st.success("Updated Successfully")
                                     st.rerun()
 
-                            # ---------------- MCQ QUESTION ----------------
+                            # ---------------- MCQ LOGIC ----------------
                             else:
                                 st.markdown("#### Edit Options")
                                 upd_opts = []
@@ -578,88 +575,48 @@ elif app_mode == "Edit Content":
                                 for opt in opts_data:
                                     c_a, c_b, c_c = st.columns([0.2, 0.7, 0.1])
                                     curr_type = opt['media_type'] if opt['media_type'] else "text"
-                                    
-                                    nt = c_a.selectbox(
-                                        "Type",
-                                        ["text", "code", "image"],
-                                        key=f"type_{opt['id']}",
-                                        index=["text", "code", "image"].index(curr_type)
-                                    )
-
+                                    nt = c_a.selectbox("Type", ["text", "code", "image"], key=f"type_{opt['id']}", index=["text", "code", "image"].index(curr_type))
                                     raw_option = (str(opt['media_content']) if opt['media_content'] is not None else str(opt['option_text']) if opt['option_text'] is not None else "")
-                                    nv = c_b.text_area(
-                                        "Value (Exact DB)",
-                                        value=raw_option,
-                                        height="content",
-                                        key=f"option_raw_{opt['id']}"
-                                    )
-
-                                    nc = c_c.checkbox(
-                                        "Correct",
-                                        value=opt['is_correct'],
-                                        key=f"correct_{opt['id']}"
-                                    )
+                                    nv = c_b.text_area("Value", value=raw_option, height="content", key=f"option_raw_{opt['id']}")
+                                    nc = c_c.checkbox("Correct", value=opt['is_correct'], key=f"correct_{opt['id']}")
                                     upd_opts.append((opt['id'], nt, nv, nc))
 
-                                if st.form_submit_button("Update Question"):
+                                if st.form_submit_button("Update Question", type="primary"):
                                     final_q_mtype = n_mtype if n_mtype != "text" else None
                                     execute_query(
                                         """
                                         UPDATE questions
-                                        SET heading=%s,
-                                            media_type=%s,
-                                            media_content=%s
+                                        SET heading=%s, media_type=%s, media_content=%s,
+                                            difficulty=%s, points=%s, manual_explanation=%s
                                         WHERE id=%s
                                         """,
-                                        (n_head, final_q_mtype, n_cont, q_id)
+                                        (n_head, final_q_mtype, n_cont, n_diff, n_pts, n_exp, q_id)
                                     )
 
                                     for oid, otype, oval, ocorr in upd_opts:
                                         if otype == "text":
-                                            execute_query(
-                                                """
-                                                UPDATE options
-                                                SET option_text=%s,
-                                                    media_type=NULL,
-                                                    media_content=NULL,
-                                                    is_correct=%s
-                                                WHERE id=%s
-                                                """,
-                                                (oval, ocorr, oid)
-                                            )
+                                            execute_query("UPDATE options SET option_text=%s, media_type=NULL, media_content=NULL, is_correct=%s WHERE id=%s", (oval, ocorr, oid))
                                         else:
-                                            execute_query(
-                                                """
-                                                UPDATE options
-                                                SET option_text=NULL,
-                                                    media_type=%s,
-                                                    media_content=%s,
-                                                    is_correct=%s
-                                                WHERE id=%s
-                                                """,
-                                                (otype, oval, ocorr, oid)
-                                            )
+                                            execute_query("UPDATE options SET option_text=NULL, media_type=%s, media_content=%s, is_correct=%s WHERE id=%s", (otype, oval, ocorr, oid))
 
                                     st.success("Updated Successfully")
                                     st.rerun()
 
     # ==========================================
-    # TAB 2: EDIT WEEK VIDEOS
+    # TAB 2: EDIT WEEK DETAILS (Upgraded)
     # ==========================================
-    with tab_edit_v:
-        st.markdown("#### Manage YouTube Videos")
-        #st.info("Assign YouTube URLs to specific weeks. These will appear in the 'View Videos' tab.")
+    with tab_edit_w:
+        st.markdown("#### Manage Week Details & Videos")
         
         c1_v, c2_v = st.columns(2)
-        
         v_subs = fetch_data("SELECT * FROM subjects ORDER BY name ASC")
+        
         if not v_subs:
             st.warning("No subjects found.")
         else:
             vs_map = {s['name']: s['id'] for s in v_subs}
             vs_sel = c1_v.selectbox("Subject", list(vs_map.keys()), key="v_edit_sub")
             
-            # Fetch from the `weeks` table
             v_weeks = fetch_data("SELECT * FROM weeks WHERE subject_id=%s ORDER BY week_number ASC", (vs_map[vs_sel],))
             
             if not v_weeks:
@@ -670,28 +627,28 @@ elif app_mode == "Edit Content":
                 
                 week_id = vw_map[vw_sel]
                 
-                # Fetch current videos
-                curr_vid_data = fetch_data("SELECT youtube_urls FROM weeks WHERE id=%s", (week_id,))
-                curr_urls = curr_vid_data[0].get('youtube_urls') if curr_vid_data else []
+                curr_vid_data = fetch_data("SELECT topic_title, youtube_urls FROM weeks WHERE id=%s", (week_id,))
+                curr_title = curr_vid_data[0].get('topic_title') if curr_vid_data else ""
+                curr_urls = curr_vid_data[0].get('youtube_urls') if curr_vid_data and curr_vid_data[0].get('youtube_urls') else []
                 curr_urls_str = "\n".join(curr_urls) if curr_urls else ""
                 
                 with st.form("edit_v_form"):
-                    st.markdown("**YouTube URLs**")
-                    st.caption("Paste video URLs below (one per line).")
+                    st.markdown("**Week Metadata**")
+                    new_title = st.text_input("Topic Title (e.g., 'Introduction to Python')", value=curr_title or "")
+                    
+                    st.markdown("**YouTube URLs (One per line)**")
                     new_urls_str = st.text_area("URLs", value=curr_urls_str, height=150, label_visibility="collapsed")
                     
-                    if st.form_submit_button("Save Videos", type="primary"):
-                        # Clean up lines and ignore empty ones
+                    if st.form_submit_button("Save Week Details", type="primary"):
                         new_urls_list = [u.strip() for u in new_urls_str.split("\n") if u.strip()]
-                        
-                        # psycopg2 automatically handles python lists -> postgres text[] arrays
-                        if execute_query("UPDATE weeks SET youtube_urls=%s WHERE id=%s", (new_urls_list, week_id)):
-                            st.success(f"Successfully saved {len(new_urls_list)} video(s) to {vw_sel}!")
+                        if execute_query("UPDATE weeks SET topic_title=%s, youtube_urls=%s WHERE id=%s", (new_title, new_urls_list, week_id)):
+                            st.success(f"Successfully updated {vw_sel}!")
                             st.rerun()
                         else:
-                            st.error("Failed to save videos.")
+                            st.error("Failed to save week details.")
+
     # ==========================================
-    # TAB 3: MANAGE STRUCTURE (Upgraded with Edit Capabilities)
+    # TAB 3: MANAGE STRUCTURE (Edit Hierarchy)
     # ==========================================
     with tab_edit_hier:
         st.markdown("##### Manage Database Structure")
@@ -699,7 +656,6 @@ elif app_mode == "Edit Content":
         # --- ROW 1: ADD NEW STRUCTURE ---
         c_sub, c_week, c_act = st.columns(3)
 
-        # 1. Add Subject
         with c_sub:
             with st.container(border=True):
                 st.markdown("**Add Subject**")
@@ -710,14 +666,10 @@ elif app_mode == "Edit Content":
                             if execute_query("INSERT INTO subjects (name) VALUES (%s)", (new_sub_name.strip(),)):
                                 st.success(f"Added '{new_sub_name}'")
                                 st.rerun()
-                            else:
-                                st.error("Failed to add subject.")
-                        else:
-                            st.warning("Please enter a name.")
+                        else: st.warning("Please enter a name.")
 
         hier_subs = fetch_data("SELECT * FROM subjects ORDER BY name ASC")
 
-        # 2. Add Week
         with c_week:
             with st.container(border=True):
                 st.markdown("**Add Week**")
@@ -730,12 +682,8 @@ elif app_mode == "Edit Content":
                             if execute_query("INSERT INTO weeks (subject_id, week_number) VALUES (%s, %s)", (sub_id_w, new_week_num)):
                                 st.success(f"Added Week {new_week_num} to {sub_sel_w}")
                                 st.rerun()
-                            else:
-                                st.error(f"Failed. (Does Week {new_week_num} already exist?)")
-                else:
-                    st.warning("Add a subject first.")
+                else: st.warning("Add a subject first.")
 
-        # 3. Add Activity
         with c_act:
             with st.container(border=True):
                 st.markdown("**Add Activity**")
@@ -752,21 +700,15 @@ elif app_mode == "Edit Content":
                                     if execute_query("INSERT INTO assessments (subject_id, week_number, name) VALUES (%s, %s, %s)", (sub_id_a, week_sel_a, new_act_name.strip())):
                                         st.success(f"Added '{new_act_name}'")
                                         st.rerun()
-                                    else:
-                                        st.error("Failed to add activity.")
-                                else:
-                                    st.warning("Please enter a name.")
-                    else:
-                        st.warning("Add a week to this subject first.")
-                else:
-                    st.warning("Add a subject first.")
+                                else: st.warning("Please enter a name.")
+                    else: st.warning("Add a week to this subject first.")
+                else: st.warning("Add a subject first.")
 
         # --- ROW 2: EDIT EXISTING STRUCTURE ---
         st.divider()
         st.markdown("##### Edit Existing Structure")
         ce_sub, ce_week, ce_act = st.columns(3)
 
-        # 1. Rename Subject
         with ce_sub:
             with st.container(border=True):
                 st.markdown("**Rename Subject**")
@@ -780,10 +722,7 @@ elif app_mode == "Edit Content":
                                 if execute_query("UPDATE subjects SET name = %s WHERE id = %s", (new_sub_name.strip(), edit_sub_id)):
                                     st.success(f"Renamed to '{new_sub_name}'")
                                     st.rerun()
-                else:
-                    st.info("No subjects available.")
 
-        # 2. Change Week Number
         with ce_week:
             with st.container(border=True):
                 st.markdown("**Change Week Number**")
@@ -798,16 +737,11 @@ elif app_mode == "Edit Content":
                             new_week_num = st.number_input("New Week Number", min_value=1, max_value=100, value=e_w_sel)
                             if st.form_submit_button("Update Week", type="primary", width="stretch"):
                                 if new_week_num != e_w_sel:
-                                    # Update week table
                                     execute_query("UPDATE weeks SET week_number = %s WHERE id = %s", (new_week_num, e_w_id))
-                                    # Cascade update to assessments table
                                     execute_query("UPDATE assessments SET week_number = %s WHERE subject_id = %s AND week_number = %s", (new_week_num, e_w_sub_id, e_w_sel))
                                     st.success(f"Updated week to {new_week_num}")
                                     st.rerun()
-                    else:
-                        st.info("No weeks found.")
 
-        # 3. Rename Activity
         with ce_act:
             with st.container(border=True):
                 st.markdown("**Rename Activity**")
@@ -828,20 +762,14 @@ elif app_mode == "Edit Content":
                                         if execute_query("UPDATE assessments SET name = %s WHERE id = %s", (new_act_name.strip(), e_a_act_id)):
                                             st.success(f"Renamed to '{new_act_name}'")
                                             st.rerun()
-                        else:
-                            st.info("No activities found.")
-    
+
     # ==========================================
-    # TOOL 4: Content Health Inspector (NEW)
+    # TOOL 4: Content Health Inspector
     # ==========================================
     with tab_health:
         st.markdown("##### Content Health Inspector")
-        
-        # We use COALESCE and TRIM to make sure we don't accidentally flag 
-        # numerical questions that don't have options.
         health_filter = "WHERE LOWER(TRIM(COALESCE(q.q_type, 'mcq'))) NOT IN ('numerical', 'nat')"
 
-        # Audit 1: MCQs with 0 options
         st.markdown("**Potential Orphaned Questions (No Options)**")
         orphans = fetch_data(f"""
             SELECT q.id, q.heading, a.name as assessment 
@@ -854,10 +782,8 @@ elif app_mode == "Edit Content":
         if orphans:
             st.error(f"Found {len(orphans)} Multiple Choice questions with NO options!")
             st.dataframe(pd.DataFrame(orphans), width="stretch", hide_index=True)
-        else:
-            st.success("Content Health: All MCQs have options.")
+        else: st.success("Content Health: All MCQs have options.")
 
-        # Audit 2: MCQs with NO correct answer
         st.markdown("**Unsolvable Questions (No Correct Option)**")
         unsolvable = fetch_data(f"""
             SELECT q.id, q.heading
@@ -877,23 +803,18 @@ elif app_mode == "Edit Content":
         st.markdown("#### Run Custom SQL")
         query = st.text_area("Enter SQL Query", height="content", placeholder="SELECT * FROM questions WHERE id = 1;")
         if st.button("Execute Query", type="primary"):
-            if query.strip() == "":
-                st.error("Please enter a query.")
+            if query.strip() == "": st.error("Please enter a query.")
             elif query.strip().upper().startswith("SELECT"):
                 try:
                     res = fetch_data(query)
                     if res:
                         st.dataframe(res, width="stretch")
                         st.success(f"Returned {len(res)} rows.")
-                    else:
-                        st.info("Query returned no results.")
-                except Exception as e:
-                    st.error(f"SQL Error: {e}")
+                    else: st.info("Query returned no results.")
+                except Exception as e: st.error(f"SQL Error: {e}")
             else:
-                if execute_query(query):
-                    st.success("Query executed and committed successfully.")
-                else:
-                    st.error("Failed to execute query. Check syntax and constraints.")
+                if execute_query(query): st.success("Query executed and committed successfully.")
+                else: st.error("Failed to execute query. Check syntax and constraints.")
 
 # ------------------------------------------
 # VIEW DATABASE (Protected Admin Area)
@@ -990,14 +911,14 @@ elif app_mode == "View Database":
             st.warning("No subjects found in the database.")
 
     # ==========================================
-    # TOOL 2: GUI Visual Dashboard (Expanded)
+    # TOOL 2: GUI Visual Dashboard (Upgraded)
     # ==========================================
     with tab_viz:
         st.markdown("##### Database Analytics")
         
         v_col1, v_col2 = st.columns(2)
         
-        # Graph 1: Questions per Subject
+        # 1. Questions per Subject (Kept)
         with v_col1:
             st.markdown("**Total Questions per Subject**")
             q_per_sub = fetch_data("""
@@ -1008,10 +929,9 @@ elif app_mode == "View Database":
                 GROUP BY s.name
             """)
             if q_per_sub:
-                df_sub = pd.DataFrame(q_per_sub).set_index("subject")
-                st.bar_chart(df_sub, color="#f9a01b")
+                st.bar_chart(pd.DataFrame(q_per_sub).set_index("subject"), color="#f9a01b")
                 
-        # Graph 2: Questions Types
+        # 2. Question Types (Kept)
         with v_col2:
             st.markdown("**Question Format Distribution**")
             q_types = fetch_data("""
@@ -1019,52 +939,45 @@ elif app_mode == "View Database":
                 FROM questions GROUP BY format
             """)
             if q_types:
-                df_types = pd.DataFrame(q_types).set_index("format")
-                st.bar_chart(df_types, color="#0099ff")
+                st.bar_chart(pd.DataFrame(q_types).set_index("format"), color="#0099ff")
 
-
-        # Graph 3: Area Chart of Questions Added per Week
-        st.markdown("**Questions Distributed Across Weeks**")
-        q_per_week = fetch_data("""
-            SELECT a.week_number, count(q.id) as question_count 
-            FROM assessments a 
-            JOIN questions q ON a.id = q.assessment_id 
-            GROUP BY a.week_number 
-            ORDER BY a.week_number ASC
-        """)
-        if q_per_week:
-            df_week = pd.DataFrame(q_per_week).set_index("week_number")
-            st.area_chart(df_week, color="#00ff99")
-
-        st.markdown("---")
-        
-        # Graph 4: Scatter Plot (Complexity Matrix)
-        st.markdown("**Complexity Matrix (Options per Question by Week)**")
-        scatter_data = fetch_data("""
-            SELECT a.week_number as "Week", count(o.id) as "Options Count"
-            FROM assessments a 
-            JOIN questions q ON a.id = q.assessment_id 
-            LEFT JOIN options o ON q.id = o.question_id
-            GROUP BY a.week_number, q.id
-        """)
-        if scatter_data:
-            df_scatter = pd.DataFrame(scatter_data)
-            # Scatter chart shows density of question complexity over the weeks
-            st.scatter_chart(df_scatter, x="Week", y="Options Count", color="#ff0055", size=50)
-
+        st.divider()
         m_col1, m_col2 = st.columns(2)
-        
+
+        # 3. NEW: Difficulty Breakdown
         with m_col1:
-            st.markdown("**Media in Questions**")
-            q_media = fetch_data("SELECT COALESCE(media_type, 'text-only') as media, COUNT(id) as count FROM questions GROUP BY media")
-            if q_media:
-                st.bar_chart(pd.DataFrame(q_media).set_index("media"), color="#8884d8")
-                
+            st.markdown("**Difficulty Spread**")
+            diff_data = fetch_data("""
+                SELECT COALESCE(difficulty, 'Unassigned') as diff, count(id) as cnt 
+                FROM questions GROUP BY diff
+            """)
+            if diff_data:
+                st.bar_chart(pd.DataFrame(diff_data).set_index("diff"), color="#ff4b4b")
+
+        # 4. NEW: Total Points Available
         with m_col2:
-            st.markdown("**Media in Options**")
-            o_media = fetch_data("SELECT COALESCE(media_type, 'text-only') as media, COUNT(id) as count FROM options GROUP BY media")
-            if o_media:
-                st.bar_chart(pd.DataFrame(o_media).set_index("media"), color="#82ca9d")
+            st.markdown("**Total Exam Points per Subject**")
+            pts_data = fetch_data("""
+                SELECT s.name as subject, SUM(COALESCE(q.points, 1)) as total_points 
+                FROM subjects s 
+                JOIN assessments a ON s.id = a.subject_id 
+                JOIN questions q ON a.id = q.assessment_id 
+                GROUP BY s.name
+            """)
+            if pts_data:
+                st.bar_chart(pd.DataFrame(pts_data).set_index("subject"), color="#00ff99")
+
+        st.divider()
+
+        # 5. NEW: Video Resources Allocation
+        st.markdown("**Video Resources per Week**")
+        vid_data = fetch_data("""
+            SELECT 'Week ' || week_number as week_label, array_length(youtube_urls, 1) as vid_count 
+            FROM weeks 
+            WHERE youtube_urls IS NOT NULL
+        """)
+        if vid_data:
+            st.bar_chart(pd.DataFrame(vid_data).set_index("week_label"), color="#8884d8")
 
 
 
@@ -1235,7 +1148,13 @@ elif app_mode == "View Videos":
         c0.markdown("#### Video Lectures & Resources")
         st.stop()
         
-    w_map = {f"Week {w['week_number']}": w['id'] for w in weeks}
+    # Build clean dropdown labels. Ex: "Week 1: Intro to Python" (or just "Week 1" if empty)
+    w_map = {}
+    for w in weeks:
+        label = f"Week {w['week_number']}"
+        if w.get('topic_title'):
+            label += f": {w['topic_title']}"
+        w_map[label] = w['id']
     w_sel = c2.selectbox("Week", list(w_map.keys()), key="vid_week")
     
     #st.markdown("---")
