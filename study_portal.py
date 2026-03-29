@@ -1003,85 +1003,191 @@ elif app_mode == "View Database":
                 st.info(f"No results found for '{kw}'.")
 
     # ==========================================
-    # TOOL 6: Advanced Table Browser (PERSISTENT)
+    # TOOL 6: Supercharged Data Explorer (Dynamic Filters & JOINs)
     # ==========================================
     with tab_browse:
-        st.markdown("#### Advanced Table Browser")
-        if table_names:
-            # Initialize session state for the browser results if not present
-            if "browse_results" not in st.session_state:
-                st.session_state.browse_results = None
+        st.markdown("#### Supercharged Data Explorer")
+        
+        if "browse_results" not in st.session_state:
+            st.session_state.browse_results = None
 
-            c_tbl, c_lim = st.columns([3, 1])
-            selected_table = c_tbl.selectbox("Select Table to View", table_names, key="browse_tab_sel")
-            limit = c_lim.number_input("Row Limit", min_value=10, max_value=5000, value=100, step=50)
-            
+        # 1. Choose Data Mode (Raw vs Joined)
+        c_mode, c_lim = st.columns([3, 1])
+        source_type = c_mode.radio("Data Mode", ["Raw Tables", "Master Joined Views"], horizontal=True, label_visibility="collapsed")
+        limit = c_lim.number_input("Row Limit", min_value=10, max_value=5000, value=100, step=50)
+
+        base_query = ""
+        col_info = []
+
+        # ------------------------------------------
+        # MODE A: Raw Tables
+        # ------------------------------------------
+        if source_type == "Raw Tables" and table_names:
+            selected_table = st.selectbox("Select Table", table_names, key="raw_tbl_sel")
             if selected_table:
-                # 1. Fetch Column Metadata for Filters
+                base_query = f"SELECT * FROM {selected_table}"
                 col_info = fetch_data("""
-                    SELECT column_name, data_type 
+                    SELECT column_name as col, data_type as type 
                     FROM information_schema.columns 
                     WHERE table_name = %s
                 """, (selected_table,))
-                col_names = [c['column_name'] for c in col_info] if col_info else []
-                
-                # 2. Dynamic Filters UI
-                with st.expander("🔍 Filter & Search Options", expanded=True):
-                    filters = {}
-                    f_cols = st.columns(4)
-                    col_idx = 0
-                    
-                    if 'subject_name' in col_names:
-                        unique_subs = fetch_data(f"SELECT DISTINCT subject_name FROM {selected_table} WHERE subject_name IS NOT NULL")
-                        sub_list = [s['subject_name'] for s in unique_subs] if unique_subs else []
-                        sel_subs = f_cols[col_idx % 4].multiselect("Subject", sub_list)
-                        if sel_subs: filters['subject_name'] = sel_subs
-                        col_idx += 1
-                        
-                    if 'difficulty' in col_names:
-                        sel_diff = f_cols[col_idx % 4].multiselect("Difficulty", ["Easy", "Medium", "Hard"])
-                        if sel_diff: filters['difficulty'] = sel_diff
+
+        # ------------------------------------------
+        # MODE B: Master Joined Views
+        # ------------------------------------------
+        else:
+            views = {
+                "Questions + Full Metadata (Context View)": {
+                    "query": """
+                        SELECT q.id as "Q_ID", s.name as "Subject", a.week_number as "Week", a.name as "Activity", 
+                               q.heading as "Heading", q.q_type as "Format", q.difficulty as "Difficulty", 
+                               q.points as "Points", q.correct_answer as "Numerical_Ans", q.is_published as "Published"
+                        FROM questions q 
+                        JOIN assessments a ON q.assessment_id = a.id 
+                        JOIN subjects s ON a.subject_id = s.id
+                    """,
+                    "cols": [
+                        {"col": "Subject", "type": "text"}, {"col": "Week", "type": "integer"}, 
+                        {"col": "Activity", "type": "text"}, {"col": "Heading", "type": "text"},
+                        {"col": "Format", "type": "text"}, {"col": "Difficulty", "type": "text"},
+                        {"col": "Published", "type": "boolean"}
+                    ]
+                },
+                "Options Dictionary (With Parent Question)": {
+                    "query": """
+                        SELECT o.id as "Opt_ID", s.name as "Subject", q.heading as "Parent_Question", 
+                               o.option_text as "Option_Text", o.is_correct as "Is_Correct", o.media_type as "Media"
+                        FROM options o 
+                        JOIN questions q ON o.question_id = q.id 
+                        JOIN assessments a ON q.assessment_id = a.id 
+                        JOIN subjects s ON a.subject_id = s.id
+                    """,
+                    "cols": [
+                        {"col": "Subject", "type": "text"}, {"col": "Parent_Question", "type": "text"},
+                        {"col": "Option_Text", "type": "text"}, {"col": "Is_Correct", "type": "boolean"},
+                        {"col": "Media", "type": "text"}
+                    ]
+                }
+            }
+            
+            selected_view = st.selectbox("Select Pre-Built Join", list(views.keys()), key="view_sel")
+            if selected_view:
+                base_query = views[selected_view]["query"]
+                col_info = views[selected_view]["cols"]
+
+        # ------------------------------------------
+        # DYNAMIC FILTER GENERATOR
+        # ------------------------------------------
+        if base_query and col_info:
+            with st.expander("🔍 Auto-Generated Filters", expanded=True):
+                filters = {}
+                f_cols = st.columns(4)
+                col_idx = 0
+
+                # System columns we don't want to clutter the UI with
+                ignored_cols = ['id', 'created_at', 'updated_at', 'subject_id', 'assessment_id', 
+                                'question_id', 'cache_key', 'video_id', 'youtube_urls', 'media_content']
+
+                for c in col_info:
+                    col_name = c['col']
+                    col_type = c['type'].lower() if c.get('type') else 'text'
+
+                    if col_name.lower() in ignored_cols or 'array' in col_type: 
+                        continue
+
+                    # 1. Generate Boolean Filters (True/False Toggles)
+                    if col_type == 'boolean':
+                        sel = f_cols[col_idx % 4].selectbox(col_name.replace('_', ' ').title(), ["All", "True", "False"], key=f"f_{col_name}")
+                        if sel != "All":
+                            filters[col_name] = {"val": True if sel == "True" else False, "type": "bool"}
                         col_idx += 1
 
-                    text_search = st.text_input("Global Search (IDs, Headings, Text)", placeholder="Type to filter...")
+                    # 2. Generate Categorical Dropdowns (Only if < 25 unique values exist)
+                    elif col_type in ['text', 'character varying', 'integer']:
+                        # For raw tables, we dynamically check the database to see if a dropdown is appropriate
+                        if source_type == "Raw Tables":
+                            try:
+                                dist_vals = fetch_data(f"SELECT DISTINCT {col_name} FROM {selected_table} WHERE {col_name} IS NOT NULL LIMIT 30")
+                                # If there are few distinct values (like Difficulty or Week), make a multi-select
+                                if dist_vals and len(dist_vals) < 25:
+                                    v_list = [str(r[col_name]) for r in dist_vals]
+                                    sel = f_cols[col_idx % 4].multiselect(col_name.replace('_', ' ').title(), v_list, key=f"f_{col_name}")
+                                    if sel: filters[col_name] = {"val": sel, "type": "in"}
+                                    col_idx += 1
+                            except: pass
+                        # For joined views, we build dropdowns based on the predefined structure
+                        else:
+                            if col_type != 'text' or col_name in ['Subject', 'Format', 'Difficulty', 'Media', 'Week']:
+                                try:
+                                    # Use a CTE to safely extract distinct values from the complex joined view
+                                    dist_vals = fetch_data(f"WITH base AS ({base_query}) SELECT DISTINCT \"{col_name}\" FROM base WHERE \"{col_name}\" IS NOT NULL LIMIT 30")
+                                    if dist_vals:
+                                        v_list = [str(r[col_name]) for r in dist_vals]
+                                        sel = f_cols[col_idx % 4].multiselect(col_name.replace('_', ' ').title(), v_list, key=f"f_{col_name}")
+                                        if sel: filters[col_name] = {"val": sel, "type": "in"}
+                                        col_idx += 1
+                                except: pass
 
-                # 3. Execution Logic
-                if st.button("Apply Filters & Fetch Data", type="primary", use_container_width=True):
-                    # Build Query
-                    base_query = f"SELECT * FROM {selected_table}"
+                st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
+                text_search = st.text_input("Global Text Search (Scans all text columns instantly)", placeholder="Enter keyword to search...")
+
+            # ------------------------------------------
+            # QUERY EXECUTION
+            # ------------------------------------------
+            if st.button("Apply Filters & Fetch Data", type="primary", use_container_width=True):
+                with st.spinner("Compiling dynamic query..."):
                     where_clauses = []
                     params = []
-                    
+
+                    # Apply Dropdown and Boolean Filters
                     for k, v in filters.items():
-                        placeholders = ", ".join(["%s"] * len(v))
-                        where_clauses.append(f"{k} IN ({placeholders})")
-                        params.extend(v)
+                        # Wrap column names in double quotes to protect case-sensitive aliases in Joined Views
+                        safe_col = f'"{k}"' if source_type == "Master Joined Views" else k
                         
+                        if v["type"] == "in":
+                            placeholders = ", ".join(["%s"] * len(v["val"]))
+                            where_clauses.append(f"{safe_col} IN ({placeholders})")
+                            params.extend(v["val"])
+                        elif v["type"] == "bool":
+                            where_clauses.append(f"{safe_col} = %s")
+                            params.append(v["val"])
+
+                    # Apply Global Text Search
                     if text_search:
-                        text_cols = [c['column_name'] for c in col_info if c['data_type'] in ('text', 'character varying')]
+                        text_cols = [c['col'] for c in col_info if c['type'] in ('text', 'character varying')]
                         if text_cols:
-                            search_clauses = [f"{c} ILIKE %s" for c in text_cols]
+                            search_clauses = []
+                            for c in text_cols:
+                                safe_c = f'"{c}"' if source_type == "Master Joined Views" else c
+                                # Cast to text ensures we don't get errors if a column behaves weirdly
+                                search_clauses.append(f"CAST({safe_c} AS TEXT) ILIKE %s")
                             where_clauses.append("(" + " OR ".join(search_clauses) + ")")
                             params.extend([f"%{text_search}%"] * len(text_cols))
-                            
-                    if where_clauses:
-                        base_query += " WHERE " + " AND ".join(where_clauses)
-                    base_query += f" ORDER BY 1 DESC LIMIT {limit}"
-                    
-                    # THE FIX: Store the results in session_state instead of just printing them
-                    st.session_state.browse_results = fetch_data(base_query, tuple(params))
 
-                # 4. Display Logic (Reads from session_state)
-                if st.session_state.browse_results is not None:
-                    if st.session_state.browse_results:
-                        st.success(f"Showing {len(st.session_state.browse_results)} records.")
-                        st.dataframe(pd.DataFrame(st.session_state.browse_results), width="stretch", hide_index=True)
-                        
-                        if st.button("Clear Results"):
-                            st.session_state.browse_results = None
-                            st.rerun()
-                    else:
-                        st.warning("No records found matching those filters.")
+                    # Wrap everything in a CTE (Common Table Expression). 
+                    # This guarantees that we can filter the result of ANY complex JOIN without SQL alias errors.
+                    final_query = f"WITH dynamic_view AS ({base_query}) SELECT * FROM dynamic_view"
+                    
+                    if where_clauses:
+                        final_query += " WHERE " + " AND ".join(where_clauses)
+
+                    final_query += f" LIMIT {limit}"
+                    
+                    st.session_state.browse_results = fetch_data(final_query, tuple(params))
+
+            # ------------------------------------------
+            # RENDER RESULTS
+            # ------------------------------------------
+            if st.session_state.browse_results is not None:
+                if st.session_state.browse_results:
+                    st.success(f"**Showing {len(st.session_state.browse_results)} records.**")
+                    st.dataframe(pd.DataFrame(st.session_state.browse_results), width="stretch", hide_index=True)
+                    
+                    if st.button("Clear Results"):
+                        st.session_state.browse_results = None
+                        st.rerun()
+                else:
+                    st.warning("No records found matching those filters. Try removing some restrictions.")
 
     
 
