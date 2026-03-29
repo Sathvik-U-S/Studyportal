@@ -12,44 +12,42 @@ from video_ai_tutor import *
 from database import *
 from cache_manager import *
 from mcq_ai_tutor import *
-from streamlit_google_auth import Authenticate # <-- NEW IMPORT
+import streamlit_authenticator as stauth
+import yaml
+from yaml.loader import SafeLoader
 
 # ==========================================
-# 0. GOOGLE AUTH GATEKEEPER & ROLE SETUP
+# 0. SECURE NATIVE AUTHENTICATION
 # ==========================================
-json_path = 'google_credentials.json'
-if "GOOGLE_CREDENTIALS_JSON" in st.secrets:
-    try:
-        with open(json_path, "w") as f:
-            f.write(st.secrets["GOOGLE_CREDENTIALS_JSON"])
-    except Exception as e:
-        st.error(f"Security Error: Could not create credentials file. {e}")
+# 1. Load credentials directly from Streamlit Secrets
+credentials = dict(st.secrets["credentials"])
+cookie_config = dict(st.secrets["cookie"])
 
-if "ADMIN_EMAILS" in st.secrets:
-    ADMIN_EMAILS = [email.strip() for email in st.secrets["ADMIN_EMAILS"].split(",")]
-else:
-    ADMIN_EMAILS = []
-
-# --- IMPORTANT: Ensure REDIRECT_URI is in your Streamlit Secrets! ---
-authenticator = Authenticate(
-    secret_credentials_path=json_path,
-    cookie_name='study_portal_cookie',
-    cookie_key=st.secrets.get("COOKIE_SECRET", "default_secret_key"),
-    redirect_uri=st.secrets.get("REDIRECT_URI", "http://localhost:8501"),
+# 2. Initialize the Authenticator
+authenticator = stauth.Authenticate(
+    credentials,
+    cookie_config['name'],
+    cookie_config['key'],
+    cookie_config['expiry_days']
 )
 
-authenticator.check_authentification()
-
-# --- MISSING BLOCK: The Gatekeeper ---
-if not st.session_state.get('connected'):
-    st.markdown("<h2 style='text-align: center;'>Academic Portal Login</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center;'>Please sign in with your Google account to continue.</p>", unsafe_allow_html=True)
+# 3. Render the Login UI
+try:
     authenticator.login()
-    st.stop() # Halts the app until they log in
+except Exception as e:
+    st.error(e)
 
-# Store the logged-in user's email
-user_info = st.session_state.get('user_info', {})
-st.session_state['user_email'] = user_info.get('email', 'Guest')
+# 4. Gatekeeper Logic
+if st.session_state["authentication_status"] is False:
+    st.error('Username/password is incorrect')
+    st.stop()
+elif st.session_state["authentication_status"] is None:
+    st.warning('Please enter your username and password to access the portal.')
+    st.stop()
+
+# If the code reaches here, the user is successfully logged in!
+current_user_role = credentials['usernames'][st.session_state["username"]]['role']
+current_user_email = credentials['usernames'][st.session_state["username"]]['email']
 # -------------------------------------
 
 # ==========================================
@@ -78,17 +76,16 @@ st.markdown("""
 # ==========================================
 # NAVIGATION (Smart Routing)
 # ==========================================
-st.sidebar.markdown(f"**User:**\n{st.session_state['user_email']}")
-if st.sidebar.button("Log Out"):
-    authenticator.logout()
+st.sidebar.markdown(f"**Welcome, {st.session_state['name']}**")
+authenticator.logout('Log Out', 'sidebar')
 
 st.sidebar.markdown("### Menu")
 
 # Base options for all students
 nav_options = ["Take Assessment", "Take Test", "View Videos"]
 
-# If the logged-in email matches the Admin list, reveal the hidden tabs!
-if st.session_state['user_email'] in ADMIN_EMAILS:
+# Reveal hidden tabs ONLY if the user's role in secrets is 'admin'
+if current_user_role == "admin":
     nav_options.insert(2, "Edit Content")
     nav_options.insert(3, "View Database")
 
