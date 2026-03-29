@@ -18,13 +18,17 @@ from yaml.loader import SafeLoader
 # ==========================================
 # 0. SECURE NATIVE AUTHENTICATION
 # ==========================================
+
 # Helper function to deeply convert Streamlit's read-only secrets into a normal, editable dictionary
 def make_mutable_dict(d):
-    if isinstance(d, dict):
+    # Use hasattr instead of isinstance(dict) because Streamlit Secrets act like dicts but aren't true dicts
+    if hasattr(d, 'items'):
         return {k: make_mutable_dict(v) for k, v in d.items()}
+    elif isinstance(d, list):
+        return [make_mutable_dict(v) for v in d]
     return d
 
-# 1. Load and convert credentials
+# 1. Load and deeply convert credentials
 credentials = make_mutable_dict(st.secrets["credentials"])
 cookie_config = make_mutable_dict(st.secrets["cookie"])
 
@@ -36,19 +40,19 @@ authenticator = stauth.Authenticate(
     cookie_config['expiry_days']
 )
 
-# 3. Render the Login UI
-try:
-    authenticator.login()
-except Exception as e:
-    st.error(e)
+# 3. Gatekeeper & Login UI
+if not st.session_state.get("authentication_status"):
+    try:
+        authenticator.login()
+    except Exception as e:
+        st.error(e)
 
-# 4. Gatekeeper Logic
-if st.session_state.get("authentication_status") is False:
-    st.error('Username/password is incorrect')
-    st.stop()
-elif st.session_state.get("authentication_status") is None:
-    st.warning('Please enter your username and password to access the portal.')
-    st.stop()
+    if st.session_state.get("authentication_status") is False:
+        st.error('Username/password is incorrect')
+        st.stop()
+    elif st.session_state.get("authentication_status") is None:
+        st.warning('Please enter your username and password to access the portal.')
+        st.stop()
 
 # If the code reaches here, the user is successfully logged in!
 current_user_role = credentials['usernames'][st.session_state["username"]]['role']
