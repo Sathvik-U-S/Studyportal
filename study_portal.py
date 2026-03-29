@@ -25,13 +25,16 @@ try:
     with open("styles.css", "r") as f:
         css_content = f.read()
         
-        # The <svg> has been removed. Your CSS will automatically draw the white arrow inside this empty <a> tag!
         html_payload = f"""
         <style>{css_content}</style>
 
         <div id="top" style="scroll-margin-top: 5rem; height: 0; visibility: hidden;"></div>
 
-        <a href="#top" class="scroll-btn" title="Go to top"></a>
+        <a href="#top" class="scroll-btn" title="Go to top">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
+                <path fill="white" d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12 12 4z"/>
+            </svg>
+        </a>
         """
         st.html(html_payload)
 except FileNotFoundError:

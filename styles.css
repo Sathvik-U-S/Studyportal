@@ -1,7 +1,9 @@
 /* =====================================================================
    STREAMLIT CUSTOM CSS - MASTER STYLE SHEET (NATIVE RED THEME)
    ===================================================================== */
-
+html {
+    scroll-behavior: smooth;
+}
 /* ==========================================
    SECTION 1: LAYOUT & TYPOGRAPHY
    ========================================== */
@@ -91,38 +93,40 @@ div[data-testid="stAlert"] * {
    ========================================== */
 .scroll-btn {
     position: fixed;
-    bottom: 55px;
-    right: 40px;
+    bottom: 50px;
+    right: 35px;
     width: 45px;
     height: 45px;
-    border-radius: 35% !important;
-    background-color: #ff4b4b !important; 
-    z-index: 99999;
-    /*box-shadow: 0 4px 10px rgba(0,0,0,0.3);*/
-    cursor: pointer;
+    border-radius: 35%;
+    
+    /* Minimalist Semi-Transparent Red */
+    background-color: rgba(255, 75, 75, 0.6) !important; 
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    
+    z-index: 999999;
     text-decoration: none !important;
     
-    /* Flexbox used to center the CSS arrow */
+    /* Center the CSS arrow */
     display: flex;
     align-items: center;
     justify-content: center;
-    
-    /* Always visible now! */
-    transition: transform 0.2s ease, background-color 0.2s ease;
+    transition: all 0.3s ease;
 }
 
 .scroll-btn:hover {
-    background-color: #ff3333 !important;
-    transform: scale(1.08);
+    background-color: rgba(255, 75, 75, 1) !important; 
+    transform: translateY(-3px);
+    /*box-shadow: 0 6px 12px rgba(255, 75, 75, 0.3);*/
 }
 
-/* Drawing the arrow using CSS borders */
+/* Pure CSS Arrow (Guaranteed to stay white) */
 .scroll-btn::after {
     content: '';
     width: 12px;
     height: 12px;
-    border-top: 2.5px solid #ffffff; 
-    border-left: 2.5px solid #ffffff; 
+    border-top: 3px solid #ffffff; 
+    border-left: 3px solid #ffffff; 
     transform: rotate(45deg); 
     margin-top: 6px; 
 }
