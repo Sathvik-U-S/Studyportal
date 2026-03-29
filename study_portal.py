@@ -40,6 +40,18 @@ authenticator = Authenticate(
 
 authenticator.check_authentification()
 
+# --- MISSING BLOCK: The Gatekeeper ---
+if not st.session_state.get('connected'):
+    st.markdown("<h2 style='text-align: center;'>Academic Portal Login</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>Please sign in with your Google account to continue.</p>", unsafe_allow_html=True)
+    authenticator.login()
+    st.stop() # Halts the app until they log in
+
+# Store the logged-in user's email
+user_info = st.session_state.get('user_info', {})
+st.session_state['user_email'] = user_info.get('email', 'Guest')
+# -------------------------------------
+
 # ==========================================
 # 1. CONFIGURATION & STYLING
 # ==========================================
