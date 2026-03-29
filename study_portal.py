@@ -18,9 +18,11 @@ from yaml.loader import SafeLoader
 # ==========================================
 # 0. SECURE NATIVE AUTHENTICATION
 # ==========================================
-# 1. Load credentials directly from Streamlit Secrets
-credentials = dict(st.secrets["credentials"])
-cookie_config = dict(st.secrets["cookie"])
+import json
+
+# 1. DEEP COPY: Convert read-only secrets to mutable dictionaries (Fixes Logout Crash)
+credentials = json.loads(json.dumps(st.secrets["credentials"]))
+cookie_config = json.loads(json.dumps(st.secrets["cookie"]))
 
 # 2. Initialize the Authenticator
 authenticator = stauth.Authenticate(
@@ -30,26 +32,23 @@ authenticator = stauth.Authenticate(
     cookie_config['expiry_days']
 )
 
-# 3. Gatekeeper & Login UI
-# This IF statement ensures the login box instantly vanishes upon success
-if not st.session_state.get("authentication_status"):
-    try:
-        authenticator.login()
-    except Exception as e:
-        st.error(e)
+# 3. Render the Login UI (Let the library handle hiding the widget natively to fix ghosting)
+try:
+    authenticator.login()
+except Exception as e:
+    st.error(e)
 
-    # Stop the app from loading the dashboard if they fail or haven't logged in
-    if st.session_state.get("authentication_status") is False:
-        st.error('Username/password is incorrect')
-        st.stop()
-    elif st.session_state.get("authentication_status") is None:
-        st.warning('Please enter your username and password to access the portal.')
-        st.stop()
+# 4. Gatekeeper Logic
+if st.session_state.get("authentication_status") is False:
+    st.error('Username/password is incorrect')
+    st.stop()
+elif st.session_state.get("authentication_status") is None:
+    st.warning('Please enter your username and password to access the portal.')
+    st.stop()
 
 # If the code reaches here, the user is successfully logged in!
 current_user_role = credentials['usernames'][st.session_state["username"]]['role']
 current_user_email = credentials['usernames'][st.session_state["username"]]['email']
-
 # ==========================================
 # 1. CONFIGURATION & STYLING
 # ==========================================
