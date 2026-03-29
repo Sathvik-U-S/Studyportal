@@ -1041,7 +1041,7 @@ elif app_mode == "View Database":
                     "query": """
                         SELECT q.id as "Q_ID", s.name as "Subject", a.week_number as "Week", a.name as "Activity", 
                                q.heading as "Heading", q.q_type as "Format", q.difficulty as "Difficulty", 
-                               q.points as "Points", q.correct_answer as "Numerical_Ans", q.is_published as "Published"
+                               q.points as "Points", q.correct_answer as "Numerical_Ans"
                         FROM questions q 
                         JOIN assessments a ON q.assessment_id = a.id 
                         JOIN subjects s ON a.subject_id = s.id
@@ -1049,8 +1049,7 @@ elif app_mode == "View Database":
                     "cols": [
                         {"col": "Subject", "type": "text"}, {"col": "Week", "type": "integer"}, 
                         {"col": "Activity", "type": "text"}, {"col": "Heading", "type": "text"},
-                        {"col": "Format", "type": "text"}, {"col": "Difficulty", "type": "text"},
-                        {"col": "Published", "type": "boolean"}
+                        {"col": "Format", "type": "text"}, {"col": "Difficulty", "type": "text"}
                     ]
                 },
                 "Options Dictionary (With Parent Question)": {
