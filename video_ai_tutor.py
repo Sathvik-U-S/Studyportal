@@ -410,7 +410,7 @@ def render_video_notes(data, video_id):
                                 const textColor = parentStyle.color;
                                 
                                 // Determine if Streamlit is currently in Dark Mode by checking background brightness
-                                const rgb = bgColor.match(/\d+/g);
+                                const rgb = bgColor.match(/\\d+/g);
                                 let isDark = false;
                                 if (rgb && rgb.length >= 3) {{
                                     const brightness = (parseInt(rgb[0]) * 299 + parseInt(rgb[1]) * 587 + parseInt(rgb[2]) * 114) / 1000;

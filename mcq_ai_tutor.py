@@ -506,7 +506,7 @@ def render_ai_tutor_response(data, ai_key):
                                     const bgColor = parentStyle.backgroundColor;
                                     const textColor = parentStyle.color;
                                     
-                                    const rgb = bgColor.match(/\d+/g);
+                                    const rgb = bgColor.match(/\\d+/g);
                                     let isDark = false;
                                     if (rgb && rgb.length >= 3) {{
                                         const brightness = (parseInt(rgb[0]) * 299 + parseInt(rgb[1]) * 587 + parseInt(rgb[2]) * 114) / 1000;
