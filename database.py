@@ -28,11 +28,16 @@ def fetch_data(query, params=None):
             cur.execute(query, params)
             return cur.fetchall()
     except Exception as e:
-        # THE FIX: Always rollback on an error to prevent the "Transaction Aborted" lockout
-        if conn: conn.rollback()
+        # THE FIX: Only attempt a rollback if the connection is STILL OPEN (0).
+        # This prevents the "InterfaceError: connection already closed" crash.
+        if conn and conn.closed == 0:
+            try:
+                conn.rollback()
+            except:
+                pass
         
-        # If it's a dropped connection error, clear cache and retry exactly once
-        if isinstance(e, psycopg2.OperationalError):
+        # If the connection was completely dropped by the server, clear cache and retry exactly once
+        if isinstance(e, (psycopg2.OperationalError, psycopg2.InterfaceError)):
             st.cache_resource.clear()
             conn = get_db_connection()
             if conn:
@@ -41,7 +46,9 @@ def fetch_data(query, params=None):
                         cur.execute(query, params)
                         return cur.fetchall()
                 except Exception as retry_e:
-                    conn.rollback()
+                    if conn and conn.closed == 0:
+                        try: conn.rollback()
+                        except: pass
                     st.error(f"Retry Fetch Error: {retry_e}")
                     return []
         
@@ -58,10 +65,15 @@ def execute_query(query, params=None):
             conn.commit()
         return True
     except Exception as e:
-        # THE FIX: Rollback failed transactions immediately
-        if conn: conn.rollback()
+        # THE FIX: Check if connection is open before rolling back
+        if conn and conn.closed == 0:
+            try:
+                conn.rollback()
+            except:
+                pass
         
-        if isinstance(e, psycopg2.OperationalError):
+        # Catch both Operational drops and Interface closures to trigger the auto-reconnect
+        if isinstance(e, (psycopg2.OperationalError, psycopg2.InterfaceError)):
             st.cache_resource.clear()
             conn = get_db_connection()
             if conn:
@@ -71,7 +83,9 @@ def execute_query(query, params=None):
                         conn.commit()
                     return True
                 except Exception as retry_e:
-                    conn.rollback()
+                    if conn and conn.closed == 0:
+                        try: conn.rollback()
+                        except: pass
                     st.error(f"Retry Execute Error: {retry_e}")
                     return False
         

@@ -363,47 +363,21 @@ def render_ai_tutor_response(data, ai_key):
         # 7. Mermaid Diagrams
         if data.get("mermaid_diagram") and data["mermaid_diagram"] != "N/A":
             st.markdown("#### Visual Architecture")
-            # 1. Clean up markdown wrappers
-            # 1. Clean up markdown wrappers and invisible characters
-            # 1. Clean up markdown wrappers and invisible characters
-        # 1. Clean up markdown wrappers and invisible characters
             raw_mermaid = data["mermaid_diagram"].replace('```mermaid', '').replace('```', '').strip()
             clean_mermaid = raw_mermaid.replace('\xa0', ' ').replace(';', '')
-            
-            # 2. Strip unsupported arrow labels (Kroki/Mermaid fix)
             clean_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', clean_mermaid)
             clean_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', clean_mermaid)
-            
             final_mermaid = clean_mermaid
-            
-            # --- THE UNIVERSAL MASTER CLEANER ---
-            # Remove LaTeX and math backslashes (Crucial for MATHS 2 / MLF)
-            # --- THE UNIVERSAL MASTER CLEANER (V3 - MATH FIX) ---
-            # Remove LaTeX and math backslashes
             final_mermaid = final_mermaid.replace('$$', '').replace('\\', '')
-            
-            # Translate dangerous symbols to English
             final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
             final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
             final_mermaid = final_mermaid.replace('!=', ' not equal to ')
             final_mermaid = final_mermaid.replace('==', ' equals ')
-            
-            # Safe replacement for isolated < and >
             final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
             final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
-            
-            # Strip single quotes and HTML breaks
             final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
-
-            # 1. THE QUOTE STRIPPER: Runs FIRST to clear out rogue internal quotes.
-            # Safely turns A{"Text"} into A{Text} so the Safety Net can process it cleanly.
             final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
-            
-            # 2. THE SAFETY NET: Convert Diamond {}, Round (), and Square [] nodes into ID["Text"]
-            # The new lookahead (?=\s*[-=\.%]|\s*$|\s*\n) guarantees it won't aggressively chop internal parentheses like (A*)
             final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
-            
-            # 3. Fix Subgraph syntax
             final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", r"subgraph \1", final_mermaid)
 
             try:
