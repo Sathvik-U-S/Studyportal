@@ -255,382 +255,381 @@ def render_ai_tutor_response(data, ai_key):
         clean_text = data.replace('\\n', '\n') if isinstance(data, str) else data
         st.error(f"**Error:**\n\n{clean_text}") 
         return
-    with st.expander("View AI Tutor Analysis", expanded=False, icon=":material/model_training:"):
-        edit_state_key = f"edit_mode_{ai_key}"
-        if edit_state_key not in st.session_state:
-            st.session_state[edit_state_key] = False
-        #edit mode
-        if st.session_state[edit_state_key]:
-            st.markdown("### Edit AI Response (Raw JSON)")
-            with st.form(key=f"form_{ai_key}"):
-                new_ca = st.text_area("Choice Analysis", value=data.get("choice_analysis", ""), height="content")
-                new_wo = st.text_area("Wrong Options Analysis", value=data.get("wrong_options_analysis", ""), height="content")
-                new_cm = st.text_area("Common Mistake Trigger", value=data.get("common_mistake_trigger", ""), height="content")
-                new_sbs = st.text_area("Step-by-Step Reasoning", value=data.get("step_by_step", ""), height="content")
-                new_ms = st.text_area("Mathematical Derivation", value=data.get("math_steps", ""), height="content")
-                new_ct = st.text_area("Execution Trace", value=data.get("code_trace", ""), height="content")
-                new_md = st.text_area("Mermaid Diagram", value=data.get("mermaid_diagram", ""), height="content")
+    edit_state_key = f"edit_mode_{ai_key}"
+    if edit_state_key not in st.session_state:
+        st.session_state[edit_state_key] = False
+    #edit mode
+    if st.session_state[edit_state_key]:
+        st.markdown("### Edit AI Response (Raw JSON)")
+        with st.form(key=f"form_{ai_key}"):
+            new_ca = st.text_area("Choice Analysis", value=data.get("choice_analysis", ""), height="content")
+            new_wo = st.text_area("Wrong Options Analysis", value=data.get("wrong_options_analysis", ""), height="content")
+            new_cm = st.text_area("Common Mistake Trigger", value=data.get("common_mistake_trigger", ""), height="content")
+            new_sbs = st.text_area("Step-by-Step Reasoning", value=data.get("step_by_step", ""), height="content")
+            new_ms = st.text_area("Mathematical Derivation", value=data.get("math_steps", ""), height="content")
+            new_ct = st.text_area("Execution Trace", value=data.get("code_trace", ""), height="content")
+            new_md = st.text_area("Mermaid Diagram", value=data.get("mermaid_diagram", ""), height="content")
 
-                cc_val = "\n".join(data.get("core_concepts", [])) if isinstance(data.get("core_concepts"), list) else str(data.get("core_concepts", ""))
-                new_cc = st.text_area("Core Concepts (One per line)", value=cc_val, height="content")
-                new_pr = st.text_area("Practical Relevance", value=data.get("practical_relevance", ""), height="content")
+            cc_val = "\n".join(data.get("core_concepts", [])) if isinstance(data.get("core_concepts"), list) else str(data.get("core_concepts", ""))
+            new_cc = st.text_area("Core Concepts (One per line)", value=cc_val, height="content")
+            new_pr = st.text_area("Practical Relevance", value=data.get("practical_relevance", ""), height="content")
 
-                col_save, col_cancel = st.columns([1, 1])
-                save_btn = col_save.form_submit_button("Save Changes", type="primary", width="stretch")
-                cancel_btn = col_cancel.form_submit_button("Cancel", width="stretch")
-                
-                if save_btn:
-                    updated_data = {
-                        "choice_analysis": new_ca,
-                        "wrong_options_analysis": new_wo,
-                        "common_mistake_trigger": new_cm,
-                        "step_by_step": new_sbs,
-                        "math_steps": new_ms,
-                        "code_trace": new_ct,
-                        "mermaid_diagram": new_md,
-                        "core_concepts": [c.strip() for c in new_cc.split("\n") if c.strip()],
-                        "practical_relevance": new_pr
-                    }
-                    
-                    save_ai_cache(ai_key, updated_data)
-                    st.session_state[edit_state_key] = False
-                    st.rerun()
-                if cancel_btn:
-                    st.session_state[edit_state_key] = False
-                    st.rerun()
-        else:
-            # VIEW MODE (Standard Rendering)
-            for key in data:
-                if isinstance(data[key], str):
-                    data[key] = data[key].replace('\\n', '\n')
-                elif isinstance(data[key], list):
-                    data[key] = [v.replace('\\n', '\n') if isinstance(v, str) else v for v in data[key]]
-
-            def is_valid(val):
-                if not val: return False
-                v_str = str(val).strip()
-                clean_str = re.sub(r'[^A-Za-z0-9]', '', v_str).upper()
-                if clean_str in ["", "NULL", "NONE", "NA", "NOTAPPLICABLE"]: 
-                    return False
-                return True
-
-            # PYTHON AUTO-CORRECTOR: Fixes smashed bullet points
-            def format_bullets(val):
-                if not val: return ""
-                v_str = str(val).strip()
-                # Finds periods/punctuation followed by a hyphen and forces a double line break
-                v_str = re.sub(r'([.?!])\s*-\s+', r'\1\n\n- ', v_str)
-                return v_str
-
+            col_save, col_cancel = st.columns([1, 1])
+            save_btn = col_save.form_submit_button("Save Changes", type="primary", width="stretch")
+            cancel_btn = col_cancel.form_submit_button("Cancel", width="stretch")
             
-            # 1. Choice Analysis
-            ca = format_bullets(data.get("choice_analysis"))
-            if is_valid(ca):
-                st.markdown("#### Choice Analysis:")
-                st.markdown(ca)
-
-            # 2. Wrong Options Analysis
-            wo = format_bullets(data.get("wrong_options_analysis"))
-            if is_valid(wo):
-                st.markdown("#### Wrong Options Analysis:")
-                st.markdown(wo)
+            if save_btn:
+                updated_data = {
+                    "choice_analysis": new_ca,
+                    "wrong_options_analysis": new_wo,
+                    "common_mistake_trigger": new_cm,
+                    "step_by_step": new_sbs,
+                    "math_steps": new_ms,
+                    "code_trace": new_ct,
+                    "mermaid_diagram": new_md,
+                    "core_concepts": [c.strip() for c in new_cc.split("\n") if c.strip()],
+                    "practical_relevance": new_pr
+                }
                 
-            # 3. Common Mistake Trigger
-            cm = format_bullets(data.get("common_mistake_trigger"))
-            if is_valid(cm):
-                st.markdown("#### Common Mistake Trap:")
-                st.markdown(cm)
+                save_ai_cache(ai_key, updated_data)
+                st.session_state[edit_state_key] = False
+                st.rerun()
+            if cancel_btn:
+                st.session_state[edit_state_key] = False
+                st.rerun()
+    else:
+        # VIEW MODE (Standard Rendering)
+        for key in data:
+            if isinstance(data[key], str):
+                data[key] = data[key].replace('\\n', '\n')
+            elif isinstance(data[key], list):
+                data[key] = [v.replace('\\n', '\n') if isinstance(v, str) else v for v in data[key]]
 
-            # 4. Reasoning & Math
-            sbs = format_bullets(data.get("step_by_step"))
-            if is_valid(sbs):
-                st.markdown("#### Step-by-Step Reasoning")
-                st.markdown(sbs)
+        def is_valid(val):
+            if not val: return False
+            v_str = str(val).strip()
+            clean_str = re.sub(r'[^A-Za-z0-9]', '', v_str).upper()
+            if clean_str in ["", "NULL", "NONE", "NA", "NOTAPPLICABLE"]: 
+                return False
+            return True
 
-            ms = str(data.get("math_steps", "")).strip()
-            if is_valid(ms):
-                st.markdown("#### Mathematical Derivation")
-                st.markdown(ms)
+        # PYTHON AUTO-CORRECTOR: Fixes smashed bullet points
+        def format_bullets(val):
+            if not val: return ""
+            v_str = str(val).strip()
+            # Finds periods/punctuation followed by a hyphen and forces a double line break
+            v_str = re.sub(r'([.?!])\s*-\s+', r'\1\n\n- ', v_str)
+            return v_str
 
-            # 5. Execution Trace 
-            ct = str(data.get("code_trace", "")).strip()
-            if is_valid(ct):
-                st.markdown("#### Execution Trace")
-                ct = re.sub(r'^```[a-zA-Z]*\n?', '', ct)
-                ct = re.sub(r'\n?```$', '', ct)
-                st.markdown(ct)
+        
+        # 1. Choice Analysis
+        ca = format_bullets(data.get("choice_analysis"))
+        if is_valid(ca):
+            st.markdown("#### Choice Analysis:")
+            st.markdown(ca)
 
-            # 6. Mermaid Flowchart
-            # 7. Mermaid Diagrams
-            if data.get("mermaid_diagram") and data["mermaid_diagram"] != "N/A":
-                st.markdown("#### Visual Architecture")
-                # 1. Clean up markdown wrappers
-                # 1. Clean up markdown wrappers and invisible characters
-                # 1. Clean up markdown wrappers and invisible characters
+        # 2. Wrong Options Analysis
+        wo = format_bullets(data.get("wrong_options_analysis"))
+        if is_valid(wo):
+            st.markdown("#### Wrong Options Analysis:")
+            st.markdown(wo)
+            
+        # 3. Common Mistake Trigger
+        cm = format_bullets(data.get("common_mistake_trigger"))
+        if is_valid(cm):
+            st.markdown("#### Common Mistake Trap:")
+            st.markdown(cm)
+
+        # 4. Reasoning & Math
+        sbs = format_bullets(data.get("step_by_step"))
+        if is_valid(sbs):
+            st.markdown("#### Step-by-Step Reasoning")
+            st.markdown(sbs)
+
+        ms = str(data.get("math_steps", "")).strip()
+        if is_valid(ms):
+            st.markdown("#### Mathematical Derivation")
+            st.markdown(ms)
+
+        # 5. Execution Trace 
+        ct = str(data.get("code_trace", "")).strip()
+        if is_valid(ct):
+            st.markdown("#### Execution Trace")
+            ct = re.sub(r'^```[a-zA-Z]*\n?', '', ct)
+            ct = re.sub(r'\n?```$', '', ct)
+            st.markdown(ct)
+
+        # 6. Mermaid Flowchart
+        # 7. Mermaid Diagrams
+        if data.get("mermaid_diagram") and data["mermaid_diagram"] != "N/A":
+            st.markdown("#### Visual Architecture")
+            # 1. Clean up markdown wrappers
             # 1. Clean up markdown wrappers and invisible characters
-                raw_mermaid = data["mermaid_diagram"].replace('```mermaid', '').replace('```', '').strip()
-                clean_mermaid = raw_mermaid.replace('\xa0', ' ').replace(';', '')
-                
-                # 2. Strip unsupported arrow labels (Kroki/Mermaid fix)
-                clean_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', clean_mermaid)
-                clean_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', clean_mermaid)
-                
-                final_mermaid = clean_mermaid
-                
-                # --- THE UNIVERSAL MASTER CLEANER ---
-                # Remove LaTeX and math backslashes (Crucial for MATHS 2 / MLF)
-                # --- THE UNIVERSAL MASTER CLEANER (V3 - MATH FIX) ---
-                # Remove LaTeX and math backslashes
-                final_mermaid = final_mermaid.replace('$$', '').replace('\\', '')
-                
-                # Translate dangerous symbols to English
-                final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
-                final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
-                final_mermaid = final_mermaid.replace('!=', ' not equal to ')
-                final_mermaid = final_mermaid.replace('==', ' equals ')
-                
-                # Safe replacement for isolated < and >
-                final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
-                final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
-                
-                # Strip single quotes and HTML breaks
-                final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
-
-                # 1. THE QUOTE STRIPPER: Runs FIRST to clear out rogue internal quotes.
-                # Safely turns A{"Text"} into A{Text} so the Safety Net can process it cleanly.
-                final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
-                
-                # 2. THE SAFETY NET: Convert Diamond {}, Round (), and Square [] nodes into ID["Text"]
-                # The new lookahead (?=\s*[-=\.%]|\s*$|\s*\n) guarantees it won't aggressively chop internal parentheses like (A*)
-                final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
-                
-                # 3. Fix Subgraph syntax
-                final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", r"subgraph \1", final_mermaid)
-
-                try:
-                    compressed = zlib.compress(final_mermaid.encode('utf-8'), 9)
-                    b64_mermaid = base64.urlsafe_b64encode(compressed).decode('utf-8').replace('=', '')
-                    mermaid_url = f"https://kroki.io/mermaid/svg/{b64_mermaid}"
-                    
-                    # --- FULLY DYNAMIC THEME-AWARE COMPONENT ---
-                    components.html(
-                        f"""
-                        <style>
-                            :root {{
-                                --text-color: #31333F;
-                                --bg-color: transparent;
-                                --border-color: rgba(49, 51, 63, 0.2);
-                                --btn-bg: rgba(49, 51, 63, 0.05);
-                                --btn-hover: rgba(49, 51, 63, 0.1);
-                                --container-bg: rgba(255, 255, 255, 0.5);
-                            }}
-                            body {{
-                                margin: 0;
-                                background-color: var(--bg-color);
-                                color: var(--text-color);
-                                font-family: sans-serif;
-                            }}
-                            .controls {{
-                                position: sticky; 
-                                top: 0; 
-                                z-index: 100; 
-                                display: flex; 
-                                gap: 8px; 
-                                background-color: transparent; 
-                                padding-bottom: 10px;
-                            }}
-                            button {{
-                                padding: 6px 12px; 
-                                cursor: pointer; 
-                                border-radius: 6px; 
-                                border: 1px solid var(--border-color); 
-                                background: var(--btn-bg); 
-                                color: var(--text-color); 
-                                font-weight: bold;
-                                transition: background 0.2s;
-                            }}
-                            button:hover {{ background: var(--btn-hover); }}
-                            
-                            #wrapper {{
-                                width: 100%; 
-                                height: 500px; 
-                                overflow: auto; 
-                                border: 1px solid var(--border-color); 
-                                border-radius: 8px; 
-                                background: var(--container-bg);
-                                cursor: grab;
-                            }}
-                            #wrapper:active {{ cursor: grabbing; }}
-                            
-                            #wrapper::-webkit-scrollbar {{ width: 10px; height: 10px; }}
-                            #wrapper::-webkit-scrollbar-track {{ background: transparent; }}
-                            #wrapper::-webkit-scrollbar-thumb {{
-                                background-color: var(--border-color);
-                                border-radius: 8px;
-                            }}
-                            #wrapper::-webkit-scrollbar-thumb:hover {{ background-color: var(--text-color); }}
-                            
-                            #container {{
-                                transform-origin: 0 0; 
-                                transition: transform 0.1s ease-out; 
-                                display: inline-block; 
-                                min-width: 100%;
-                                user-select: none;
-                            }}
-                            #mermaid-img {{
-                                display: block; 
-                                width: 100%;
-                                pointer-events: none;
-                                transition: filter 0.3s ease;
-                            }}
-                        </style>
-                        
-                        <div class="controls">
-                            <button type="button" onclick="zoom(1.2)">➕ Zoom In</button>
-                            <button type="button" onclick="zoom(0.8)">➖ Zoom Out</button>
-                            <button type="button" onclick="resetZoom()">🔄 Reset</button>
-                            <span id="zoom-level" style="margin-left: 10px; align-self: center; font-weight: 500;">100%</span>
-                        </div>
-                        
-                        <div id="wrapper">
-                            <div id="container">
-                                <img id="mermaid-img" src="{mermaid_url}">
-                            </div>
-                        </div>
-
-                        <script>
-                            // --- DYNAMIC STREAMLIT THEME SYNC ---
-                            function syncTheme() {{
-                                try {{
-                                    const parentStyle = window.parent.getComputedStyle(window.parent.document.querySelector('.stApp') || window.parent.document.body);
-                                    const bgColor = parentStyle.backgroundColor;
-                                    const textColor = parentStyle.color;
-                                    
-                                    const rgb = bgColor.match(/\\d+/g);
-                                    let isDark = false;
-                                    if (rgb && rgb.length >= 3) {{
-                                        const brightness = (parseInt(rgb[0]) * 299 + parseInt(rgb[1]) * 587 + parseInt(rgb[2]) * 114) / 1000;
-                                        isDark = brightness < 128;
-                                    }}
-
-                                    document.documentElement.style.setProperty('--text-color', textColor);
-                                    const textRgba = textColor.replace('rgb', 'rgba').replace(')', ', 0.2)');
-                                    const btnBg = textColor.replace('rgb', 'rgba').replace(')', ', 0.05)');
-                                    const btnHover = textColor.replace('rgb', 'rgba').replace(')', ', 0.1)');
-                                    const containerBg = isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.5)';
-
-                                    document.documentElement.style.setProperty('--border-color', textRgba);
-                                    document.documentElement.style.setProperty('--btn-bg', btnBg);
-                                    document.documentElement.style.setProperty('--btn-hover', btnHover);
-                                    document.documentElement.style.setProperty('--container-bg', containerBg);
-
-                                    const img = document.getElementById('mermaid-img');
-                                    if (isDark) {{
-                                        img.style.filter = 'invert(0.85) hue-rotate(180deg)';
-                                    }} else {{
-                                        img.style.filter = 'none';
-                                    }}
-                                }} catch (e) {{
-                                    console.log("Theme sync fallback.");
-                                }}
-                            }}
-
-                            syncTheme();
-                            setInterval(syncTheme, 1000);
-
-                            // --- Zoom & Pan Logic ---
-                            let scale = 1.0;
-                            const container = document.getElementById('container');
-                            const zoomLevel = document.getElementById('zoom-level');
-                            const wrapper = document.getElementById('wrapper');
-
-                            function zoom(factor) {{
-                                scale *= factor;
-                                if (scale < 0.2) scale = 0.2;
-                                if (scale > 10.0) scale = 10.0;
-                                container.style.transform = `scale(${{scale}})`;
-                                zoomLevel.innerText = Math.round(scale * 100) + "%";
-                            }}
-
-                            function resetZoom() {{
-                                scale = 1.0;
-                                container.style.transform = 'scale(1)';
-                                zoomLevel.innerText = "100%";
-                            }}
-
-                            // --- Desktop Mouse Events ---
-                            let isDown = false;
-                            let startX, startY, scrollLeft, scrollTop;
-
-                            wrapper.addEventListener('mousedown', (e) => {{
-                                isDown = true;
-                                startX = e.pageX - wrapper.offsetLeft;
-                                startY = e.pageY - wrapper.offsetTop;
-                                scrollLeft = wrapper.scrollLeft;
-                                scrollTop = wrapper.scrollTop;
-                            }});
-                            wrapper.addEventListener('mouseleave', () => {{ isDown = false; }});
-                            wrapper.addEventListener('mouseup', () => {{ isDown = false; }});
-                            wrapper.addEventListener('mousemove', (e) => {{
-                                if (!isDown) return;
-                                e.preventDefault();
-                                const x = e.pageX - wrapper.offsetLeft;
-                                const y = e.pageY - wrapper.offsetTop;
-                                wrapper.scrollLeft = scrollLeft - (x - startX) * 1.5; 
-                                wrapper.scrollTop = scrollTop - (y - startY) * 1.5;
-                            }});
-
-                            // --- Mobile Touch Events ---
-                            wrapper.addEventListener('touchstart', (e) => {{
-                                isDown = true;
-                                startX = e.touches[0].pageX - wrapper.offsetLeft;
-                                startY = e.touches[0].pageY - wrapper.offsetTop;
-                                scrollLeft = wrapper.scrollLeft;
-                                scrollTop = wrapper.scrollTop;
-                            }});
-                            wrapper.addEventListener('touchend', () => {{ isDown = false; }});
-                            wrapper.addEventListener('touchmove', (e) => {{
-                                if (!isDown) return;
-                                e.preventDefault(); 
-                                const x = e.touches[0].pageX - wrapper.offsetLeft;
-                                const y = e.touches[0].pageY - wrapper.offsetTop;
-                                wrapper.scrollLeft = scrollLeft - (x - startX) * 1.5;
-                                wrapper.scrollTop = scrollTop - (y - startY) * 1.5;
-                            }}, {{ passive: false }});
-                        </script>
-                        """,
-                        height=600,
-                    )
-
-                    with st.expander("View Diagram Code"):
-                        st.code(final_mermaid, language="text")
-                except Exception:
-                    st.code(final_mermaid, language="text")
-
-            # 7. Summary Info
-            col1, col2 = st.columns(2)
-            cc = data.get("core_concepts")
-            if is_valid(cc):
-                with col1:
-                    st.markdown("#### Core Concepts")
-                    for c in cc:
-                        clean_c = re.sub(r'^[\-\*\•\s]+', '', str(c)).strip()
-                        st.markdown(f"- {clean_c}")
-
-            pr = format_bullets(data.get("practical_relevance"))
-            if is_valid(pr):
-                with col2:
-                    st.markdown("#### Practical Relevance")
-                    st.markdown(pr)
-
+            # 1. Clean up markdown wrappers and invisible characters
+        # 1. Clean up markdown wrappers and invisible characters
+            raw_mermaid = data["mermaid_diagram"].replace('```mermaid', '').replace('```', '').strip()
+            clean_mermaid = raw_mermaid.replace('\xa0', ' ').replace(';', '')
             
-            st.divider()
-            c_edit, c_del = st.columns(2)
+            # 2. Strip unsupported arrow labels (Kroki/Mermaid fix)
+            clean_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', clean_mermaid)
+            clean_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', clean_mermaid)
+            
+            final_mermaid = clean_mermaid
+            
+            # --- THE UNIVERSAL MASTER CLEANER ---
+            # Remove LaTeX and math backslashes (Crucial for MATHS 2 / MLF)
+            # --- THE UNIVERSAL MASTER CLEANER (V3 - MATH FIX) ---
+            # Remove LaTeX and math backslashes
+            final_mermaid = final_mermaid.replace('$$', '').replace('\\', '')
+            
+            # Translate dangerous symbols to English
+            final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
+            final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
+            final_mermaid = final_mermaid.replace('!=', ' not equal to ')
+            final_mermaid = final_mermaid.replace('==', ' equals ')
+            
+            # Safe replacement for isolated < and >
+            final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
+            final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
+            
+            # Strip single quotes and HTML breaks
+            final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
 
-            if c_edit.button("Edit AI Response", key=f"edit_{ai_key}", help="Manually correct or enhance the AI's analysis", width="stretch"):
-                st.session_state[edit_state_key] = True
-                st.rerun()
+            # 1. THE QUOTE STRIPPER: Runs FIRST to clear out rogue internal quotes.
+            # Safely turns A{"Text"} into A{Text} so the Safety Net can process it cleanly.
+            final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
+            
+            # 2. THE SAFETY NET: Convert Diamond {}, Round (), and Square [] nodes into ID["Text"]
+            # The new lookahead (?=\s*[-=\.%]|\s*$|\s*\n) guarantees it won't aggressively chop internal parentheses like (A*)
+            final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
+            
+            # 3. Fix Subgraph syntax
+            final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", r"subgraph \1", final_mermaid)
 
-            if c_del.button("Delete Cache for this Question", key=f"del_{ai_key}", help="Clear the saved AI response", width="stretch"):
-                delete_ai_cache(ai_key)
-                st.rerun()
+            try:
+                compressed = zlib.compress(final_mermaid.encode('utf-8'), 9)
+                b64_mermaid = base64.urlsafe_b64encode(compressed).decode('utf-8').replace('=', '')
+                mermaid_url = f"https://kroki.io/mermaid/svg/{b64_mermaid}"
+                
+                # --- FULLY DYNAMIC THEME-AWARE COMPONENT ---
+                components.html(
+                    f"""
+                    <style>
+                        :root {{
+                            --text-color: #31333F;
+                            --bg-color: transparent;
+                            --border-color: rgba(49, 51, 63, 0.2);
+                            --btn-bg: rgba(49, 51, 63, 0.05);
+                            --btn-hover: rgba(49, 51, 63, 0.1);
+                            --container-bg: rgba(255, 255, 255, 0.5);
+                        }}
+                        body {{
+                            margin: 0;
+                            background-color: var(--bg-color);
+                            color: var(--text-color);
+                            font-family: sans-serif;
+                        }}
+                        .controls {{
+                            position: sticky; 
+                            top: 0; 
+                            z-index: 100; 
+                            display: flex; 
+                            gap: 8px; 
+                            background-color: transparent; 
+                            padding-bottom: 10px;
+                        }}
+                        button {{
+                            padding: 6px 12px; 
+                            cursor: pointer; 
+                            border-radius: 6px; 
+                            border: 1px solid var(--border-color); 
+                            background: var(--btn-bg); 
+                            color: var(--text-color); 
+                            font-weight: bold;
+                            transition: background 0.2s;
+                        }}
+                        button:hover {{ background: var(--btn-hover); }}
+                        
+                        #wrapper {{
+                            width: 100%; 
+                            height: 500px; 
+                            overflow: auto; 
+                            border: 1px solid var(--border-color); 
+                            border-radius: 8px; 
+                            background: var(--container-bg);
+                            cursor: grab;
+                        }}
+                        #wrapper:active {{ cursor: grabbing; }}
+                        
+                        #wrapper::-webkit-scrollbar {{ width: 10px; height: 10px; }}
+                        #wrapper::-webkit-scrollbar-track {{ background: transparent; }}
+                        #wrapper::-webkit-scrollbar-thumb {{
+                            background-color: var(--border-color);
+                            border-radius: 8px;
+                        }}
+                        #wrapper::-webkit-scrollbar-thumb:hover {{ background-color: var(--text-color); }}
+                        
+                        #container {{
+                            transform-origin: 0 0; 
+                            transition: transform 0.1s ease-out; 
+                            display: inline-block; 
+                            min-width: 100%;
+                            user-select: none;
+                        }}
+                        #mermaid-img {{
+                            display: block; 
+                            width: 100%;
+                            pointer-events: none;
+                            transition: filter 0.3s ease;
+                        }}
+                    </style>
+                    
+                    <div class="controls">
+                        <button type="button" onclick="zoom(1.2)">➕ Zoom In</button>
+                        <button type="button" onclick="zoom(0.8)">➖ Zoom Out</button>
+                        <button type="button" onclick="resetZoom()">🔄 Reset</button>
+                        <span id="zoom-level" style="margin-left: 10px; align-self: center; font-weight: 500;">100%</span>
+                    </div>
+                    
+                    <div id="wrapper">
+                        <div id="container">
+                            <img id="mermaid-img" src="{mermaid_url}">
+                        </div>
+                    </div>
+
+                    <script>
+                        // --- DYNAMIC STREAMLIT THEME SYNC ---
+                        function syncTheme() {{
+                            try {{
+                                const parentStyle = window.parent.getComputedStyle(window.parent.document.querySelector('.stApp') || window.parent.document.body);
+                                const bgColor = parentStyle.backgroundColor;
+                                const textColor = parentStyle.color;
+                                
+                                const rgb = bgColor.match(/\\d+/g);
+                                let isDark = false;
+                                if (rgb && rgb.length >= 3) {{
+                                    const brightness = (parseInt(rgb[0]) * 299 + parseInt(rgb[1]) * 587 + parseInt(rgb[2]) * 114) / 1000;
+                                    isDark = brightness < 128;
+                                }}
+
+                                document.documentElement.style.setProperty('--text-color', textColor);
+                                const textRgba = textColor.replace('rgb', 'rgba').replace(')', ', 0.2)');
+                                const btnBg = textColor.replace('rgb', 'rgba').replace(')', ', 0.05)');
+                                const btnHover = textColor.replace('rgb', 'rgba').replace(')', ', 0.1)');
+                                const containerBg = isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.5)';
+
+                                document.documentElement.style.setProperty('--border-color', textRgba);
+                                document.documentElement.style.setProperty('--btn-bg', btnBg);
+                                document.documentElement.style.setProperty('--btn-hover', btnHover);
+                                document.documentElement.style.setProperty('--container-bg', containerBg);
+
+                                const img = document.getElementById('mermaid-img');
+                                if (isDark) {{
+                                    img.style.filter = 'invert(0.85) hue-rotate(180deg)';
+                                }} else {{
+                                    img.style.filter = 'none';
+                                }}
+                            }} catch (e) {{
+                                console.log("Theme sync fallback.");
+                            }}
+                        }}
+
+                        syncTheme();
+                        setInterval(syncTheme, 1000);
+
+                        // --- Zoom & Pan Logic ---
+                        let scale = 1.0;
+                        const container = document.getElementById('container');
+                        const zoomLevel = document.getElementById('zoom-level');
+                        const wrapper = document.getElementById('wrapper');
+
+                        function zoom(factor) {{
+                            scale *= factor;
+                            if (scale < 0.2) scale = 0.2;
+                            if (scale > 10.0) scale = 10.0;
+                            container.style.transform = `scale(${{scale}})`;
+                            zoomLevel.innerText = Math.round(scale * 100) + "%";
+                        }}
+
+                        function resetZoom() {{
+                            scale = 1.0;
+                            container.style.transform = 'scale(1)';
+                            zoomLevel.innerText = "100%";
+                        }}
+
+                        // --- Desktop Mouse Events ---
+                        let isDown = false;
+                        let startX, startY, scrollLeft, scrollTop;
+
+                        wrapper.addEventListener('mousedown', (e) => {{
+                            isDown = true;
+                            startX = e.pageX - wrapper.offsetLeft;
+                            startY = e.pageY - wrapper.offsetTop;
+                            scrollLeft = wrapper.scrollLeft;
+                            scrollTop = wrapper.scrollTop;
+                        }});
+                        wrapper.addEventListener('mouseleave', () => {{ isDown = false; }});
+                        wrapper.addEventListener('mouseup', () => {{ isDown = false; }});
+                        wrapper.addEventListener('mousemove', (e) => {{
+                            if (!isDown) return;
+                            e.preventDefault();
+                            const x = e.pageX - wrapper.offsetLeft;
+                            const y = e.pageY - wrapper.offsetTop;
+                            wrapper.scrollLeft = scrollLeft - (x - startX) * 1.5; 
+                            wrapper.scrollTop = scrollTop - (y - startY) * 1.5;
+                        }});
+
+                        // --- Mobile Touch Events ---
+                        wrapper.addEventListener('touchstart', (e) => {{
+                            isDown = true;
+                            startX = e.touches[0].pageX - wrapper.offsetLeft;
+                            startY = e.touches[0].pageY - wrapper.offsetTop;
+                            scrollLeft = wrapper.scrollLeft;
+                            scrollTop = wrapper.scrollTop;
+                        }});
+                        wrapper.addEventListener('touchend', () => {{ isDown = false; }});
+                        wrapper.addEventListener('touchmove', (e) => {{
+                            if (!isDown) return;
+                            e.preventDefault(); 
+                            const x = e.touches[0].pageX - wrapper.offsetLeft;
+                            const y = e.touches[0].pageY - wrapper.offsetTop;
+                            wrapper.scrollLeft = scrollLeft - (x - startX) * 1.5;
+                            wrapper.scrollTop = scrollTop - (y - startY) * 1.5;
+                        }}, {{ passive: false }});
+                    </script>
+                    """,
+                    height=600,
+                )
+
+                with st.expander("View Diagram Code"):
+                    st.code(final_mermaid, language="text")
+            except Exception:
+                st.code(final_mermaid, language="text")
+
+        # 7. Summary Info
+        col1, col2 = st.columns(2)
+        cc = data.get("core_concepts")
+        if is_valid(cc):
+            with col1:
+                st.markdown("#### Core Concepts")
+                for c in cc:
+                    clean_c = re.sub(r'^[\-\*\•\s]+', '', str(c)).strip()
+                    st.markdown(f"- {clean_c}")
+
+        pr = format_bullets(data.get("practical_relevance"))
+        if is_valid(pr):
+            with col2:
+                st.markdown("#### Practical Relevance")
+                st.markdown(pr)
+
+        
+        st.divider()
+        c_edit, c_del = st.columns(2)
+
+        if c_edit.button("Edit AI Response", key=f"edit_{ai_key}", help="Manually correct or enhance the AI's analysis", width="stretch"):
+            st.session_state[edit_state_key] = True
+            st.rerun()
+
+        if c_del.button("Delete Cache for this Question", key=f"del_{ai_key}", help="Clear the saved AI response", width="stretch"):
+            delete_ai_cache(ai_key)
+            st.rerun()

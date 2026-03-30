@@ -87,28 +87,24 @@ current_user_email = credentials['usernames'][st.session_state["username"]]['ema
 # ==========================================
 # NAVIGATION (Smart Routing)
 # ==========================================
-st.sidebar.markdown(f"**Welcome, {st.session_state['name']}**")
-authenticator.logout('Log Out', 'sidebar')
-
+st.sidebar.markdown(f"## Welcome, {st.session_state['name']}")
 st.sidebar.markdown("### Menu")
-
 # Base options for all students
-nav_options = ["Take Assessment", "Take Test", "View Videos"]
+nav_options = ["Take Assessment", "Take Test", "View Videos","AI Notes"]
 
 # Reveal hidden tabs ONLY if the user's role in secrets is 'admin'
 if current_user_role == "admin":
-    nav_options.insert(2, "Edit Content")
-    nav_options.insert(3, "View Database")
+    nav_options.insert(4, "Edit Content")
+    nav_options.insert(5, "View Database")
 
 app_mode = st.sidebar.radio("Nav", nav_options, label_visibility="collapsed")
+authenticator.logout('Log Out', 'sidebar')
 
 
 # ------------------------------------------
 # TAKE ASSESSMENT
 # ------------------------------------------
-if app_mode == "Take Assessment":
-    #st.markdown("##  ")
-    
+if app_mode == "Take Assessment":    
     c1, c2, c3, c4 = st.columns([1, 0.6, 1.4, 0.8])
     
     subjects = fetch_data("SELECT * FROM subjects ORDER BY name ASC")
@@ -126,7 +122,6 @@ if app_mode == "Take Assessment":
     a_sel = c3.selectbox("Activity", list(a_map.keys()), key="assess_act")
     
     mode = c4.selectbox("Mode", ["Study Mode", "Exam Mode"])
-    st.divider() 
 
     questions = fetch_data("SELECT * FROM questions WHERE assessment_id=%s ORDER BY id ASC", (a_map[a_sel],))
     
@@ -202,7 +197,8 @@ if app_mode == "Take Assessment":
                         cached_res = get_cached_ai_response(ai_key)
                         
                         if cached_res:
-                            render_ai_tutor_response(cached_res, ai_key)
+                            with st.expander("View AI Tutor Analysis", expanded=False, icon=":material/model_training:"):
+                                render_ai_tutor_response(cached_res, ai_key)
                         else:
                             if st.button(f"Ask AI Tutor for Q{i+1}", key=f"ai_btn_{q['id']}", width="stretch", type="secondary"):
                                 with st.spinner("Consulting AI Tutor..."):
@@ -1005,14 +1001,13 @@ elif app_mode == "View Database":
     # ==========================================
     # TOOL 6: Supercharged Data Explorer (Dynamic Filters & JOINs)
     # ==========================================
-    with tab_browse:
-        st.markdown("#### Supercharged Data Explorer")
-        
+    with tab_browse:        
         if "browse_results" not in st.session_state:
             st.session_state.browse_results = None
 
         # 1. Choose Data Mode (Raw vs Joined)
         c_mode, c_lim = st.columns([3, 1])
+        c_mode.markdown("##### *Select Data Source*")
         source_type = c_mode.radio("Data Mode", ["Raw Tables", "Master Joined Views"], horizontal=True, label_visibility="collapsed")
         limit = c_lim.number_input("Row Limit", min_value=10, max_value=5000, value=100, step=50)
 
@@ -1078,7 +1073,7 @@ elif app_mode == "View Database":
         # DYNAMIC FILTER GENERATOR
         # ------------------------------------------
         if base_query and col_info:
-            with st.expander("🔍 Auto-Generated Filters", expanded=True):
+            with st.expander("Auto-Generated Filters", expanded=True, icon=":material/search:"):
                 filters = {}
                 f_cols = st.columns(4)
                 col_idx = 0
@@ -1386,7 +1381,6 @@ elif app_mode == "View Videos":
                     if cached_vid:
                         render_video_notes(cached_vid, vid_id)
                     else:
-                        st.markdown("<br>", unsafe_allow_html=True)
                         if st.button("Generate Deep-Dive Lecture Notes", key=f"gen_notes_{vid_id}", type="secondary", width="stretch"):
                             with st.spinner("Compiling elite notes..."):
                                 # --- UPDATED API KEY LOGIC ---
@@ -1411,3 +1405,273 @@ elif app_mode == "View Videos":
     else:
         st.info(f"No videos are currently linked to {w_sel}.")
         c0.markdown("#### Video Lectures & Resources")
+
+# # ------------------------------------------
+# SAVED AI NOTES (Central Knowledge Hub)
+# ------------------------------------------
+elif app_mode == "AI Notes":
+    
+    # --- THE CLEVER RENDER CHECKER (UPGRADED) ---
+    @st.cache_data(show_spinner=False, ttl=86400) 
+    def verify_mermaid_with_kroki(mermaid_str):
+        """Actually pings the Kroki rendering server. ONLY fails if Kroki explicitly rejects the syntax."""
+        if not mermaid_str or str(mermaid_str).strip() in ["", "N/A", "None"]:
+            return True 
+        
+        import zlib, base64, requests, re
+        raw_mermaid = str(mermaid_str).replace('```mermaid', '').replace('```', '').strip()
+        clean_mermaid = raw_mermaid.replace('\xa0', ' ').replace(';', '')
+        clean_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', clean_mermaid)
+        clean_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', clean_mermaid)
+        final_mermaid = clean_mermaid
+        final_mermaid = final_mermaid.replace('$$', '').replace('\\', '')
+        final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
+        final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
+        final_mermaid = final_mermaid.replace('!=', ' not equal to ')
+        final_mermaid = final_mermaid.replace('==', ' equals ')
+        final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
+        final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
+        final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
+        final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
+        final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
+        final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", r"subgraph \1", final_mermaid)
+
+        try:
+            compressed = zlib.compress(final_mermaid.encode('utf-8'), 9)
+            b64_mermaid = base64.urlsafe_b64encode(compressed).decode('utf-8').replace('=', '')
+            mermaid_url = f"https://kroki.io/mermaid/svg/{b64_mermaid}"
+            
+            res = requests.get(mermaid_url, timeout=4)
+            if res.status_code == 400:
+                return False 
+            return True 
+        except:
+            return True 
+
+    def is_response_broken(ai_data):
+        if not isinstance(ai_data, dict): return True 
+        for val in ai_data.values():
+            if isinstance(val, str) and ("API Error" in val or "Error:" in val):
+                return True
+        mermaid = ai_data.get("mermaid_diagram")
+        if mermaid:
+            if not verify_mermaid_with_kroki(mermaid):
+                return True 
+        return False
+    
+    tab_mcq, tab_vid = st.tabs(["MCQ Explanations", "Video Notes"])
+    
+    # ==========================================
+    # TAB 1: MCQ Explanations
+    # ==========================================
+    with tab_mcq:
+        with st.expander("Filter MCQ Scope", expanded=True, icon=":material/filter_list:"):
+            c1, c2, c3 = st.columns([1, 1, 1])
+            
+            subjects = fetch_data("SELECT * FROM subjects ORDER BY name ASC")
+            if not subjects: st.stop()
+            s_map = {s['name']: s['id'] for s in subjects}
+            
+            # Subject Filter
+            s_opts = ["All Subjects"] + list(s_map.keys())
+            s_sel = c1.selectbox("Subject", s_opts, key="aimcq_sub")
+            
+            # Dynamic Week Filter
+            w_query = "SELECT DISTINCT week_number FROM assessments"
+            w_params = []
+            if s_sel != "All Subjects":
+                w_query += " WHERE subject_id=%s"
+                w_params.append(s_map[s_sel])
+            w_query += " ORDER BY week_number ASC"
+            weeks = fetch_data(w_query, tuple(w_params))
+            
+            w_opts = ["All Weeks"] + [w['week_number'] for w in weeks]
+            w_sel = c2.selectbox("Week", w_opts, key="aimcq_week")
+            
+            # Dynamic Activity Filter
+            a_query = "SELECT id, name FROM assessments WHERE 1=1"
+            a_params = []
+            if s_sel != "All Subjects":
+                a_query += " AND subject_id=%s"
+                a_params.append(s_map[s_sel])
+            if w_sel != "All Weeks":
+                a_query += " AND week_number=%s"
+                a_params.append(w_sel)
+            a_query += " ORDER BY name ASC"
+            
+            assessments = fetch_data(a_query, tuple(a_params))
+            a_map = {a['name']: a['id'] for a in assessments}
+            
+            a_opts = ["All Activities"] + list(a_map.keys())
+            a_sel = c3.selectbox("Activity", a_opts, key="aimcq_act")
+                
+        with st.spinner("Fetching and Analyzing AI Health..."):
+            # Fetch Questions based on filters (Includes Activity/Week info for context)
+            q_query = "SELECT q.*, a.name as activity_name, a.week_number as w_num, s.name as sub_name FROM questions q JOIN assessments a ON q.assessment_id = a.id JOIN subjects s ON a.subject_id = s.id WHERE 1=1"
+            q_params = []
+            
+            if a_sel != "All Activities":
+                q_query += " AND q.assessment_id=%s"
+                q_params.append(a_map[a_sel])
+            elif assessments:
+                ass_ids = tuple([a['id'] for a in assessments])
+                if len(ass_ids) == 1:
+                    q_query += f" AND q.assessment_id = {ass_ids[0]}"
+                else:
+                    q_query += f" AND q.assessment_id IN {ass_ids}"
+            else:
+                q_query += " AND 1=0" # Failsafe if no activities match
+
+            q_query += " ORDER BY q.id ASC"
+            questions = fetch_data(q_query, tuple(q_params))
+            
+            if not questions:
+                st.info("No questions found for the selected filters.")
+            else:
+                q_ids = [q['id'] for q in questions]
+                cache_map = {}
+                if q_ids:
+                    q_ids_str = f"({q_ids[0]})" if len(q_ids) == 1 else str(tuple(q_ids))
+                    caches = fetch_data(f"SELECT * FROM mcq_cache WHERE question_id IN {q_ids_str}")
+                    cache_map = {c['question_id']: c for c in caches}
+
+                broken_qs = []
+                healthy_qs = []
+                
+                for i, q in enumerate(questions):
+                    if q['id'] in cache_map:
+                        ai_data = cache_map[q['id']]['ai_data']
+                        if is_response_broken(ai_data): 
+                            broken_qs.append((i, q, cache_map[q['id']]))
+                        else: 
+                            healthy_qs.append((i, q, cache_map[q['id']]))
+
+                def render_aimcq_question(i, q, cache_entry):
+                    context_tag = f" `[{q['sub_name']} | W{q['w_num']} | {q['activity_name']}]`" if a_sel == "All Activities" else ""
+
+                    
+                    with st.expander(expanded=False, label=f"{context_tag}", icon=":material/question_answer:"):
+                        # Show Context Tags if "All" is selected
+                        st.markdown(f"{q['heading']}")
+                        render_content(q['media_type'], q['media_content'])
+                        
+                        
+                        if q.get('q_type') == 'numerical':
+                            st.success(f"Correct Answer: {q['correct_answer']}")
+                        else:
+                            options = fetch_data("SELECT * FROM options WHERE question_id=%s ORDER BY id ASC", (q['id'],))
+                            for idx, opt in enumerate(options):
+                                status = "correct" if opt['is_correct'] else "incorrect"
+                                content = opt['media_content'] if opt['media_content'] else opt['option_text']
+                                render_option_card(f"OPTION {idx+1}", content, opt['media_type'], status=status)
+                        render_ai_tutor_response(cache_entry['ai_data'], cache_entry['cache_key'])
+
+                if broken_qs:
+                    st.error(f"**{len(broken_qs)} Broken Responses**")
+                    for i, q, cache in broken_qs:
+                        render_aimcq_question(i, q, cache)
+                
+                if healthy_qs:
+                    st.success(f"**{len(healthy_qs)} Healthy Responses**")
+                    for i, q, cache in healthy_qs:
+                        render_aimcq_question(i, q, cache)
+                        
+                if not broken_qs and not healthy_qs:
+                    st.info("No AI Notes have been generated for this selection yet. Go to 'Take Assessment' to ask the AI Tutor!")
+
+    # ==========================================
+    # TAB 2: Video Lecture Notes
+    # ==========================================
+    with tab_vid:
+        with st.expander("Filter Video Scope", expanded=True, icon=":material/filter_list:"):
+            c1_v, c2_v = st.columns([1, 1])
+            s_opts_v = ["All Subjects"] + list(s_map.keys())
+            s_sel_v = c1_v.selectbox("Subject", s_opts_v, key="aivid_sub")
+            
+            vw_query = "SELECT * FROM weeks WHERE 1=1"
+            vw_params = []
+            if s_sel_v != "All Subjects":
+                vw_query += " AND subject_id=%s"
+                vw_params.append(s_map[s_sel_v])
+            vw_query += " ORDER BY week_number ASC"
+            weeks_v = fetch_data(vw_query, tuple(vw_params))
+            
+            w_map_v = {f"Week {w['week_number']}: {w.get('topic_title','')}": w['id'] for w in weeks_v}
+            w_opts_v = ["All Weeks"] + list(w_map_v.keys())
+            w_sel_v = c2_v.selectbox("Week", w_opts_v, key="aivid_week")
+        
+        if not weeks_v:
+            st.warning("No weeks configured for the selected filters.")
+        else:
+            with st.spinner("Fetching and Analyzing AI Health..."):
+                # We need to map subject IDs back to Names for context tags
+                reverse_s_map = {v: k for k, v in s_map.items()}
+
+                # Compile a master list of all valid caches matching the filters
+                vid_cache_list = []
+                for w in weeks_v:
+                    if w_sel_v != "All Weeks" and w['id'] != w_map_v[w_sel_v]:
+                        continue
+                    
+                    if w.get('youtube_urls'):
+                        # Remove duplicates while preserving order
+                        seen = set()
+                        unique_urls = []
+                        for u in w['youtube_urls']:
+                            if u not in seen:
+                                unique_urls.append(u)
+                                seen.add(u)
+
+                        for idx, url in enumerate(unique_urls):
+                            if url and url.strip():
+                                try:
+                                    vid_id = extract_youtube_id(url.strip())
+                                    cached_note = get_cached_video_notes(vid_id)
+                                    if cached_note:
+                                        sub_name = reverse_s_map.get(w['subject_id'], "Unknown")
+                                        vid_cache_list.append({
+                                            'url': url.strip(),
+                                            'video_id': vid_id,
+                                            'ai_data': cached_note,
+                                            'sub_name': sub_name,
+                                            'week_number': w['week_number'],
+                                            'topic_title': w.get('topic_title', ''),
+                                            'lecture_idx': idx + 1
+                                        })
+                                except: pass
+                
+                if vid_cache_list:
+                    broken_vids = []
+                    healthy_vids = []
+                    
+                    # Group them based on Mermaid/API Health
+                    for item in vid_cache_list:
+                        if is_response_broken(item['ai_data']):
+                            broken_vids.append(item)
+                        else:
+                            healthy_vids.append(item)
+
+                    # Dynamic rendering function for the expanders
+                    def render_aivid_note(item):
+                        context_tag = f" `[{item['sub_name']} | W{item['week_number']}]`" if (s_sel_v == "All Subjects" or w_sel_v == "All Weeks") else ""
+                        topic_str = f" - {item['topic_title']}" if item['topic_title'] else ""
+                        label = f"{topic_str}{context_tag}"
+                        
+                        with st.expander(expanded=False, label=label, icon=":material/smart_display:"):
+                            # Render the video player right at the top of the notes!
+                            st.video(item['url'])
+                            render_video_notes(item['ai_data'], item['video_id'])
+
+                    # Render Broken Section
+                    if broken_vids:
+                        st.error(f"**{len(broken_vids)} Broken Video Notes**")
+                        for item in broken_vids:
+                            render_aivid_note(item)
+                    
+                    # Render Healthy Section
+                    if healthy_vids:
+                        st.success(f"**{len(healthy_vids)} Healthy Video Notes**")
+                        for item in healthy_vids:
+                            render_aivid_note(item)
+                else:
+                    st.info("No AI notes generated for this selection yet. Go to 'View Videos' to ask the AI Tutor!")
