@@ -623,25 +623,35 @@ elif app_mode == "Edit Content":
                 
                 week_id = vw_map[vw_sel]
                 
-                curr_vid_data = fetch_data("SELECT topic_title, youtube_urls FROM weeks WHERE id=%s", (week_id,))
+                curr_vid_data = fetch_data("SELECT topic_title, youtube_urls, video_titles FROM weeks WHERE id=%s", (week_id,))
                 curr_title = curr_vid_data[0].get('topic_title') if curr_vid_data else ""
                 curr_urls = curr_vid_data[0].get('youtube_urls') if curr_vid_data and curr_vid_data[0].get('youtube_urls') else []
-                curr_urls_str = "\n".join(curr_urls) if curr_urls else ""
+                curr_titles = curr_vid_data[0].get('video_titles') if curr_vid_data and curr_vid_data[0].get('video_titles') else []
+                
+                curr_urls_str = "\n".join(curr_urls)
+                curr_titles_str = "\n".join(curr_titles)
                 
                 with st.form("edit_v_form"):
                     st.markdown("**Week Metadata**")
-                    new_title = st.text_input("Topic Title (e.g., 'Introduction to Python')", value=curr_title or "")
+                    new_title = st.text_input("Overall Topic Title (e.g., 'Introduction to Python')", value=curr_title or "")
                     
-                    st.markdown("**YouTube URLs (One per line)**")
-                    new_urls_str = st.text_area("URLs", value=curr_urls_str, height=150, label_visibility="collapsed")
+                    st.markdown("**YouTube URLs & Custom Titles (Must have the same number of lines)**")
+                    col_u, col_t = st.columns(2)
+                    new_urls_str = col_u.text_area("YouTube URLs", value=curr_urls_str, height=150)
+                    new_titles_str = col_t.text_area("Video Titles", value=curr_titles_str, height=150)
                     
                     if st.form_submit_button("Save Week Details", type="primary"):
                         new_urls_list = [u.strip() for u in new_urls_str.split("\n") if u.strip()]
-                        if execute_query("UPDATE weeks SET topic_title=%s, youtube_urls=%s WHERE id=%s", (new_title, new_urls_list, week_id)):
-                            st.success(f"Successfully updated {vw_sel}!")
-                            st.rerun()
+                        new_titles_list = [t.strip() for t in new_titles_str.split("\n") if t.strip()]
+                        
+                        if len(new_urls_list) != len(new_titles_list) and len(new_urls_list) > 0:
+                            st.error(f"Mismatch: You provided {len(new_urls_list)} URLs but {len(new_titles_list)} Titles.")
                         else:
-                            st.error("Failed to save week details.")
+                            if execute_query("UPDATE weeks SET topic_title=%s, youtube_urls=%s, video_titles=%s WHERE id=%s", (new_title, new_urls_list, new_titles_list, week_id)):
+                                st.success(f"Successfully updated {vw_sel}!")
+                                st.rerun()
+                            else:
+                                st.error("Failed to save week details.")
 
     # ==========================================
     # TAB 3: MANAGE STRUCTURE (Edit Hierarchy)
@@ -1326,45 +1336,38 @@ elif app_mode == "View Videos":
     #st.markdown("---")
     
     # ---------------- RENDER VIDEOS ----------------
-    # Fetch the youtube_urls array using the week's unique ID
-    week_data = fetch_data("SELECT youtube_urls FROM weeks WHERE id=%s", (w_map[w_sel],))
+    week_data = fetch_data("SELECT youtube_urls, video_titles FROM weeks WHERE id=%s", (w_map[w_sel],))
     week_id = w_map[w_sel]
 
     if week_data and week_data[0].get('youtube_urls'):
         urls = week_data[0]['youtube_urls']
+        titles = week_data[0].get('video_titles') or []
         
         if isinstance(urls, list) and len(urls) > 0:
             c0.markdown(f"#### Lectures for {s_sel} - {w_sel}")
             
             state_key = f"active_vid_{week_id}"
             if state_key not in st.session_state:
-                # Default to the first video in the list
                 st.session_state[state_key] = urls[0]
 
-            # 2. Create the Layout Columns (Big Left, Small Right)
             col_player, col_playlist = st.columns([2.5, .8])
 
-            # Big Player Container
             with col_player:
                 with st.container(border=True):
-                    # Render whatever video URL is currently stored in the session state
                     current_url = st.session_state[state_key]
                     st.video(current_url)
             
-            # Scrollable Playlist Container
             with col_playlist:
-                #st.markdown("##### Playlist")
-                # Using a fixed-height container so it scrolls if you have 10+ videos
                 with st.container(height="content", border=True):
                     for idx, url in enumerate(urls):
                         if url and url.strip():
-                            # Highlight the active video button by making its type "primary"
+                            # Dynamically fetch the custom title, fallback to "Lecture X" if missing
+                            video_name = titles[idx] if idx < len(titles) else f"Lecture {idx + 1}"
+                            
                             is_active = (st.session_state[state_key] == url.strip())
                             btn_type = "primary" if is_active else "secondary"
-                            btn_label = f"Lecture {idx + 1}" if is_active else f"Lecture {idx + 1}"
                             
-                            # If a button is clicked, update the state and instantly refresh
-                            if st.button(btn_label, key=f"vid_btn_{week_id}_{idx}", type=btn_type, width="stretch"):
+                            if st.button(video_name, key=f"vid_btn_{week_id}_{idx}", type=btn_type, width="stretch"):
                                 st.session_state[state_key] = url.strip()
                                 st.rerun()
             with st.expander("AI Tutor: Generate Lecture Notes", expanded=False, icon=":material/model_training:"):
@@ -1579,7 +1582,7 @@ elif app_mode == "AI Notes":
                 if not broken_qs and not healthy_qs:
                     st.info("No AI Notes have been generated for this selection yet. Go to 'Take Assessment' to ask the AI Tutor!")
 
-    # ==========================================
+# ==========================================
     # TAB 2: Video Lecture Notes
     # ==========================================
     with tab_vid:
@@ -1621,6 +1624,9 @@ elif app_mode == "AI Notes":
                             if u not in seen:
                                 unique_urls.append(u)
                                 seen.add(u)
+                        
+                        # Safely fetch the custom titles array
+                        titles = w.get('video_titles') or []
 
                         for idx, url in enumerate(unique_urls):
                             if url and url.strip():
@@ -1629,6 +1635,10 @@ elif app_mode == "AI Notes":
                                     cached_note = get_cached_video_notes(vid_id)
                                     if cached_note:
                                         sub_name = reverse_s_map.get(w['subject_id'], "Unknown")
+                                        
+                                        # Map the specific custom title to this video, or fallback if missing
+                                        video_title = titles[idx] if idx < len(titles) else f"Lecture {idx + 1}"
+                                        
                                         vid_cache_list.append({
                                             'url': url.strip(),
                                             'video_id': vid_id,
@@ -1636,6 +1646,7 @@ elif app_mode == "AI Notes":
                                             'sub_name': sub_name,
                                             'week_number': w['week_number'],
                                             'topic_title': w.get('topic_title', ''),
+                                            'video_title': video_title, # Store the fetched custom title
                                             'lecture_idx': idx + 1
                                         })
                                 except: pass
@@ -1654,12 +1665,14 @@ elif app_mode == "AI Notes":
                     # Dynamic rendering function for the expanders
                     def render_aivid_note(item):
                         context_tag = f" `[{item['sub_name']} | W{item['week_number']}]`" if (s_sel_v == "All Subjects" or w_sel_v == "All Weeks") else ""
-                        topic_str = f" - {item['topic_title']}" if item['topic_title'] else ""
-                        label = f"{topic_str}{context_tag}"
+                        
+                        # Simply use the newly mapped custom video title!
+                        label = f"{item['video_title']}{context_tag}"
                         
                         with st.expander(expanded=False, label=label, icon=":material/smart_display:"):
                             # Render the video player right at the top of the notes!
                             st.video(item['url'])
+                            st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
                             render_video_notes(item['ai_data'], item['video_id'])
 
                     # Render Broken Section
