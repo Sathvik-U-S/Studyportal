@@ -108,8 +108,27 @@ nav_options = ["Take Assessment", "Take Test", "View Videos","AI Notes"]
 if current_user_role == "admin":
     nav_options.insert(4, "Edit Content")
     nav_options.insert(5, "View Database")
-
 app_mode = st.sidebar.radio("Nav", nav_options, label_visibility="collapsed")
+
+st.sidebar.divider() 
+st.sidebar.markdown("### AI Settings")
+available_models = [
+    "gemini-3.1-pro-preview",   # Highest reasoning, best structured output control
+    "gemini-2.5-pro",           # Very strong accuracy, stable for production
+    "gemini-1.5-pro",           # Older but still reliable for long-context tasks
+    
+    "gemini-3-flash-preview",   # Fast + surprisingly strong formatting ability
+    "gemini-2.5-flash",         # Great balance of speed + quality
+    "gemini-1.5-flash",         # Good for lightweight structured responses
+    
+    "gemini-3.1-flash-lite-preview",  # Ultra fast, weaker consistency
+    "gemini-2.5-flash-lite"           # Fastest + cheapest, lowest accuracy
+]
+selected_model = st.sidebar.selectbox("Select Model", options=available_models, index=0)
+custom_model = st.sidebar.text_input("Type model name", placeholder="e.g. gemini-exp-123")
+
+# Save the choice globally (Custom overrides the dropdown if typed)
+st.session_state.gemini_model = custom_model.strip() if custom_model.strip() else selected_model
 authenticator.logout('Log Out', 'sidebar')
 
 

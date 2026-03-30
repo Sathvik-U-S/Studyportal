@@ -218,9 +218,12 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
     }
     
     last_error_code = None
-
+    # Grab the selected model from the global state
+    model_name = st.session_state.get('gemini_model', 'gemini-1.5-pro')
+    
     for key in api_keys:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={key}"
+        # Inject the dynamic model name into the URL
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
         
         try:
             response = requests.post(url, json=payload, timeout=60)

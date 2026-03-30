@@ -125,10 +125,12 @@ def ask_video_ai(subject, video_url, api_keys):
     }
 
     last_error_code = None
-
-    # Use Gemini 1.5 PRO for large context windows (transcripts)
+    # Grab the selected model from the global state
+    model_name = st.session_state.get('gemini_model', 'gemini-1.5-pro')
+    
     for key in api_keys:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={key}"
+        # Inject the dynamic model name into the URL
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
         
         try:
             response = requests.post(url, json=payload, timeout=120) # Increased timeout for massive prompts
