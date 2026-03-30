@@ -144,7 +144,6 @@ if app_mode == "Take Assessment":
             
             # --- NUMERICAL LOGIC ---
             if q.get('q_type') == 'numerical':
-                st.markdown("<br>", unsafe_allow_html=True)
                 val = st.text_input(f"Answer Q{i+1}", key=f"num_{q['id']}")
                 
                 if mode == "Study Mode" and val:
@@ -165,7 +164,6 @@ if app_mode == "Take Assessment":
 
             # --- MCQ & MSQ LOGIC ---
             else:
-                st.markdown("<br>", unsafe_allow_html=True)
                 options = fetch_data("SELECT * FROM options WHERE question_id=%s ORDER BY id ASC", (q['id'],))
                 
                 is_multi = len([o for o in options if o['is_correct']]) > 1
@@ -246,7 +244,7 @@ elif app_mode == "Take Test":
         st.session_state.responses = {} 
 
     if st.session_state.test_state == 'setup':
-        st.markdown("### Configure Test")
+        st.markdown("#### Configure Test")
         subs = fetch_data("SELECT * FROM subjects ORDER BY name ASC")
         if not subs: 
             st.warning("No subjects available.")
@@ -306,9 +304,7 @@ elif app_mode == "Take Test":
         
         st.markdown(f"Q{st.session_state.curr_idx + 1}. {q['heading']}")
         render_content(q['media_type'], q['media_content'])
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        
+                
         if q.get('q_type') == 'numerical':
             col_q, col_a = st.columns([0.6, 0.4])
             with col_q: st.write("Numerical Answer")

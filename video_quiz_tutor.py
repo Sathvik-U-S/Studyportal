@@ -199,7 +199,6 @@ def render_interactive_quiz(video_id, quiz_data):
                 e_ans = st.text_input("Correct Answer (Must exactly match an option or a number)", value=q['correct_answer'], key=f"e_ans_{video_id}_{idx}")
                 e_exp = st.text_area("Explanation", value=q['explanation'], key=f"e_exp_{video_id}_{idx}", height=150)
                 
-                st.markdown("<br>", unsafe_allow_html=True)
                 c_save, c_cancel = st.columns([1, 5])
                 
                 if c_save.button("Save Changes", type="primary", key=f"save_{video_id}_{idx}"):
@@ -243,10 +242,8 @@ def render_interactive_quiz(video_id, quiz_data):
                         else:
                             st.error("Cannot drop the last question.")
 
-
                 is_revealed = st.session_state[rev_key]
                 user_choice = st.session_state[ans_key]
-
                 c_input, c_status = st.columns([3, 1])
 
                 with c_input:

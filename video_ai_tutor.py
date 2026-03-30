@@ -128,7 +128,7 @@ def ask_video_ai(subject, video_url, api_keys):
 
     # Use Gemini 1.5 PRO for large context windows (transcripts)
     for key in api_keys:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={key}"
         
         try:
             response = requests.post(url, json=payload, timeout=120) # Increased timeout for massive prompts
@@ -388,9 +388,9 @@ def render_video_notes(data, video_id):
                     </style>
                     
                     <div class="controls">
-                        <button type="button" onclick="zoom(1.2)">➕ Zoom In</button>
-                        <button type="button" onclick="zoom(0.8)">➖ Zoom Out</button>
-                        <button type="button" onclick="resetZoom()">🔄 Reset</button>
+                        <button type="button" onclick="zoom(1.2)">Zoom In</button>
+                        <button type="button" onclick="zoom(0.8)">Zoom Out</button>
+                        <button type="button" onclick="resetZoom()">Reset</button>
                         <span id="zoom-level" style="margin-left: 10px; align-self: center; font-weight: 500;">100%</span>
                     </div>
                     
@@ -497,14 +497,8 @@ def render_video_notes(data, video_id):
                         }});
                     </script>
                     """,
-                    height=600,
+                    height=550,
                 )
-
-
-                # Offload rendering to the browser
-                #st.markdown(f"![Diagram]({mermaid_url})")
-                #st.image(mermaid_url, width="content")
-                # Always provide the fallback code
                 with st.expander("View Diagram Code"):
                     st.code(final_mermaid, language="text")
             except Exception:
@@ -517,7 +511,7 @@ def render_video_notes(data, video_id):
                     st.markdown(f"- {q}")
 
         # --- CONTROL BUTTONS ---
-        st.markdown("<br>", unsafe_allow_html=True)
+        
         c_edit, c_del = st.columns(2)
         if c_edit.button("Edit Notes", key=f"edit_btn_{video_id}", width="stretch"):
             st.session_state[edit_state_key] = True
