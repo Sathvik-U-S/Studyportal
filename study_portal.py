@@ -15,6 +15,7 @@ from mcq_ai_tutor import *
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
+from video_quiz_tutor import *
 
 @st.cache_data(show_spinner=False, ttl=604800) # Caches the title for a week so the app stays lightning fast
 def fetch_youtube_title(url):
@@ -1418,6 +1419,56 @@ elif app_mode == "View Videos":
                                 ai_response = ask_video_ai(s_sel, current_url, video_api_keys)
                                 save_video_cache(vid_id, ai_response) # Saves to PostgreSQL
                                 st.rerun()
+            
+            # --- AI VIDEO QUIZ GENERATOR ---
+            with st.expander("AI Tutor: Practice Quiz", expanded=False, icon=":material/quiz:"):
+                try:
+                    vid_id = extract_youtube_id(current_url)
+                except NameError:
+                    vid_id = None
+                    
+                if vid_id:
+                    cached_quiz = get_cached_video_quiz(vid_id)
+                    if cached_quiz:
+                        # Render the sideways interactive UI from the new file
+                        render_interactive_quiz(vid_id, cached_quiz)
+                    else:
+                        st.info("Test your understanding of this lecture. The AI will generate a custom quiz based on the transcript.")
+                        if st.button("Generate Practice Quiz", key=f"gen_quiz_{vid_id}", type="primary", width="stretch"):
+                            with st.spinner("Analyzing transcript and generating comprehensive quiz (This takes 20-30 seconds)..."):
+                                # Ensure we have API keys
+                                if "GEMINI_VIDEO_KEYS" in st.secrets:
+                                    keys = st.secrets["GEMINI_VIDEO_KEYS"]
+                                elif "GEMINI_KEYS" in st.secrets:
+                                    keys = st.secrets["GEMINI_KEYS"]
+                                else:
+                                    keys = [st.secrets.get("GEMINI_KEY")]
+                                
+                                quiz_data = generate_video_quiz(s_sel, current_url, keys)
+                                
+                                # --- THE FIX IS HERE ---
+                                if "error" not in quiz_data:
+                                    try:
+                                        week_num = int(w_sel.split(" ")[1].split(":")[0])
+                                    except: week_num = 0
+                                    
+                                    topic_title = w_sel.split(": ")[1] if ": " in w_sel else ""
+                                    
+                                    meta = {
+                                        "subject": s_sel,
+                                        "week_num": week_num,
+                                        "topic": topic_title,
+                                        "video_title": fetch_youtube_title(current_url) or f"Video ID: {vid_id}",
+                                        "url": current_url
+                                    }
+                                    
+                                    save_video_quiz(vid_id, quiz_data, meta)
+                                    
+                                    # ONLY rerun if successful!
+                                    st.rerun() 
+                                else:
+                                    # If it fails, print the error and STAY on the page so you can read it.
+                                    st.error(f"Generation Failed: {quiz_data['error']}")
 
         else:
             st.info(f"No videos are currently linked to {w_sel}.")

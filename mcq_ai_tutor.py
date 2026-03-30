@@ -220,7 +220,7 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
     last_error_code = None
 
     for key in api_keys:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={key}"
         
         try:
             response = requests.post(url, json=payload, timeout=60)
