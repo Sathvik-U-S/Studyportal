@@ -4,6 +4,19 @@
 html {
     scroll-behavior: smooth;
 }
+/* Force all Streamlit button text to stay on one line and use ellipses if too long */
+[data-testid="stButton"] button div {
+    width: 100%;
+    overflow: hidden;
+}
+
+[data-testid="stButton"] button p {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    width: 100%;
+    margin: 0;
+}
 /* ==========================================
    SECTION 1: LAYOUT & TYPOGRAPHY
    ========================================== */
