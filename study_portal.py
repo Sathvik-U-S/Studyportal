@@ -16,6 +16,17 @@ import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
 
+@st.cache_data(show_spinner=False, ttl=604800) # Caches the title for a week so the app stays lightning fast
+def fetch_youtube_title(url):
+    """Fetches the actual video title directly from YouTube's public oEmbed API."""
+    try:
+        oembed_url = f"https://www.youtube.com/oembed?url={url}&format=json"
+        response = requests.get(oembed_url, timeout=3)
+        if response.status_code == 200:
+            return response.json().get('title', 'Unknown Title')
+    except:
+        pass
+    return None
 # ==========================================
 # 1. ESSENTIAL CONFIG & STYLING (MUST BE FIRST)
 # ==========================================
@@ -1361,8 +1372,14 @@ elif app_mode == "View Videos":
                 with st.container(height="content", border=True):
                     for idx, url in enumerate(urls):
                         if url and url.strip():
-                            # Dynamically fetch the custom title, fallback to "Lecture X" if missing
-                            video_name = titles[idx] if idx < len(titles) else f"Lecture {idx + 1}"
+                            # Check what is currently in the database
+                            db_title = titles[idx] if idx < len(titles) else ""
+                            
+                            # THE MAGIC: If the DB is empty or just says "Lecture X" from the backfill, fetch the real YouTube title!
+                            if not db_title or db_title.startswith("Lecture "):
+                                video_name = fetch_youtube_title(url.strip()) or f"Lecture {idx + 1}"
+                            else:
+                                video_name = db_title
                             
                             is_active = (st.session_state[state_key] == url.strip())
                             btn_type = "primary" if is_active else "secondary"
@@ -1636,8 +1653,14 @@ elif app_mode == "AI Notes":
                                     if cached_note:
                                         sub_name = reverse_s_map.get(w['subject_id'], "Unknown")
                                         
-                                        # Map the specific custom title to this video, or fallback if missing
-                                        video_title = titles[idx] if idx < len(titles) else f"Lecture {idx + 1}"
+                                        # Check what is currently in the database
+                                        db_title = titles[idx] if idx < len(titles) else ""
+                                        
+                                        # THE MAGIC: Auto-fetch real title if needed
+                                        if not db_title or db_title.startswith("Lecture "):
+                                            video_title = fetch_youtube_title(url.strip()) or f"Lecture {idx + 1}"
+                                        else:
+                                            video_title = db_title
                                         
                                         vid_cache_list.append({
                                             'url': url.strip(),
@@ -1646,7 +1669,7 @@ elif app_mode == "AI Notes":
                                             'sub_name': sub_name,
                                             'week_number': w['week_number'],
                                             'topic_title': w.get('topic_title', ''),
-                                            'video_title': video_title, # Store the fetched custom title
+                                            'video_title': video_title, # Store the actual YouTube title
                                             'lecture_idx': idx + 1
                                         })
                                 except: pass
