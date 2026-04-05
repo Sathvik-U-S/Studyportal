@@ -1,5 +1,6 @@
 import streamlit as st # type: ignore
 import json
+import ast
 import requests # type: ignore
 import re
 import time
@@ -10,9 +11,9 @@ from video_ai_tutor import fetch_transcript, extract_youtube_id
 # DATABASE CACHE FUNCTIONS
 # ==========================================
 def get_cached_video_quiz(video_id):
-    query = "SELECT quiz_data FROM video_quizzes WHERE video_id = %s"
+    query = "SELECT quiz_data, created_by_user FROM video_quizzes WHERE video_id = %s"
     result = fetch_data(query, (video_id,))
-    return result[0]['quiz_data'] if result else None
+    return result[0] if result else None
 
 def get_video_quiz_meta(video_id):
     """Fetches the subject and URL needed to generate MORE questions."""
@@ -25,18 +26,15 @@ def update_video_quiz_data(video_id, new_quiz_data):
     query = "UPDATE video_quizzes SET quiz_data = %s, updated_at = CURRENT_TIMESTAMP WHERE video_id = %s"
     execute_query(query, (json.dumps(new_quiz_data), video_id))
 
-def save_video_quiz(video_id, data, meta):
+def save_video_quiz(video_id, data, meta, username):
+    """Saves the quiz with the dynamic username provided from the session."""
     query = """
-        INSERT INTO video_quizzes (video_id, quiz_data, subject_name, week_number, topic_title, video_title, youtube_url, updated_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+        INSERT INTO video_quizzes (video_id, quiz_data, subject_name, week_number, topic_title, video_title, youtube_url, created_by_user, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
         ON CONFLICT (video_id) 
         DO UPDATE SET 
             quiz_data = EXCLUDED.quiz_data,
-            subject_name = EXCLUDED.subject_name,
-            week_number = EXCLUDED.week_number,
-            topic_title = EXCLUDED.topic_title,
-            video_title = EXCLUDED.video_title,
-            youtube_url = EXCLUDED.youtube_url,
+            created_by_user = EXCLUDED.created_by_user,
             updated_at = CURRENT_TIMESTAMP
     """
     execute_query(query, (
@@ -46,9 +44,10 @@ def save_video_quiz(video_id, data, meta):
         meta.get('week_num'), 
         meta.get('topic'), 
         meta.get('video_title'), 
-        meta.get('url')
+        meta.get('url'), 
+        username 
     ))
-
+    
 def delete_video_quiz(video_id):
     execute_query("DELETE FROM video_quizzes WHERE video_id = %s", (video_id,))
 
@@ -120,8 +119,12 @@ def generate_video_quiz(subject, video_url, api_keys):
 
     last_error = None
     
+    # Grab the selected model from the global state, defaulting to 1.5-pro just in case
+    model_name = st.session_state.get('gemini_model', 'gemini-1.5-pro')
+    
     for key in api_keys:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key}"
+        # Inject the dynamic model name into the URL
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
         try:
             response = requests.post(url, json=payload, timeout=180)
             if response.status_code == 200:
@@ -151,17 +154,73 @@ def generate_video_quiz(subject, video_url, api_keys):
 # ==========================================
 # INTERACTIVE UI RENDERER (Top-Down List)
 # ==========================================
-def render_interactive_quiz(video_id, quiz_data):
-    if "error" in quiz_data:
-        st.error(quiz_data["error"])
+def render_interactive_quiz(video_id, quiz_data, created_by_user="System"):
+    # --- THE ULTIMATE UNPACKER ---
+    parsed_data = quiz_data
+    
+    # 1. Unpack nested strings (handles both JSON and Python string-dicts)
+    for _ in range(3):
+        if isinstance(parsed_data, str):
+            try: 
+                parsed_data = json.loads(parsed_data)
+            except Exception: 
+                try:
+                    parsed_data = ast.literal_eval(parsed_data)
+                except Exception:
+                    break
+        else:
+            break
+            
+    # 2. Safety check: Did it get wrapped in an extra dictionary?
+    if isinstance(parsed_data, dict) and "quiz_data" in parsed_data and "questions" not in parsed_data:
+        parsed_data = parsed_data["quiz_data"]
+        for _ in range(2):
+            if isinstance(parsed_data, str):
+                try: parsed_data = json.loads(parsed_data)
+                except: break
+            else: break
+
+    if not isinstance(parsed_data, dict):
+        st.error(f"Error: Database returned invalid quiz formatting. Data type: {type(parsed_data)}")
+        return
+        
+    if "error" in parsed_data:
+        st.error(parsed_data["error"])
         return
 
-    questions = quiz_data.get("questions", [])
-    if not questions:
+    # 1. Fallback for legacy DB rows where the author was NULL
+    if not created_by_user:
+        created_by_user = "System"
+        
+    # --- THE FIX: Bulletproof Case-Insensitive Role Checking ---
+    current_role = str(st.session_state.get("role", "")).strip().lower()
+    current_user = str(st.session_state.get("username", "")).strip().lower()
+    author = str(created_by_user).strip().lower()
+
+    is_admin = (current_role == "admin")
+    is_author = (current_user == author)
+    can_edit = is_admin or is_author
+
+    st.caption(f"Quiz Authored by: **{created_by_user}**")
+
+    questions = parsed_data.get("questions", [])
+    
+    # 3. Safety check: Is the questions array itself stringified?
+    if isinstance(questions, str):
+        try: questions = json.loads(questions)
+        except: 
+            try: questions = ast.literal_eval(questions)
+            except: questions = []
+            
+    if not questions or not isinstance(questions, list):
         st.info("No questions were generated for this video.")
         return
 
+    # Synchronize the variable for the rest of the app's functions
+    quiz_data = parsed_data 
+    
     st.markdown(f"### Practice Quiz ({len(questions)} Questions)")
+    # Loop through all questions and render them vertically
     # Loop through all questions and render them vertically
     for idx, q in enumerate(questions):
         
@@ -177,10 +236,10 @@ def render_interactive_quiz(video_id, quiz_data):
 
         with st.container(border=True):
             # ==========================================
-            # EDIT MODE UI (For this specific question)
+            # EDIT MODE UI (Strictly Admin/Creator Only)
             # ==========================================
-            if st.session_state[edit_key]:
-                st.markdown(f"#### Edit Question {idx + 1}")
+            if can_edit and st.session_state[edit_key]:
+                st.markdown(f"#### ✏️ Edit Question {idx + 1}")
                 
                 e_type = st.selectbox("Question Type", ["mcq", "numerical", "tf"], index=["mcq", "numerical", "tf"].index(q['q_type']), key=f"e_type_{video_id}_{idx}")
                 e_text = st.text_area("Question Text", value=q['question_text'], key=f"e_text_{video_id}_{idx}", height=100)
@@ -223,24 +282,25 @@ def render_interactive_quiz(video_id, quiz_data):
             # NORMAL STUDY UI
             # ==========================================
             else:
-                # Question Header & Inline Controls
-                c_header, c_ctrl = st.columns([0.9, 0.1])
+                # --- THE FIX: Wider 25% column, and force buttons to fill the container ---
+                c_header, c_ctrl = st.columns([0.75, 0.25])
                 with c_header:
                     st.markdown(f"**Q{idx + 1}.** {q['question_text']}")
                     st.caption(f"Type: `{q['q_type'].upper()}`")
                     
-                with c_ctrl:
-                   
-                    if c_ctrl.button("", key=f"btn_edit_{video_id}_{idx}", help="Edit Question",icon=":material/edit:"):
-                        st.session_state[edit_key] = True
-                        st.rerun()
-                    if c_ctrl.button("", key=f"btn_drop_{video_id}_{idx}", help="Drop Question",icon=":material/delete:"):
-                        if len(quiz_data["questions"]) > 1:
-                            quiz_data["questions"].pop(idx)
-                            update_video_quiz_data(video_id, quiz_data)
+                if can_edit:    
+                    with c_ctrl:
+                        ce1, ce2 = st.columns(2)
+                        if ce1.button("✏️ Edit", key=f"btn_edit_{video_id}_{idx}", help="Edit Question", use_container_width=True):
+                            st.session_state[edit_key] = True
                             st.rerun()
-                        else:
-                            st.error("Cannot drop the last question.")
+                        if ce2.button("🗑️ Drop", key=f"btn_drop_{video_id}_{idx}", help="Drop Question", use_container_width=True):
+                            if len(quiz_data["questions"]) > 1:
+                                quiz_data["questions"].pop(idx)
+                                update_video_quiz_data(video_id, quiz_data)
+                                st.rerun()
+                            else:
+                                st.error("Cannot drop the last question.")
 
                 is_revealed = st.session_state[rev_key]
                 user_choice = st.session_state[ans_key]
@@ -292,9 +352,9 @@ def render_interactive_quiz(video_id, quiz_data):
 
                     with c_status:
                         if is_correct:
-                            st.success("Correct!")
+                            st.success("✅ Correct!")
                         else:
-                            st.error("Incorrect.")
+                            st.error("❌ Incorrect.")
                             
                     st.info(f"**Correct Answer:** {q['correct_answer']}")
                     with st.container(border=True):
@@ -304,37 +364,40 @@ def render_interactive_quiz(video_id, quiz_data):
     # ==========================================
     # GLOBAL ADMIN / TUTOR CONTROLS
     # ==========================================
-    st.markdown("##### Quiz Controls")
-    
-    ca1, ca2 = st.columns(2)
-    
-    with ca1:
-        if st.button("Generate & Add More Questions", width="stretch", icon=":material/add:"):
-            with st.spinner("Analyzing transcript to append more questions..."):
-                meta = get_video_quiz_meta(video_id)
-                if meta:
-                    if "GEMINI_VIDEO_KEYS" in st.secrets:
-                        keys = st.secrets["GEMINI_VIDEO_KEYS"]
-                    elif "GEMINI_KEYS" in st.secrets:
-                        keys = st.secrets["GEMINI_KEYS"]
+    if can_edit:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown("##### ⚙️ Global Quiz Controls")
+        
+        ca1, ca2 = st.columns(2)
+        
+        with ca1:
+            # Reverted to emoji to ensure standard rendering
+            if st.button("➕ Generate & Add More Questions", width="stretch"):
+                with st.spinner("Analyzing transcript to append more questions..."):
+                    meta = get_video_quiz_meta(video_id)
+                    if meta:
+                        if "GEMINI_VIDEO_KEYS" in st.secrets:
+                            keys = st.secrets["GEMINI_VIDEO_KEYS"]
+                        elif "GEMINI_KEYS" in st.secrets:
+                            keys = st.secrets["GEMINI_KEYS"]
+                        else:
+                            keys = [st.secrets.get("GEMINI_KEY")]
+                        
+                        new_quiz = generate_video_quiz(meta['subject_name'], meta['youtube_url'], keys)
+                        
+                        if "error" not in new_quiz:
+                            new_count = len(new_quiz['questions'])
+                            quiz_data["questions"].extend(new_quiz["questions"])
+                            update_video_quiz_data(video_id, quiz_data)
+                            st.success(f"Successfully added {new_count} new questions to the bottom!")
+                            st.rerun()
+                        else:
+                            st.error(new_quiz["error"])
                     else:
-                        keys = [st.secrets.get("GEMINI_KEY")]
-                    
-                    new_quiz = generate_video_quiz(meta['subject_name'], meta['youtube_url'], keys)
-                    
-                    if "error" not in new_quiz:
-                        new_count = len(new_quiz['questions'])
-                        quiz_data["questions"].extend(new_quiz["questions"])
-                        update_video_quiz_data(video_id, quiz_data)
-                        st.success(f"Successfully added {new_count} new questions to the bottom!")
-                        st.rerun()
-                    else:
-                        st.error(new_quiz["error"])
-                else:
-                    st.error("Could not find video metadata to generate more questions.")
-
-    with ca2:
-        if st.button("Delete Entire Quiz", width="stretch", type="primary", icon=":material/delete:"):
-            delete_video_quiz(video_id)
-            st.rerun()
+                        st.error("Could not find video metadata to generate more questions.")
+        
+        with ca2:
+            if st.button("🚨 Delete Entire Quiz", width="stretch", type="primary"):
+                delete_video_quiz(video_id)
+                st.rerun()
 

@@ -4,6 +4,7 @@
 html {
     scroll-behavior: smooth;
 }
+
 /* Force all Streamlit button text to stay on one line and use ellipses if too long */
 [data-testid="stButton"] button div {
     width: 100%;
@@ -17,13 +18,15 @@ html {
     width: 100%;
     margin: 0;
 }
+
 /* ==========================================
    SECTION 1: LAYOUT & TYPOGRAPHY
    ========================================== */
 header[data-testid="stHeader"] {
     background-color: transparent !important;
-    height: 0px !important; 
+    height: 0px !important;
 }
+
 /* 1A. Global Font */
 .stApp {
     font-family: 'Segoe UI', sans-serif;
@@ -34,11 +37,15 @@ header[data-testid="stHeader"] {
     padding-top: 0rem !important;
     padding-bottom: 2rem !important;
 }
+
 /* Create a buffer so the 'top' anchor lands below the header */
 #top {
-    scroll-margin-top: 0px; /* Adjust this (e.g., 70px to 120px) to your liking */
-    visibility: hidden;      /* Keeps the div invisible */
-    display: block;          /* Ensures it takes up space for the anchor to work */
+    scroll-margin-top: 0px;
+    /* Adjust this (e.g., 70px to 120px) to your liking */
+    visibility: hidden;
+    /* Keeps the div invisible */
+    display: block;
+    /* Ensures it takes up space for the anchor to work */
 }
 
 /* 1C. Option Labels (e.g., "OPTION 1", "SELECT") */
@@ -46,7 +53,8 @@ header[data-testid="stHeader"] {
     font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
-    color: #718096; /* Gray text */
+    color: #718096;
+    /* Gray text */
     margin-bottom: 4px;
     display: block;
 }
@@ -54,10 +62,10 @@ header[data-testid="stHeader"] {
 /* ==========================================
    SECTION 8: MOBILE SCROLL FIX FOR TABLES
    ========================================== */
-[data-testid="stMarkdownContainer"] table { 
-    display: block !important; 
-    overflow-x: auto !important; 
-    white-space: nowrap !important; 
+[data-testid="stMarkdownContainer"] table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
 }
 
 /* ==========================================
@@ -74,12 +82,13 @@ header[data-testid="stHeader"] {
 
 /* 2B. Full-Screen Image Expansion */
 div[data-testid="stFullScreenFrame"] img {
-    max-height: 95vh; 
+    max-height: 95vh;
     max-width: 95vw;
     width: auto;
     height: auto;
     object-fit: contain;
 }
+
 /* ==========================================
    SECTION 3: NOTIFICATION BOXES (st.info, st.success)
    (Dynamically syncs with Streamlit's Theme Toggle)
@@ -88,17 +97,17 @@ div[data-testid="stFullScreenFrame"] img {
 /* The Box Background and Border */
 div[data-testid="stAlert"] {
     /* Automatically switches between light gray and dark charcoal */
-    background-color: var(--secondary-background-color) !important; 
-    
+    background-color: var(--secondary-background-color) !important;
+
     /* A semi-transparent border that looks good in both modes */
-   /* border: 1px solid rgba(130, 130, 130, 0.3) !important; */
+    /* border: 1px solid rgba(130, 130, 130, 0.3) !important; */
     border-radius: .5rem !important;
 }
 
 /* The Text Inside the Box */
 div[data-testid="stAlert"] * {
     /* Automatically switches between near-black and white text */
-    color: var(--text-color) !important; 
+    color: var(--text-color) !important;
 }
 
 /* ==========================================
@@ -111,15 +120,15 @@ div[data-testid="stAlert"] * {
     width: 45px;
     height: 45px;
     border-radius: 35%;
-    
+
     /* Minimalist Semi-Transparent Red */
-    background-color: rgba(255, 75, 75, 0.6) !important; 
+    background-color: rgba(255, 75, 75, 0.6) !important;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    
+
     z-index: 999999;
     text-decoration: none !important;
-    
+
     /* Center the CSS arrow */
     display: flex;
     align-items: center;
@@ -127,10 +136,22 @@ div[data-testid="stAlert"] * {
     transition: all 0.3s ease;
 }
 
-.scroll-btn:hover {
-    background-color: rgba(255, 75, 75, 1) !important; 
-    transform: translateY(-3px);
-    /*box-shadow: 0 6px 12px rgba(255, 75, 75, 0.3);*/
+@media (hover: hover) and (pointer: fine) {
+    .scroll-btn:hover {
+        background-color: rgba(255, 75, 75, 1) !important;
+        transform: translateY(-3px);
+    }
+}
+
+@media (hover: none) {
+    .scroll-btn:active {
+        background-color: rgba(255, 75, 75, 1) !important;
+        transform: translateY(-3px);
+    }
+}
+
+button:focus:not(:active) {
+    background-color: transparent !important;
 }
 
 /* Pure CSS Arrow (Guaranteed to stay white) */
@@ -138,8 +159,44 @@ div[data-testid="stAlert"] * {
     content: '';
     width: 12px;
     height: 12px;
-    border-top: 3px solid #ffffff; 
-    border-left: 3px solid #ffffff; 
-    transform: rotate(45deg); 
-    margin-top: 6px; 
+    border-top: 3px solid #ffffff;
+    border-left: 3px solid #ffffff;
+    transform: rotate(45deg);
+    margin-top: 6px;
+}
+
+/* ==========================================
+   MOBILE HOVER FIX 
+   Prevents buttons from staying dark after tapping on iOS/Android
+   ========================================== */
+@media (hover: none) {
+    [data-testid="stButton"] button:hover {
+        background-color: transparent !important;
+        border-color: rgba(49, 51, 63, 0.2) !important;
+        color: inherit !important;
+    }
+
+    [data-testid="stButton"] button[kind="primary"]:hover {
+        background-color: #ff4b4b !important;
+        border-color: #ff4b4b !important;
+        color: white !important;
+    }
+}
+
+/* ==========================================
+   MOBILE HOVER FIX 
+   Prevents buttons from staying dark after tapping on iOS/Android
+   ========================================== */
+@media (hover: none) {
+    [data-testid="stButton"] button:hover {
+        background-color: transparent !important;
+        border-color: rgba(49, 51, 63, 0.2) !important;
+        color: inherit !important;
+    }
+
+    [data-testid="stButton"] button[kind="primary"]:hover {
+        background-color: #ff4b4b !important;
+        border-color: #ff4b4b !important;
+        color: white !important;
+    }
 }
