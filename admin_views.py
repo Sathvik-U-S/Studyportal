@@ -369,24 +369,42 @@ def render_edit_content():
             st.dataframe(pd.DataFrame(unsolvable), width="stretch", hide_index=True)
 
     # TOOL 7: Custom SQL Executor
+    # TAB: CUSTOM SQL
     with tab_sql:
         st.markdown("#### :material/terminal: Run Custom SQL")
-        query = st.text_area("Enter SQL Query", height="content", placeholder="SELECT * FROM questions WHERE id = 1;")
-        if st.button("Execute Query", type="primary", icon=":material/play_circle:"):
-            if query.strip() == "": st.error("Please enter a query.")
-            elif query.strip().upper().startswith("SELECT"):
-                try:
-                    res = fetch_data(query)
-                    if res:
-                        st.dataframe(res, width="stretch")
-                        st.success(f"Returned {len(res)} rows.")
-                    else: st.info("Query returned no results.", icon=":material/info:")
-                except Exception as e: st.error(f"SQL Error: {e}")
-            else:
-                if execute_query(query): st.success("Query executed and committed successfully.")
-                else: st.error("Failed to execute query. Check syntax and constraints.")
-
-    # VIEW DATABASE (Protected Admin Area)
+        
+        # 1. Wrap in a form to stop laggy reloads while typing
+        with st.form("custom_sql_form", clear_on_submit=False):
+            query = st.text_area("Enter SQL Query", height=200, placeholder="SELECT * FROM questions WHERE id = 1;")
+            
+            # 2. Form submit button handles the loading state and prevents double-clicks
+            submitted = st.form_submit_button("Execute Query", type="primary", icon=":material/play_circle:")
+            
+            if submitted:
+                if query.strip() == "":
+                    st.error("Please enter a query.", icon=":material/error:")
+                else:
+                    import datetime
+                    # 3. Precise timestamp for feedback (Hour:Minute:Second AM/PM)
+                    now = datetime.datetime.now().strftime("%I:%M:%S %p")
+                    
+                    with st.spinner("Executing..."):
+                        # Use same text and logic as your original snippet
+                        if query.strip().upper().startswith("SELECT"):
+                            try:
+                                res = fetch_data(query) #
+                                if res:
+                                    st.dataframe(res, use_container_width=True)
+                                    st.success(f"**[{now}]** Returned {len(res)} rows.", icon=":material/check_circle:")
+                                else:
+                                    st.info(f"**[{now}]** Query returned no results.", icon=":material/info:")
+                            except Exception as e:
+                                st.error(f"**[{now}]** SQL Error: {e}", icon=":material/error:")
+                        else:
+                            if execute_query(query): #
+                                st.success(f"**[{now}]** Query executed and committed successfully.", icon=":material/check_circle:")
+                            else:
+                                st.error(f"**[{now}]** Failed to execute query. Check syntax and constraints.", icon=":material/error:")
 
 
 def render_view_database():
