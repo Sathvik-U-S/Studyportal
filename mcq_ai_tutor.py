@@ -8,39 +8,56 @@ import zlib
 import streamlit.components.v1 as components # type: ignore
 from cache_manager import save_ai_cache, delete_ai_cache
 import mimetypes
+import re
 
 def detect_language(code_str):
-    """A heuristic text classifier to auto-detect the programming language for syntax highlighting."""
+    """A highly robust heuristic text classifier for syntax highlighting."""
     if not code_str: return "python"
     
     c = code_str.strip()
     c_lower = c.lower()
     
-    # HTML
-    if re.search(r'^<!doctype html>|<html|<div|<p>|<script', c_lower): return 'html'
-    # SQL
-    if re.search(r'^\s*(select\s+.*?\s+from|insert\s+into|update\s+.*?\s+set|delete\s+from|create\s+table)', c_lower): return 'sql'
-    # Java
-    if re.search(r'public\s+class\s+\w+|public\s+static\s+void\s+main|system\.out\.print|import\s+java\.', c_lower): return 'java'
-    # C / C++
-    if re.search(r'#include\s*<|int\s+main\s*\(|std::cout|printf\(', c_lower): return 'cpp'
-    # CSS
-    if re.search(r'^[.#a-z0-9\s,\-_]+\s*\{[^}]+\}', c_lower) and ':' in c_lower and ';' in c_lower: return 'css'
-    # JSON
+    # 1. JSON (Strict structural check first)
     if (c.startswith('{') and c.endswith('}')) or (c.startswith('[') and c.endswith(']')):
         if '"' in c and ':' in c: return 'json'
-    # JavaScript / TypeScript / Vue
+
+    # 2. STRICT HTML (Only triggers if the file explicitly starts with standard web document tags)
+    if re.search(r'^\s*(<!doctype html>|<html|<body|<head)', c_lower): 
+        return 'html'
+        
+    # 3. SQL
+    if re.search(r'^\s*(select\s+.*?|insert\s+into|update\s+.*?|delete\s+from|create\s+table|alter\s+table)', c_lower): 
+        return 'sql'
+
+    # 4. Java (Uses word boundaries \b to prevent catching javascript properties)
+    if re.search(r'\b(public\s+class|public\s+static\s+void\s+main|system\.out\.print|import\s+java\.)\b', c_lower): 
+        return 'java'
+
+    # 5. C / C++
+    if re.search(r'#include\s*<|int\s+main\s*\(|std::cout|printf\(', c_lower): 
+        return 'cpp'
+
+    # 6. JAVASCRIPT / TYPESCRIPT / VUE
+    # Placed ABOVE Loose HTML so templates containing '<p>' inside JS don't trigger HTML!
     if re.search(
-        r'console\.log|document\.|const\s+\w+\s*=|let\s+\w+\s*=|var\s+\w+\s*=|'
-        r'=>|export\s+const|\w+\s*\([^)]*\)\s*\{|\.push\(|\.map\(|\.filter\(|'
-        r'v-(if|else|else-if|for|on|bind|model)\s*[:=]',
+        r'\b(const|let|var|function|export|import|async|await|return|console\.log|new vue|template:)\b|\s*=>\s*', 
         c_lower
     ):
         return 'javascript'
-    # Markdown
-    if re.search(r'^#+\s+[a-zA-Z]|^\*\*[a-zA-Z]', c): return 'markdown'
+
+    # 7. LOOSE HTML (Fallback for raw HTML components/tags that have no JS logic)
+    if re.search(r'<(div|p|script|span|a|ul|li|nav|footer|button|input)\b', c_lower): 
+        return 'html'
+
+    # 8. CSS
+    if re.search(r'^[.#a-z0-9\s,\-_]+\s*\{[^}]+\}', c_lower) and ':' in c_lower and ';' in c_lower: 
+        return 'css'
+
+    # 9. Markdown
+    if re.search(r'^#+\s+[a-zA-Z]|^\*\*[a-zA-Z]', c): 
+        return 'markdown'
     
-    # Default fallback to Python
+    # Default fallback
     return 'python'
 
 def render_content(media_type, content):
