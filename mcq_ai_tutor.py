@@ -10,6 +10,8 @@ from cache_manager import save_ai_cache, delete_ai_cache
 import mimetypes
 import re
 
+import re
+
 def detect_language(code_str):
     """A highly robust heuristic text classifier for syntax highlighting."""
     if not code_str: return "python"
@@ -53,11 +55,7 @@ def detect_language(code_str):
     if re.search(r'^[.#a-z0-9\s,\-_]+\s*\{[^}]+\}', c_lower) and ':' in c_lower and ';' in c_lower: 
         return 'css'
 
-    # 9. Markdown
-    if re.search(r'^#+\s+[a-zA-Z]|^\*\*[a-zA-Z]', c): 
-        return 'markdown'
-    
-    # Default fallback
+    # Default fallback to Python (Markdown check removed to prevent comment clashing)
     return 'python'
 
 def render_content(media_type, content):
