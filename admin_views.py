@@ -28,8 +28,8 @@ def render_edit_content():
     Renders the Edit Content view for modifying questions, weeks, and structure.
     """
     # Renamed the second tab to reflect it handles more than just videos now
-    tab_edit_q, tab_edit_w, tab_edit_hier, tab_health, tab_sql = st.tabs([
-        "Edit Questions", "Edit Week Details", "Edit Hierarchy", "Content Health", "Custom SQL"
+    tab_edit_q, tab_edit_w, tab_edit_hier, tab_health, tab_overview, tab_sql = st.tabs([
+        "Edit Questions", "Edit Week Details", "Edit Hierarchy", "Content Health", "Content Overview", "Custom SQL"
     ])
     
     # TAB 1: EDIT QUESTIONS (Upgraded with New Attributes)
@@ -368,7 +368,71 @@ def render_edit_content():
             st.warning(f"Found {len(unsolvable)} MCQs with no correct answer marked.")
             st.dataframe(pd.DataFrame(unsolvable), width="stretch", hide_index=True)
 
-    # TOOL 7: Custom SQL Executor
+    # TAB: CONTENT OVERVIEW
+    with tab_overview:
+        st.markdown("#### :material/account_tree: Content Overview")
+
+        subjects = fetch_data("SELECT * FROM subjects ORDER BY name ASC")
+        if subjects:
+            s_map = {s['name']: s['id'] for s in subjects}
+            s_sel = st.selectbox("Select Subject", list(s_map.keys()), key="overview_sub")
+
+            if s_sel:
+                s_id = s_map[s_sel]
+
+                # 1. Fetch all weeks and activities in TWO lightning-fast queries
+                weeks_data = fetch_data("SELECT week_number, topic_title FROM weeks WHERE subject_id=%s ORDER BY week_number ASC", (s_id,))
+                
+                # The "Magic" Query: Gets activities and counts their questions instantly
+                act_query = """
+                    SELECT a.week_number, a.name AS activity_name, COUNT(q.id) as question_count
+                    FROM assessments a
+                    LEFT JOIN questions q ON a.id = q.assessment_id
+                    WHERE a.subject_id = %s
+                    GROUP BY a.week_number, a.name
+                    ORDER BY a.week_number ASC, a.name ASC
+                """
+                act_data = fetch_data(act_query, (s_id,))
+
+                # 2. Organize data in Python memory so we don't spam the database inside the UI loop!
+                act_by_week = {}
+                if act_data:
+                    for row in act_data:
+                        wn = row['week_number']
+                        if wn not in act_by_week:
+                            act_by_week[wn] = []
+                        act_by_week[wn].append({
+                            'name': row['activity_name'],
+                            'count': row['question_count']
+                        })
+
+                # Merge week numbers from both the weeks table and any orphaned activities
+                all_week_nums = set([w['week_number'] for w in weeks_data]) if weeks_data else set()
+                if act_data:
+                    all_week_nums.update([row['week_number'] for row in act_data])
+                
+                w_title_map = {w['week_number']: w.get('topic_title', '') for w in weeks_data} if weeks_data else {}
+
+                # 3. Render the Collapsibles
+                if not all_week_nums:
+                    st.warning(f"No weeks or activities found for {s_sel}.", icon=":material/warning:")
+                else:
+                    for wn in sorted(list(all_week_nums)):
+                        title = w_title_map.get(wn, "")
+                        label = f"Week {wn}" + (f": {title}" if title else "")
+                        
+                        week_acts = act_by_week.get(wn, [])
+                        total_acts = len(week_acts)
+                        total_qs = sum(a['count'] for a in week_acts)
+
+                        # Provide a rich summary right on the collapsible header!
+                        with st.expander(f"{label} — ({total_acts} Activities, {total_qs} Questions)", icon=":material/folder:"):
+                            if week_acts:
+                                for act in week_acts:
+                                    st.markdown(f"- **{act['name']}**: `{act['count']} Questions`")
+                            else:
+                                st.info("No activities added for this week yet.", icon=":material/info:")
+
     # TAB: CUSTOM SQL
     with tab_sql:
         st.markdown("#### :material/terminal: Run Custom SQL")
@@ -1149,7 +1213,3 @@ def render_ai_notes():
                             render_aivid_note(item)
                 else:
                     st.info("No AI notes generated for this selection yet. Go to 'View Videos' to ask the AI Tutor!", icon=":material/info:")
-
-
-
-
