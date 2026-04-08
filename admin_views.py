@@ -170,7 +170,7 @@ def render_edit_content():
                                     st.success("Updated Successfully")
                                     st.rerun()
 
-    # TAB 2: EDIT WEEK DETAILS (Upgraded)
+    # TAB 2: EDIT WEEK DETAILS (Upgraded with Auto-Title Fetch)
     with tab_edit_w:
         st.markdown("#### :material/play_lesson: Manage Week Details & Videos")
         
@@ -203,26 +203,78 @@ def render_edit_content():
                 
                 with st.form("edit_v_form"):
                     st.markdown("**Week Metadata**")
-                    new_title = st.text_input("Overall Topic Title (e.g., \'Introduction to Python\')", value=curr_title or "", icon=":material/title:")
+                    new_title = st.text_input("Overall Topic Title (e.g., 'Introduction to Python')", value=curr_title or "", icon=":material/title:")
                     
-                    st.markdown("**YouTube URLs & Custom Titles (Must have the same number of lines)**")
+                    st.markdown("**YouTube URLs & Video Titles**")
+                    st.info("You can leave the Video Titles box completely empty. The app will automatically fetch the real titles directly from YouTube!", icon=":material/auto_awesome:")
                     col_u, col_t = st.columns(2)
                     new_urls_str = col_u.text_area("YouTube URLs", value=curr_urls_str, height=150)
-                    new_titles_str = col_t.text_area("Video Titles", value=curr_titles_str, height=150)
+                    new_titles_str = col_t.text_area("Video Titles (Optional Override)", value=curr_titles_str, height=150)
                     
                     if st.form_submit_button("Save Week Details", type="primary", icon=":material/save:"):
                         new_urls_list = [u.strip() for u in new_urls_str.split("\n") if u.strip()]
                         new_titles_list = [t.strip() for t in new_titles_str.split("\n") if t.strip()]
                         
-                        if len(new_urls_list) != len(new_titles_list) and len(new_urls_list) > 0:
-                            st.error(f"Mismatch: You provided {len(new_urls_list)} URLs but {len(new_titles_list)} Titles.")
-                        else:
-                            if execute_query("UPDATE weeks SET topic_title=%s, youtube_urls=%s, video_titles=%s WHERE id=%s", (new_title, new_urls_list, new_titles_list, week_id)):
+                        final_titles = []
+                        with st.spinner("Processing URLs and automatically fetching YouTube titles..."):
+                            for i, url in enumerate(new_urls_list):
+                                # If you typed a manual title, keep it. Otherwise, fetch it.
+                                if i < len(new_titles_list) and new_titles_list[i]:
+                                    final_titles.append(new_titles_list[i])
+                                else:
+                                    fetched_title = fetch_youtube_title(url)
+                                    final_titles.append(fetched_title if fetched_title else f"Lecture {i+1}")
+                                    
+                            if execute_query("UPDATE weeks SET topic_title=%s, youtube_urls=%s, video_titles=%s WHERE id=%s", (new_title, new_urls_list, final_titles, week_id)):
                                 st.success(f"Successfully updated {vw_sel}!")
+                                time.sleep(1)
                                 st.rerun()
                             else:
                                 st.error("Failed to save week details.")
 
+        # ==========================================
+        # THE GLOBAL BACKFILL TOOL (Fixes old videos)
+        # ==========================================
+        st.divider()
+        st.markdown("##### :material/build: Auto-Fix Missing Titles (Global)")
+        st.info("Did you previously add URLs without titles? Click below to scan the entire database and automatically fetch titles for any videos that are missing them.")
+        
+        if st.button("Auto-Fill Missing Titles for ALL Weeks", type="secondary", icon=":material/autorenew:"):
+            with st.spinner("Scanning database and fetching titles from YouTube... This may take a minute."):
+                all_weeks = fetch_data("SELECT id, youtube_urls, video_titles FROM weeks WHERE youtube_urls IS NOT NULL")
+                fixed_count = 0
+                
+                for w in all_weeks:
+                    urls = w['youtube_urls']
+                    if not urls: continue
+                    titles = w['video_titles'] or []
+                    
+                    needs_update = False
+                    new_titles = []
+                    
+                    for i, u in enumerate(urls):
+                        # Keep existing valid titles
+                        if i < len(titles) and titles[i] and not titles[i].startswith("Lecture "):
+                            new_titles.append(titles[i])
+                        else:
+                            # Fetch the missing title
+                            fetched = fetch_youtube_title(u)
+                            new_titles.append(fetched if fetched else f"Lecture {i+1}")
+                            needs_update = True
+                            
+                    # Update database if changes were made or arrays were misaligned
+                    if needs_update or len(new_titles) != len(urls):
+                        execute_query("UPDATE weeks SET video_titles=%s WHERE id=%s", (new_titles, w['id']))
+                        fixed_count += 1
+                
+                if fixed_count > 0:
+                    st.success(f"✅ Successfully fetched and updated titles for {fixed_count} weeks!")
+                else:
+                    st.success("✅ All videos in the database already have titles!")
+                    
+                time.sleep(2)
+                st.rerun()
+                
     # TAB 3: MANAGE STRUCTURE (Edit Hierarchy)
     with tab_edit_hier:
         st.markdown("##### :material/account_tree: Manage Database Structure")
