@@ -342,37 +342,6 @@ def render_take_test():
         c2.metric("Percent", f"{int(score/total*100)}%", border=True)
         c3.metric("Time", f"{mins}m {secs}s", border=True)
 
-
-        st.markdown("#### :material/monitoring: Performance Analytics")
-        
-        col_g1, col_g2, col_g3 = st.columns(3)
-        
-        with col_g1:
-            st.markdown("**Accuracy Breakdown**")
-            # Workaround: Formatted standard index for native Streamlit charts
-            chart_data = pd.DataFrame({"Answers": [score, total - score]}, index=["Correct", "Incorrect"])
-            st.bar_chart(chart_data)
-            
-        with col_g2:
-            st.markdown("**Question Types**")
-            type_counts = {}
-            for item in results_data:
-                t = str(item['q'].get('q_type') or 'mcq').upper()
-                type_counts[t] = type_counts.get(t, 0) + 1
-            
-            # Workaround: Mapped dictionary correctly to DataFrame for the chart
-            df_types = pd.DataFrame(list(type_counts.values()), index=list(type_counts.keys()), columns=["Count"])
-            st.bar_chart(df_types)
-
-        with col_g3:
-            st.markdown("**Test Mastery**")
-            progress_val = int((score/total) * 100) if total > 0 else 0
-            st.progress(progress_val, text=f"Overall Mastery: {progress_val}%")
-            if progress_val >= 80: st.success("Excellent Work!")
-            elif progress_val >= 50: st.warning("Good, but keep reviewing.")
-            else: st.error("Review AI Notes for missed concepts.")
-
-
         for idx, item in enumerate(results_data):
             q = item['q']
             opts = item['opts']
