@@ -25,6 +25,7 @@ def fetch_youtube_title(url):
 def render_take_assessment():
     """
     Renders the Take Assessment view where students can practice questions.
+    Utilizes st.fragment for micro-reloading and st.form for batching.
     """
     # 1. Base Setup
     c1, c2, c3, c4 = st.columns([.6, 1.2, 1, 0.8])
@@ -71,17 +72,141 @@ def render_take_assessment():
     q_ids = tuple([q['id'] for q in questions])
     opts_by_q = {}
     if q_ids:
-        # One single query to grab every option instead of asking the DB 20 times!
         options_data = fetch_data("SELECT * FROM options WHERE question_id IN %s ORDER BY id ASC", (q_ids,))
         if options_data:
             for opt in options_data:
                 opts_by_q.setdefault(opt['question_id'], []).append(opt)
 
     # =========================================================================
-    # EXAM MODE (Zero Loading - Wrapped in a Form)
+    # MICRO-RELOADING STRATEGY (Isolates logic so only 1 question reloads at a time)
+    # =========================================================================
+    @st.fragment
+    def render_study_question(i, q, options, s_sel, w_sel, a_sel):
+        with st.container(border=True):
+            st.markdown(f"Q{i+1}. {q['heading']}")    
+            render_content(q['media_type'], q['media_content'])
+            
+            # NUMERICAL LOGIC
+            if q.get('q_type') == 'numerical':
+                val = st.text_input(f"Answer Q{i+1}", key=f"num_{q['id']}")
+                
+                if val:
+                    if check_numerical_answer(val, q['correct_answer']): st.success("Correct")
+                    else: st.error(f"Incorrect. Answer: {q['correct_answer']}")
+                
+                ai_key = f"num_{q['id']}" 
+                cached_res = get_cached_ai_response(ai_key)
+                
+                if cached_res:
+                    with st.expander("View AI Tutor Analysis", expanded=False, icon=":material/model_training:"):
+                        render_ai_tutor_response(cached_res.get('ai_data', cached_res), ai_key, cached_res.get('created_by_user', 'System'))
+                else:
+                    if not st.session_state.get("user_api_keys"):
+                        st.warning("Please add your Gemini API Key in 'My Settings' to unlock the AI Tutor.", icon=":material/vpn_key:")
+                    else:
+                        if st.button(f"Ask AI Tutor for Q{i+1}", key=f"ai_btn_{q['id']}", width="stretch", type="secondary", icon=":material/smart_toy:"):
+                            with st.spinner("Consulting AI Tutor..."):
+                                opt_texts = [] 
+                                c_ans = q['correct_answer']
+                                explanation = ask_ai_tutor(s_sel, q['heading'], q['media_type'], q['media_content'], opt_texts, c_ans, st.session_state["user_api_keys"])
+                                meta = {'q_id': q['id'], 'sub': s_sel, 'heading': q['heading'], 'week': w_sel, 'ass_name': a_sel}
+                                save_ai_cache(ai_key, explanation, st.session_state["name"], metadata=meta)
+                                st.rerun(scope="fragment") # Only reruns this specific question!
+
+            # MCQ LOGIC
+            else:
+                is_multi = len([o for o in options if o['is_correct']]) > 1
+                c_disp, c_sel = st.columns([0.90, 0.10])
+                
+                with c_disp:
+                    for idx, opt in enumerate(options):
+                        content = opt['media_content'] if (opt['media_content']) else opt['option_text']
+                        status = None
+                        
+                        if is_multi:
+                            is_checked = st.session_state.get(f"chk_{q['id']}_{opt['id']}", False)
+                            if is_checked:
+                                status = "correct" if opt['is_correct'] else "incorrect"
+                        else:
+                            selected_radio = st.session_state.get(f"rad_{q['id']}")
+                            if selected_radio == str(idx + 1):
+                                status = "correct" if opt['is_correct'] else "incorrect"
+                        
+                        render_option_card(f"OPTION {idx+1}", content, opt['media_type'], status=status)
+                
+                with c_sel:
+                    st.markdown('<span class="option-label">SELECT</span>', unsafe_allow_html=True)
+                    if is_multi:
+                        sel_idxs = []
+                        for idx, opt in enumerate(options):                            
+                            if st.checkbox(f"{idx+1}", key=f"chk_{q['id']}_{opt['id']}"): 
+                                sel_idxs.append(idx)
+                    else:
+                        r_opts = [f"{x+1}" for x in range(len(options))]
+                        choice = st.radio(f"Rad_{i}", r_opts, index=None, label_visibility="collapsed", key=f"rad_{q['id']}")
+
+                # AI Tutor Logic
+                has_selection = (is_multi and len(sel_idxs) > 0) or (not is_multi and choice is not None)
+                if has_selection:
+                    ai_key = f"mcq_{q['id']}"
+                    cached_res = get_cached_ai_response(ai_key)
+                    
+                    if cached_res:
+                        with st.expander("View AI Tutor Analysis", expanded=False, icon=":material/model_training:"):
+                            render_ai_tutor_response(cached_res.get('ai_data', cached_res), ai_key, cached_res.get('created_by_user', 'System'))
+                    else:
+                        if not st.session_state.get("user_api_keys"):
+                            st.warning("Please add your Gemini API Key in 'My Settings' to unlock the AI Tutor.", icon=":material/vpn_key:")
+                        else:
+                            if st.button(f"Ask AI Tutor for Q{i+1}", key=f"ai_btn_{q['id']}", width="stretch", type="secondary", icon=":material/smart_toy:"):
+                                with st.spinner("Consulting AI Tutor..."):
+                                    opt_texts = []
+                                    for o in options:
+                                        if o['media_type'] == 'image' and o['media_content']:
+                                            opt_texts.append(f"[IMAGE: {o['media_content']}]")
+                                        else:
+                                            opt_texts.append(o['option_text'] or o['media_content'] or "No Content")
+
+                                    if is_multi:
+                                        u_choice = [opt_texts[idx] for idx in sel_idxs]
+                                        c_ans = [opt_texts[i] for i, o in enumerate(options) if o['is_correct']]
+                                    else:
+                                        u_choice = opt_texts[int(choice) - 1] if choice else "No Answer"
+                                        c_ans_list = [opt_texts[i] for i, o in enumerate(options) if o['is_correct']]
+                                        c_ans = c_ans_list[0] if c_ans_list else "Unknown"
+                                    
+                                    explanation = ask_ai_tutor(s_sel, q['heading'], q['media_type'], q['media_content'], opt_texts, c_ans, st.session_state["user_api_keys"])
+                                    meta = {'q_id': q['id'], 'sub': s_sel, 'heading': q['heading'], 'week': w_sel, 'ass_name': a_sel}
+                                    save_ai_cache(ai_key, explanation, st.session_state["name"], metadata=meta) 
+                                    st.rerun(scope="fragment") # Micro-reload!
+
+            # ADMIN CONTROLS
+            if st.session_state.get("role") == "admin":
+                st.divider()
+                st.caption("🛠️ **Admin Tools: Flag Issues**")
+                c_flag1, c_flag2 = st.columns(2)
+                
+                if c_flag1.toggle("Flag Question Data", key=f"tog_q_{q['id']}"):
+                    q_note = st.text_area("Describe the issue with the Question or Options:", key=f"txt_q_{q['id']}")
+                    if st.button("Save Question Flag", key=f"save_q_{q['id']}", type="primary"):
+                        execute_query("INSERT INTO question_issues (question_id, issue_description, reported_by) VALUES (%s, %s, %s)", (q['id'], q_note, st.session_state.get("name")))
+                        st.success("Question Data flagged successfully!", icon=":material/check_circle:")
+                        st.rerun(scope="fragment")
+                
+                if c_flag2.toggle("Flag AI Response", key=f"tog_ai_{q['id']}"):
+                    ai_note = st.text_area("Describe the issue with the AI explanation:", key=f"txt_ai_{q['id']}")
+                    if st.button("Save AI Flag", key=f"save_ai_{q['id']}", type="primary"):
+                        a_key = f"num_{q['id']}" if q.get('q_type') == 'numerical' else f"mcq_{q['id']}"
+                        execute_query("UPDATE mcq_cache SET needs_attention=TRUE, attention_note=%s WHERE cache_key=%s", (ai_note, a_key))
+                        st.success("AI Response flagged successfully!", icon=":material/check_circle:")
+                        st.rerun(scope="fragment")
+
+
+    # =========================================================================
+    # EXAM MODE (Batching Strategy - Zero Loading - Wrapped in a Form)
     # =========================================================================
     if mode == "Exam Mode":
-        st.info("⏱️ **Exam Mode Active:** Click options below with zero loading. Click 'Lock Answers' at the bottom when finished, then switch to Study Mode to instantly see your results.", icon=":material/speed:")
+        st.info("**Exam Mode Active:** Click options below with zero loading. Click 'Lock Answers' at the bottom when finished, then switch to Study Mode to instantly see your results.", icon=":material/speed:")
         
         with st.form("exam_form", clear_on_submit=False):
             for i, q in enumerate(questions):
@@ -113,136 +238,14 @@ def render_take_assessment():
             st.form_submit_button("Lock Answers & Save State", type="primary", use_container_width=True)
 
     # =========================================================================
-    # STUDY MODE (Instant Validation + AI + Admin Tools)
+    # STUDY MODE (Micro-Reloading Execution)
     # =========================================================================
     else:
         for i, q in enumerate(questions):
-            with st.container(border=True):
-                st.markdown(f"Q{i+1}. {q['heading']}")    
-                render_content(q['media_type'], q['media_content'])
-                
-                # Numerical Logic
-                if q.get('q_type') == 'numerical':
-                    val = st.text_input(f"Answer Q{i+1}", key=f"num_{q['id']}")
-                    
-                    if val:
-                        if check_numerical_answer(val, q['correct_answer']): st.success("Correct")
-                        else: st.error(f"Incorrect. Answer: {q['correct_answer']}")
-                    
-                    ai_key = f"num_{q['id']}" 
-                    cached_res = get_cached_ai_response(ai_key)
-                    
-                    if cached_res:
-                        with st.expander("View AI Tutor Analysis", expanded=False, icon=":material/model_training:"):
-                            render_ai_tutor_response(cached_res.get('ai_data', cached_res), ai_key, cached_res.get('created_by_user', 'System'))
-                    else:
-                        if not st.session_state.get("user_api_keys"):
-                            st.warning("Please add your Gemini API Key in 'My Settings' to unlock the AI Tutor.", icon=":material/vpn_key:")
-                        else:
-                            if st.button(f"Ask AI Tutor for Q{i+1}", key=f"ai_btn_{q['id']}", width="stretch", type="secondary", icon=":material/smart_toy:"):
-                                with st.spinner("Consulting AI Tutor..."):
-                                    opt_texts = [] 
-                                    c_ans = q['correct_answer']
-                                    explanation = ask_ai_tutor(s_sel, q['heading'], q['media_type'], q['media_content'], opt_texts, c_ans, st.session_state["user_api_keys"])
-                                    meta = {'q_id': q['id'], 'sub': s_sel, 'heading': q['heading'], 'week': w_sel, 'ass_name': a_sel}
-                                    save_ai_cache(ai_key, explanation, st.session_state["name"], metadata=meta)
-                                    st.rerun()
-
-                # MCQ LOGIC
-                else:
-                    options = opts_by_q.get(q['id'], [])
-                    is_multi = len([o for o in options if o['is_correct']]) > 1
-                    
-                    c_disp, c_sel = st.columns([0.90, 0.10])
-                    
-                    with c_disp:
-                        for idx, opt in enumerate(options):
-                            content = opt['media_content'] if (opt['media_content']) else opt['option_text']
-                            status = None
-                            
-                            if is_multi:
-                                is_checked = st.session_state.get(f"chk_{q['id']}_{opt['id']}", False)
-                                if is_checked:
-                                    status = "correct" if opt['is_correct'] else "incorrect"
-                            else:
-                                selected_radio = st.session_state.get(f"rad_{q['id']}")
-                                if selected_radio == str(idx + 1):
-                                    status = "correct" if opt['is_correct'] else "incorrect"
-                            
-                            render_option_card(f"OPTION {idx+1}", content, opt['media_type'], status=status)
-                    
-                    with c_sel:
-                        st.markdown('<span class="option-label">SELECT</span>', unsafe_allow_html=True)
-                        if is_multi:
-                            sel_idxs = []
-                            for idx, opt in enumerate(options):                            
-                                if st.checkbox(f"{idx+1}", key=f"chk_{q['id']}_{opt['id']}"): 
-                                    sel_idxs.append(idx)
-                        else:
-                            r_opts = [f"{x+1}" for x in range(len(options))]
-                            choice = st.radio(f"Rad_{i}", r_opts, index=None, label_visibility="collapsed", key=f"rad_{q['id']}")
-
-                    # Ai Tutor Button Logic
-                    has_selection = (is_multi and len(sel_idxs) > 0) or (not is_multi and choice is not None)
-                    
-                    if has_selection:
-                        ai_key = f"mcq_{q['id']}"
-                        cached_res = get_cached_ai_response(ai_key)
-                        
-                        if cached_res:
-                            with st.expander("View AI Tutor Analysis", expanded=False, icon=":material/model_training:"):
-                                render_ai_tutor_response(cached_res.get('ai_data', cached_res), ai_key, cached_res.get('created_by_user', 'System'))
-                        else:
-                            if not st.session_state.get("user_api_keys"):
-                                st.warning("Please add your Gemini API Key in 'My Settings' to unlock the AI Tutor.", icon=":material/vpn_key:")
-                            else:
-                                if st.button(f"Ask AI Tutor for Q{i+1}", key=f"ai_btn_{q['id']}", width="stretch", type="secondary", icon=":material/smart_toy:"):
-                                    with st.spinner("Consulting AI Tutor..."):
-                                        opt_texts = []
-                                        for o in options:
-                                            if o['media_type'] == 'image' and o['media_content']:
-                                                opt_texts.append(f"[IMAGE: {o['media_content']}]")
-                                            else:
-                                                opt_texts.append(o['option_text'] or o['media_content'] or "No Content")
-
-                                        if is_multi:
-                                            u_choice = [opt_texts[idx] for idx in sel_idxs]
-                                            c_ans = [opt_texts[i] for i, o in enumerate(options) if o['is_correct']]
-                                        else:
-                                            u_choice = opt_texts[int(choice) - 1] if choice else "No Answer"
-                                            c_ans_list = [opt_texts[i] for i, o in enumerate(options) if o['is_correct']]
-                                            c_ans = c_ans_list[0] if c_ans_list else "Unknown"
-                                        
-                                        explanation = ask_ai_tutor(s_sel, q['heading'], q['media_type'], q['media_content'], opt_texts, c_ans, st.session_state["user_api_keys"])
-                                        meta = {'q_id': q['id'], 'sub': s_sel, 'heading': q['heading'], 'week': w_sel, 'ass_name': a_sel}
-                                        save_ai_cache(ai_key, explanation, st.session_state["name"], metadata=meta) 
-                                        st.rerun()
-
-                # ==========================================
-                # ADMIN CONTROLS: FLAG QUESTIONS & AI
-                # ==========================================
-                if st.session_state.get("role") == "admin":
-                    c_flag1, c_flag2 = st.columns(2)
-                    
-                    # 1. Flag Question Data
-                    if c_flag1.toggle("Flag Question Data", key=f"tog_q_{q['id']}"):
-                        q_note = st.text_area("Describe the issue with the Question or Options:", key=f"txt_q_{q['id']}")
-                        if st.button("Save Question Flag", key=f"save_q_{q['id']}", type="primary"):
-                            execute_query("INSERT INTO question_issues (question_id, issue_description, reported_by) VALUES (%s, %s, %s)", (q['id'], q_note, st.session_state.get("name")))
-                            st.success("Question Data flagged successfully!", icon=":material/check_circle:")
-                    
-                    # 2. Flag AI Response
-                    if c_flag2.toggle("Flag AI Response", key=f"tog_ai_{q['id']}"):
-                        ai_note = st.text_area("Describe the issue with the AI explanation:", key=f"txt_ai_{q['id']}")
-                        if st.button("Save AI Flag", key=f"save_ai_{q['id']}", type="primary"):
-                            a_key = f"num_{q['id']}" if q.get('q_type') == 'numerical' else f"mcq_{q['id']}"
-                            
-                            # Update the flag status
-                            execute_query("UPDATE mcq_cache SET needs_attention=TRUE, attention_note=%s WHERE cache_key=%s", (ai_note, a_key))
-                            st.success("AI Response flagged successfully!", icon=":material/check_circle:")
-    # Take Test
-
-
+            options = opts_by_q.get(q['id'], [])
+            # Call the fragment function for each question independently!
+            render_study_question(i, q, options, s_sel, w_sel, a_sel)
+            
 def render_take_test():
     """
     Renders the Take Test view for a timed, graded test.
