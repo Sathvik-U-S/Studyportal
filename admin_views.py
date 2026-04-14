@@ -75,11 +75,13 @@ def render_edit_content():
                     )
 
                     if not questions:
-                        st.info("No questions found for this activity. Add one below!")
+                        st.info("No questions found for this activity. Add one below!", icon=":material/info:")
                     else:
                         st.markdown(f"#### Managing {len(questions)} Questions in `{a_sel}`")
                         
-                        for idx, q_data in enumerate(questions, start=1):
+                        # OPTIMIZATION: Isolate every question into its own micro-environment
+                        @st.fragment
+                        def render_question_editor_fragment(idx, q_data, act_id, s_sel):
                             q_id = q_data['id']
                             short_head = str(q_data['heading'])[:60] + ("..." if len(str(q_data['heading'])) > 60 else "")
                             
@@ -95,12 +97,7 @@ def render_edit_content():
 
                                     c_qm1, c_qm2 = st.columns([1, 4])
                                     curr_q_mtype = q_data['media_type'] if q_data['media_type'] else "text"
-                                    n_mtype = c_qm1.selectbox(
-                                        "Media Type",
-                                        ["text", "code", "image"],
-                                        index=["text", "code", "image"].index(curr_q_mtype),
-                                        key=f"mtype_{q_id}"
-                                    )
+                                    n_mtype = c_qm1.selectbox("Media Type", ["text", "code", "image"], index=["text", "code", "image"].index(curr_q_mtype), key=f"mtype_{q_id}")
                                     raw_media = str(q_data['media_content']) if q_data['media_content'] is not None else ""
                                     n_cont = c_qm2.text_area("Media Content", value=raw_media, height="content", key=f"media_edit_{q_id}")
 
@@ -110,7 +107,6 @@ def render_edit_content():
                                     curr_diff = q_data.get('difficulty') or "Medium"
                                     n_diff = c_meta1.selectbox("Difficulty", ["Easy", "Medium", "Hard"], index=["Easy", "Medium", "Hard"].index(curr_diff), key=f"diff_{q_id}")
                                     n_pts = c_meta2.number_input("Points", min_value=1, value=int(q_data.get('points') or 1), key=f"pts_{q_id}")
-                                    
                                     n_exp = st.text_area("Manual Explanation / Tutor Note", value=q_data.get('manual_explanation') or "", height=100, key=f"exp_{q_id}")
 
                                     # NUMERICAL LOGIC
@@ -119,17 +115,9 @@ def render_edit_content():
 
                                         if st.form_submit_button("Update Question", type="primary", icon=":material/save:"):
                                             final_q_mtype = n_mtype if n_mtype != "text" else None
-                                            execute_query(
-                                                """
-                                                UPDATE questions
-                                                SET heading=%s, media_type=%s, media_content=%s, correct_answer=%s,
-                                                    difficulty=%s, points=%s, manual_explanation=%s
-                                                WHERE id=%s
-                                                """,
-                                                (n_head, final_q_mtype, n_cont, n_ans, n_diff, n_pts, n_exp, q_id)
-                                            )
-                                            st.success("Updated Successfully")
-                                            st.rerun()
+                                            execute_query("UPDATE questions SET heading=%s, media_type=%s, media_content=%s, correct_answer=%s, difficulty=%s, points=%s, manual_explanation=%s WHERE id=%s", (n_head, final_q_mtype, n_cont, n_ans, n_diff, n_pts, n_exp, q_id))
+                                            st.success("Updated Successfully", icon=":material/check_circle:")
+                                            st.rerun(scope="fragment") # Instantly reloads just this box!
 
                                     # MCQ LOGIC
                                     else:
@@ -137,51 +125,38 @@ def render_edit_content():
                                         upd_opts = []
 
                                         for opt in opts_data:
-                                            # Clever Logic: Added a 4th column for a 'Delete' toggle
                                             c_a, c_b, c_c, c_d = st.columns([0.2, 0.55, 0.15, 0.1])
                                             curr_type = opt['media_type'] if opt['media_type'] else "text"
                                             nt = c_a.selectbox("Type", ["text", "code", "image"], key=f"type_{opt['id']}", index=["text", "code", "image"].index(curr_type))
                                             raw_option = (str(opt['media_content']) if opt['media_content'] is not None else str(opt['option_text']) if opt['option_text'] is not None else "")
                                             nv = c_b.text_area("Value", value=raw_option, height="content", key=f"option_raw_{opt['id']}")
                                             nc = c_c.checkbox("Correct", value=opt['is_correct'], key=f"correct_{opt['id']}")
-                                            
-                                            # The Delete Checkbox
                                             ndel = c_d.checkbox("Delete", value=False, key=f"del_opt_{opt['id']}") 
-                                            
                                             upd_opts.append((opt['id'], nt, nv, nc, ndel))
 
                                         if st.form_submit_button("Update Question", type="primary", icon=":material/save:"):
                                             final_q_mtype = n_mtype if n_mtype != "text" else None
-                                            execute_query(
-                                                """
-                                                UPDATE questions
-                                                SET heading=%s, media_type=%s, media_content=%s,
-                                                    difficulty=%s, points=%s, manual_explanation=%s
-                                                WHERE id=%s
-                                                """,
-                                                (n_head, final_q_mtype, n_cont, n_diff, n_pts, n_exp, q_id)
-                                            )
+                                            execute_query("UPDATE questions SET heading=%s, media_type=%s, media_content=%s, difficulty=%s, points=%s, manual_explanation=%s WHERE id=%s", (n_head, final_q_mtype, n_cont, n_diff, n_pts, n_exp, q_id))
 
                                             for oid, otype, oval, ocorr, odel in upd_opts:
-                                                # If the delete box was checked, destroy the option
-                                                if odel:
-                                                    execute_query("DELETE FROM options WHERE id=%s", (oid,))
+                                                if odel: execute_query("DELETE FROM options WHERE id=%s", (oid,))
                                                 else:
-                                                    # Otherwise, update it normally
-                                                    if otype == "text":
-                                                        execute_query("UPDATE options SET option_text=%s, media_type=NULL, media_content=NULL, is_correct=%s WHERE id=%s", (oval, ocorr, oid))
-                                                    else:
-                                                        execute_query("UPDATE options SET option_text=NULL, media_type=%s, media_content=%s, is_correct=%s WHERE id=%s", (otype, oval, ocorr, oid))
+                                                    if otype == "text": execute_query("UPDATE options SET option_text=%s, media_type=NULL, media_content=NULL, is_correct=%s WHERE id=%s", (oval, ocorr, oid))
+                                                    else: execute_query("UPDATE options SET option_text=NULL, media_type=%s, media_content=%s, is_correct=%s WHERE id=%s", (otype, oval, ocorr, oid))
 
-                                            st.success("Updated Successfully")
-                                            st.rerun()
+                                            st.success("Updated Successfully", icon=":material/check_circle:")
+                                            st.rerun(scope="fragment")
 
-                                # ADD BLANK OPTION BUTTON (Replaces the old 'Delete Question' button)
+                                # ADD BLANK OPTION BUTTON
                                 if q_data.get('q_type') != 'numerical' and str(q_data.get('q_type')).lower() != 'nat':
                                     if st.button(f"➕ Add Blank Option to Q{idx}", key=f"add_opt_btn_{q_id}", use_container_width=True):
                                         execute_query("INSERT INTO options (question_id, option_text, is_correct, subject_name) VALUES (%s, %s, %s, %s)", (q_id, "New Option", False, s_sel))
-                                        st.success("Option Added!")
-                                        st.rerun()
+                                        st.success("Option Added!", icon=":material/check_circle:")
+                                        st.rerun(scope="fragment")
+
+                        # Execute the fragment for each question
+                        for idx, q_data in enumerate(questions, start=1):
+                            render_question_editor_fragment(idx, q_data, act_id, s_sel)
 
                     # ---------- ADD NEW QUESTION TOOL ----------------
                     st.divider()
@@ -1195,22 +1170,23 @@ def render_ai_notes():
                         else: 
                             broken_qs.append((i, q, c_row))
 
+                # OPTIMIZATION: Fragmenting AI MCQ rendering prevents whole-page reload on edits/dismissals
+                @st.fragment
                 def render_aimcq_question(i, q, cache_entry, is_flagged=False):
                     context_tag = f" `[{q['sub_name']} | W{q['w_num']} | {q['activity_name']}]`" if a_sel == "All Activities" else ""
                     
-                    # Style it prominently if it's flagged
                     icon = ":material/warning:" if is_flagged else ":material/question_answer:"
-                    label = f"🚩 FLAGGED {context_tag}" if is_flagged else f"{context_tag}"
+                    label = f"FLAGGED {context_tag}" if is_flagged else f"{context_tag}"
                     
                     with st.expander(expanded=is_flagged, label=label, icon=icon):
                         if is_flagged:
-                            st.error(f"**Admin Note:** {cache_entry.get('attention_note', 'No details provided.')}")
+                            st.error(f"**Admin Note:** {cache_entry.get('attention_note', 'No details provided.')}", icon=":material/error:")
                             
                         st.markdown(f"{q['heading']}")
                         render_content(q['media_type'], q['media_content'])
                         
                         if q.get('q_type') == 'numerical':
-                            st.success(f"Correct Answer: {q['correct_answer']}")
+                            st.success(f"Correct Answer: {q['correct_answer']}", icon=":material/check_circle:")
                         else:
                             options = fetch_data("SELECT * FROM options WHERE question_id=%s ORDER BY id ASC", (q['id'],))
                             for idx, opt in enumerate(options):
@@ -1218,13 +1194,12 @@ def render_ai_notes():
                                 content = opt['media_content'] if opt['media_content'] else opt['option_text']
                                 render_option_card(f"OPTION {idx+1}", content, opt['media_type'], status=status)
                                 
-                        # Render the notes (Clicking Edit here and saving will automatically clear the flag!)
                         render_ai_tutor_response(cache_entry['ai_data'], cache_entry['cache_key'], cache_entry.get('created_by_user', 'System'))
                         
                         if is_flagged:
                             if st.button("Dismiss Flag (Without Editing)", key=f"unflag_{cache_entry['cache_key']}"):
                                 execute_query("UPDATE mcq_cache SET needs_attention=FALSE, attention_note=NULL WHERE cache_key=%s", (cache_entry['cache_key'],))
-                                st.rerun()
+                                st.rerun(scope="fragment") # Zero lag flag dismissal!
 
                 # Render Flagged Items FIRST at the top!
                 if flagged_qs:
@@ -1333,18 +1308,17 @@ def render_ai_notes():
                             healthy_vids.append(item)
 
                     # Dynamic rendering function for the expanders
+                    # OPTIMIZATION: Fragmenting Video Notes editing
+                    @st.fragment
                     def render_aivid_note(item):
                         context_tag = f" `[{item['sub_name']} | W{item['week_number']}]`" if (s_sel_v == "All Subjects" or w_sel_v == "All Weeks") else ""
                         
-                        # Simply use the newly mapped custom video title!
                         label = f"{item['video_title']}{context_tag}"
                         
                         with st.expander(expanded=False, label=label, icon=":material/smart_display:"):
-                            # Render the video player right at the top of the notes!
                             st.video(item['url'])
                             st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
                             
-                            # Workaround: Properly extract the JSON and the Author Name
                             actual_ai_json = item['ai_data'].get('ai_data', item['ai_data'])
                             author = item['ai_data'].get('created_by_user', 'System')
                             
