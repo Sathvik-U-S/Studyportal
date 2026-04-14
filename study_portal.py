@@ -71,30 +71,32 @@ def to_dict(obj):
 config = to_dict(st.secrets)
 
 # Initialize Authenticator 
-# 1. Use strict dictionary conversion to prevent Streamlit internal proxy errors
 authenticator = stauth.Authenticate(
-    dict(st.secrets['credentials']),
-    st.secrets['cookie']['name'],
-    st.secrets['cookie']['key'],
-    st.secrets['cookie']['expiry_days']
+    config['credentials'],
+    config['cookie']['name'],
+    config['cookie']['key'],
+    config['cookie']['expiry_days']
 )
 
-# 2. Render Login Form
+# Render the Login Form 
 authenticator.login(location='main')
 
-# 3. Handle States with the Foolproof Restore Button
+# --- THE STREAMLIT CLOUD "COOKIE LATENCY" HACK ---
+# Bypasses the network delay that causes random logouts on refresh
+if st.session_state.get("authentication_status") is None:
+    if "cloud_cookie_sync" not in st.session_state:
+        st.session_state["cloud_cookie_sync"] = True
+        import time
+        time.sleep(0.3) # Give the browser 300ms to send the cookie over the internet
+        st.rerun()
+
+# Handle Login States
 if st.session_state.get("authentication_status") is False:
     st.error('Username/password is incorrect', icon=":material/error:")
     st.stop()
     
 elif st.session_state.get("authentication_status") is None:
     st.warning('Please enter your username and password', icon=":material/warning:")
-    
-    # --- THE FOOLPROOF CLOUD LATENCY FIX ---
-    st.info("If you just refreshed the page and got logged out, click below to restore your session.", icon=":material/restore:")
-    if st.button("Restore Previous Session", type="primary", use_container_width=True):
-        st.rerun() # Forces Python to check for the cookie a second time
-        
     st.stop()
     
 elif st.session_state.get("authentication_status"):
