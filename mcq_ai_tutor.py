@@ -114,14 +114,23 @@ def render_option_card(label, content, media_type, status=None):
         elif status == 'incorrect': st.error(content)
         else: st.info(content)
 
-def check_numerical_answer(user_val, correct_key):
+def check_numerical_answer(user_ans, correct_ans):
+    """Checks answers, ignoring case and spaces. Works for both strings and math."""
+    if user_ans is None or correct_ans is None: 
+        return False
+        
+    # 1. String Check: Strip spaces and convert to lowercase for case-insensitivity
+    u_val = str(user_ans).strip().lower()
+    c_val = str(correct_ans).strip().lower()
+    
+    if u_val == c_val: 
+        return True
+        
+    # 2. Math Check: Fallback for floating point math (e.g., if user types 5.0 but answer is 5)
     try:
-        u = float(user_val)
-        if ',' in correct_key:
-            l, h = map(float, correct_key.split(','))
-            return l <= u <= h
-        return abs(u - float(correct_key)) < 0.001
-    except: return False
+        return abs(float(u_val) - float(c_val)) < 0.001
+    except ValueError:
+        return False
 
 def ask_ai_tutor(subject, question, media_type, media_content, all_options, correct_answer, api_keys, retry_count=0):
     if not api_keys:

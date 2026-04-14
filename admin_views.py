@@ -32,7 +32,7 @@ def render_edit_content():
         "Edit Questions", "Edit Week Details", "Edit Hierarchy", "Content Health", "Content Overview", "Custom SQL"
     ])
     
-    # TAB 1: EDIT QUESTIONS (Upgraded with New Attributes)
+    # TAB 1: EDIT QUESTIONS (Upgraded Bulk Editor + Add/Delete)
     with tab_edit_q:
         c1, c2, c3 = st.columns([1, 0.5, 1.5])
 
@@ -66,110 +66,154 @@ def render_edit_content():
                 else:
                     a_map = {a['name']: a['id'] for a in assessments}
                     a_sel = c3.selectbox("Activity", list(a_map.keys()), key="edit_q_act")
+                    act_id = a_map[a_sel]
 
-                    # ---------- QUESTIONS ----------------
+                    # ---------- BULK QUESTION VIEWER ----------------
                     questions = fetch_data(
-                        "SELECT id, heading FROM questions WHERE assessment_id = %s ORDER BY id ASC",
-                        (a_map[a_sel],)
+                        "SELECT * FROM questions WHERE assessment_id = %s ORDER BY id ASC",
+                        (act_id,)
                     )
 
                     if not questions:
-                        st.warning("No questions found.")
+                        st.info("No questions found for this activity. Add one below!")
                     else:
-                        q_map = {}
-                        for idx, q in enumerate(questions, start=1):
-                            short_head = q['heading'][:60] + ("..." if len(q['heading']) > 60 else "")
-                            label = f"Q{idx} | ID {q['id']} | {short_head}"
-                            q_map[label] = q['id']
-
-                        q_sel = st.selectbox("Select Question", list(q_map.keys()), key="edit_q_sel")
-                        q_id = q_map[q_sel]
-
-                        # ---------- LOAD QUESTION ----------------
-                        q_data = fetch_data("SELECT * FROM questions WHERE id = %s", (q_id,))[0]
-                        opts_data = fetch_data("SELECT * FROM options WHERE question_id = %s ORDER BY id ASC", (q_id,))
-
-                        st.markdown(f"#### Editing Question ID: `{q_id}`")
-
-                        # ---------- EDIT FORM ----------------
-                        with st.form("edit_form"):
-                            st.markdown("#### :material/info: Core Details")
-
-                            raw_heading = str(q_data['heading']) if q_data['heading'] is not None else ""
-                            n_head = st.text_area("Heading (Raw DB Value)", value=raw_heading, height="content", key=f"heading_raw_{q_id}")
-
-                            c_qm1, c_qm2 = st.columns([1, 4])
-                            curr_q_mtype = q_data['media_type'] if q_data['media_type'] else "text"
-                            n_mtype = c_qm1.selectbox(
-                                "Media Type",
-                                ["text", "code", "image"],
-                                index=["text", "code", "image"].index(curr_q_mtype)
-                            )
-                            raw_media = str(q_data['media_content']) if q_data['media_content'] is not None else ""
-                            n_cont = c_qm2.text_area("Media Content", value=raw_media, height="content", key=f"media_edit_{q_id}")
-
-                            # New Attributes Section
-                            st.markdown("#### :material/notes: Metadata & Explanations")
-                            c_meta1, c_meta2 = st.columns(2)
-                            curr_diff = q_data.get('difficulty') or "Medium"
-                            n_diff = c_meta1.selectbox("Difficulty", ["Easy", "Medium", "Hard"], index=["Easy", "Medium", "Hard"].index(curr_diff))
-                            n_pts = c_meta2.number_input("Points", min_value=1, value=int(q_data.get('points') or 1))
+                        st.markdown(f"#### Managing {len(questions)} Questions in `{a_sel}`")
+                        
+                        for idx, q_data in enumerate(questions, start=1):
+                            q_id = q_data['id']
+                            short_head = str(q_data['heading'])[:60] + ("..." if len(str(q_data['heading'])) > 60 else "")
                             
-                            n_exp = st.text_area("Manual Explanation / Tutor Note", value=q_data.get('manual_explanation') or "", height=100)
+                            with st.expander(f"Q{idx} | ID: {q_id} | {short_head}", expanded=False, icon=":material/edit_document:"):
+                                opts_data = fetch_data("SELECT * FROM options WHERE question_id = %s ORDER BY id ASC", (q_id,))
 
-                            # ---------- NUMERICAL LOGIC ----------------
-                            if q_data.get('q_type') == 'numerical':
-                                n_ans = st.text_input("Correct Answer", value=q_data.get('correct_answer') or "", icon=":material/check:")
+                                # ---------- EDIT FORM ----------------
+                                with st.form(f"edit_form_{q_id}"):
+                                    st.markdown("#### :material/info: Core Details")
 
-                                if st.form_submit_button("Update Question", type="primary", icon=":material/save:"):
-                                    final_q_mtype = n_mtype if n_mtype != "text" else None
-                                    execute_query(
-                                        """
-                                        UPDATE questions
-                                        SET heading=%s, media_type=%s, media_content=%s, correct_answer=%s,
-                                            difficulty=%s, points=%s, manual_explanation=%s
-                                        WHERE id=%s
-                                        """,
-                                        (n_head, final_q_mtype, n_cont, n_ans, n_diff, n_pts, n_exp, q_id)
+                                    raw_heading = str(q_data['heading']) if q_data['heading'] is not None else ""
+                                    n_head = st.text_area("Heading (Raw DB Value)", value=raw_heading, height="content", key=f"heading_raw_{q_id}")
+
+                                    c_qm1, c_qm2 = st.columns([1, 4])
+                                    curr_q_mtype = q_data['media_type'] if q_data['media_type'] else "text"
+                                    n_mtype = c_qm1.selectbox(
+                                        "Media Type",
+                                        ["text", "code", "image"],
+                                        index=["text", "code", "image"].index(curr_q_mtype),
+                                        key=f"mtype_{q_id}"
                                     )
-                                    st.success("Updated Successfully")
-                                    st.rerun()
+                                    raw_media = str(q_data['media_content']) if q_data['media_content'] is not None else ""
+                                    n_cont = c_qm2.text_area("Media Content", value=raw_media, height="content", key=f"media_edit_{q_id}")
 
-                            # ---------- MCQ LOGIC ----------------
+                                    # Metadata Section
+                                    st.markdown("#### :material/notes: Metadata & Explanations")
+                                    c_meta1, c_meta2 = st.columns(2)
+                                    curr_diff = q_data.get('difficulty') or "Medium"
+                                    n_diff = c_meta1.selectbox("Difficulty", ["Easy", "Medium", "Hard"], index=["Easy", "Medium", "Hard"].index(curr_diff), key=f"diff_{q_id}")
+                                    n_pts = c_meta2.number_input("Points", min_value=1, value=int(q_data.get('points') or 1), key=f"pts_{q_id}")
+                                    
+                                    n_exp = st.text_area("Manual Explanation / Tutor Note", value=q_data.get('manual_explanation') or "", height=100, key=f"exp_{q_id}")
+
+                                    # NUMERICAL LOGIC
+                                    if q_data.get('q_type') == 'numerical' or str(q_data.get('q_type')).lower() == 'nat':
+                                        n_ans = st.text_input("Correct Answer", value=q_data.get('correct_answer') or "", icon=":material/check:", key=f"ans_{q_id}")
+
+                                        if st.form_submit_button("Update Question", type="primary", icon=":material/save:"):
+                                            final_q_mtype = n_mtype if n_mtype != "text" else None
+                                            execute_query(
+                                                """
+                                                UPDATE questions
+                                                SET heading=%s, media_type=%s, media_content=%s, correct_answer=%s,
+                                                    difficulty=%s, points=%s, manual_explanation=%s
+                                                WHERE id=%s
+                                                """,
+                                                (n_head, final_q_mtype, n_cont, n_ans, n_diff, n_pts, n_exp, q_id)
+                                            )
+                                            st.success("Updated Successfully")
+                                            st.rerun()
+
+                                    # MCQ LOGIC
+                                    else:
+                                        st.markdown("#### :material/list: Edit Options")
+                                        upd_opts = []
+
+                                        for opt in opts_data:
+                                            # Clever Logic: Added a 4th column for a 'Delete' toggle
+                                            c_a, c_b, c_c, c_d = st.columns([0.2, 0.55, 0.15, 0.1])
+                                            curr_type = opt['media_type'] if opt['media_type'] else "text"
+                                            nt = c_a.selectbox("Type", ["text", "code", "image"], key=f"type_{opt['id']}", index=["text", "code", "image"].index(curr_type))
+                                            raw_option = (str(opt['media_content']) if opt['media_content'] is not None else str(opt['option_text']) if opt['option_text'] is not None else "")
+                                            nv = c_b.text_area("Value", value=raw_option, height="content", key=f"option_raw_{opt['id']}")
+                                            nc = c_c.checkbox("Correct", value=opt['is_correct'], key=f"correct_{opt['id']}")
+                                            
+                                            # The Delete Checkbox
+                                            ndel = c_d.checkbox("Delete", value=False, key=f"del_opt_{opt['id']}") 
+                                            
+                                            upd_opts.append((opt['id'], nt, nv, nc, ndel))
+
+                                        if st.form_submit_button("Update Question", type="primary", icon=":material/save:"):
+                                            final_q_mtype = n_mtype if n_mtype != "text" else None
+                                            execute_query(
+                                                """
+                                                UPDATE questions
+                                                SET heading=%s, media_type=%s, media_content=%s,
+                                                    difficulty=%s, points=%s, manual_explanation=%s
+                                                WHERE id=%s
+                                                """,
+                                                (n_head, final_q_mtype, n_cont, n_diff, n_pts, n_exp, q_id)
+                                            )
+
+                                            for oid, otype, oval, ocorr, odel in upd_opts:
+                                                # If the delete box was checked, destroy the option
+                                                if odel:
+                                                    execute_query("DELETE FROM options WHERE id=%s", (oid,))
+                                                else:
+                                                    # Otherwise, update it normally
+                                                    if otype == "text":
+                                                        execute_query("UPDATE options SET option_text=%s, media_type=NULL, media_content=NULL, is_correct=%s WHERE id=%s", (oval, ocorr, oid))
+                                                    else:
+                                                        execute_query("UPDATE options SET option_text=NULL, media_type=%s, media_content=%s, is_correct=%s WHERE id=%s", (otype, oval, ocorr, oid))
+
+                                            st.success("Updated Successfully")
+                                            st.rerun()
+
+                                # ADD BLANK OPTION BUTTON (Replaces the old 'Delete Question' button)
+                                if q_data.get('q_type') != 'numerical' and str(q_data.get('q_type')).lower() != 'nat':
+                                    if st.button(f"➕ Add Blank Option to Q{idx}", key=f"add_opt_btn_{q_id}", use_container_width=True):
+                                        execute_query("INSERT INTO options (question_id, option_text, is_correct, subject_name) VALUES (%s, %s, %s, %s)", (q_id, "New Option", False, s_sel))
+                                        st.success("Option Added!")
+                                        st.rerun()
+
+                    # ---------- ADD NEW QUESTION TOOL ----------------
+                    st.divider()
+                    st.markdown("#### :material/add_circle: Add New Question")
+                    with st.form(f"add_q_form_{act_id}"):
+                        st.info("When adding an MCQ, the system will automatically create 4 blank options for you to edit above.", icon=":material/info:")
+                        new_heading = st.text_area("Question Heading", height=100, placeholder="Enter your question here...")
+                        
+                        col_t1, col_t2 = st.columns(2)
+                        new_type = col_t1.selectbox("Question Format", ["mcq", "numerical"])
+                        new_diff = col_t2.selectbox("Difficulty", ["Easy", "Medium", "Hard"])
+                        
+                        if st.form_submit_button("Create Question", type="primary", icon=":material/add:"):
+                            if new_heading.strip():
+                                # 1. Insert the Question
+                                execute_query(
+                                    "INSERT INTO questions (assessment_id, heading, q_type, difficulty, points, created_at, subject_name) VALUES (%s, %s, %s, %s, 1, CURRENT_TIMESTAMP, %s)", 
+                                    (act_id, new_heading.strip(), new_type, new_diff, s_sel)
+                                )
+                                
+                                # 2. If it is an MCQ, seed 4 blank options so the user can easily edit them
+                                if new_type == "mcq":
+                                    new_q_data = fetch_data("SELECT id FROM questions WHERE assessment_id=%s ORDER BY id DESC LIMIT 1", (act_id,))
+                                    if new_q_data:
+                                        new_q_id = new_q_data[0]['id']
+                                        for _ in range(4):
+                                            execute_query("INSERT INTO options (question_id, option_text, is_correct, subject_name) VALUES (%s, %s, %s, %s)", (new_q_id, "New Option", False, s_sel))
+                                
+                                st.success("Question created! It now appears in the list above for you to edit.")
+                                st.rerun()
                             else:
-                                st.markdown("#### :material/list: Edit Options")
-                                upd_opts = []
-
-                                for opt in opts_data:
-                                    c_a, c_b, c_c = st.columns([0.2, 0.7, 0.1])
-                                    curr_type = opt['media_type'] if opt['media_type'] else "text"
-                                    nt = c_a.selectbox("Type", ["text", "code", "image"], key=f"type_{opt['id']}", index=["text", "code", "image"].index(curr_type))
-                                    raw_option = (str(opt['media_content']) if opt['media_content'] is not None else str(opt['option_text']) if opt['option_text'] is not None else "")
-                                    nv = c_b.text_area("Value", value=raw_option, height="content", key=f"option_raw_{opt['id']}")
-                                    nc = c_c.checkbox("Correct", value=opt['is_correct'], key=f"correct_{opt['id']}")
-                                    upd_opts.append((opt['id'], nt, nv, nc))
-
-                                if st.form_submit_button("Update Question", type="primary", icon=":material/save:"):
-                                    final_q_mtype = n_mtype if n_mtype != "text" else None
-                                    execute_query(
-                                        """
-                                        UPDATE questions
-                                        SET heading=%s, media_type=%s, media_content=%s,
-                                            difficulty=%s, points=%s, manual_explanation=%s
-                                        WHERE id=%s
-                                        """,
-                                        (n_head, final_q_mtype, n_cont, n_diff, n_pts, n_exp, q_id)
-                                    )
-
-                                    for oid, otype, oval, ocorr in upd_opts:
-                                        if otype == "text":
-                                            execute_query("UPDATE options SET option_text=%s, media_type=NULL, media_content=NULL, is_correct=%s WHERE id=%s", (oval, ocorr, oid))
-                                        else:
-                                            execute_query("UPDATE options SET option_text=NULL, media_type=%s, media_content=%s, is_correct=%s WHERE id=%s", (otype, oval, ocorr, oid))
-
-                                    st.success("Updated Successfully")
-                                    st.rerun()
-
+                                st.error("Heading cannot be blank.", icon=":material/error:")
     # TAB 2: EDIT WEEK DETAILS (Upgraded with Auto-Title Fetch)
     with tab_edit_w:
         st.markdown("#### :material/play_lesson: Manage Week Details & Videos")
