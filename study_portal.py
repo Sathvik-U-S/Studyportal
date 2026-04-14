@@ -62,8 +62,6 @@ components.html(
 )
 
 
-# 4. AUTHENTICATION & ROLE MANAGEMENT
-
 # Create a fully mutable deep-copy of secrets
 def to_dict(obj):
     if hasattr(obj, 'items'):
@@ -72,7 +70,7 @@ def to_dict(obj):
 
 config = to_dict(st.secrets)
 
-# Initialize Authenticator using explicit positional arguments to prevent version mismatch errors
+# Initialize Authenticator 
 authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
@@ -80,8 +78,17 @@ authenticator = stauth.Authenticate(
     config['cookie']['expiry_days']
 )
 
-# Render the Login Form (Removed the unpacking that caused the TypeError crash)
+# Render the Login Form 
 authenticator.login(location='main')
+
+# --- THE STREAMLIT CLOUD "COOKIE LATENCY" HACK ---
+# Bypasses the network delay that causes random logouts on refresh
+if st.session_state.get("authentication_status") is None:
+    if "cloud_cookie_sync" not in st.session_state:
+        st.session_state["cloud_cookie_sync"] = True
+        import time
+        time.sleep(0.3) # Give the browser 300ms to send the cookie over the internet
+        st.rerun()
 
 # Handle Login States
 if st.session_state.get("authentication_status") is False:
