@@ -53,21 +53,19 @@ def to_dict(obj):
 
 config = to_dict(st.secrets)
 
-# Initialize Authenticator with HARDCODED safe values
-# This completely severs the connection to the corrupt browser cookie!
+# Initialize Authenticator directly from your secure secrets.toml
 authenticator = stauth.Authenticate(
     config['credentials'],
-    "academic_portal_safe_cookie_v5", # Hardcoded fresh name
-    "academic_portal_safe_key_v5",    # Hardcoded fresh key
-    30
+    config['cookie']['name'],
+    config['cookie']['key'],
+    config['cookie']['expiry_days']
 )
 
 # Render the Login Form
 try:
-    authenticator.login('main')
+    authenticator.login()
 except Exception as e:
     pass
-
 # Handle Login States
 if st.session_state.get("authentication_status") is False:
     st.error('Username/password is incorrect', icon=":material/error:")
@@ -103,10 +101,16 @@ elif st.session_state.get("authentication_status"):
                     saved_keys = [raw_data]
                 
                 decrypted_keys = []
+                corrupted_count = 0
                 for enc_key in saved_keys:
                     try:
                         decrypted_keys.append(f.decrypt(enc_key.encode()).decode())
-                    except: pass
+                    except: 
+                        corrupted_count += 1
+                
+                # Warn the user explicitly if decryption fails so they know to reset them!
+                if corrupted_count > 0:
+                    st.error(f"WARNING: {corrupted_count} of your saved API keys are corrupted (likely due to an encryption key change). Please go to 'My Settings', remove the old keys, and re-add them.", icon=":material/warning:")
                 
                 st.session_state["user_api_keys"] = decrypted_keys
             except Exception:
