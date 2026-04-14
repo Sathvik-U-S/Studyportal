@@ -59,7 +59,9 @@ def detect_language(code_str):
     return 'python'
 
 def render_content(media_type, content):
-    if not content or str(content).strip() == "": return
+    if not content or str(content).strip() == "": 
+        st.divider()
+        return
     
     if media_type == 'code':
         # Bulletproof regex split for code blocks
@@ -83,6 +85,7 @@ def render_content(media_type, content):
                 st.warning(f"Image not found: {img_path}")
     else: 
         st.markdown(content)
+    st.divider()
 
 def render_option_card(label, content, media_type, status=None):
     """Renders an option. If a status is provided, it changes color to success or error."""
