@@ -182,8 +182,6 @@ def render_take_assessment():
 
             # ADMIN CONTROLS
             if st.session_state.get("role") == "admin":
-                st.divider()
-                st.caption("🛠️ **Admin Tools: Flag Issues**")
                 c_flag1, c_flag2 = st.columns(2)
                 
                 if c_flag1.toggle("Flag Question Data", key=f"tog_q_{q['id']}"):
@@ -245,7 +243,7 @@ def render_take_assessment():
             options = opts_by_q.get(q['id'], [])
             # Call the fragment function for each question independently!
             render_study_question(i, q, options, s_sel, w_sel, a_sel)
-            
+
 def render_take_test():
     """
     Renders the Take Test view for a timed, graded test.
