@@ -42,6 +42,25 @@ try:
 except FileNotFoundError:
     pass
 
+# --- FOOLPROOF JAVASCRIPT: Kills mobile keyboard on dropdowns without breaking clicks ---
+components.html(
+    """
+    <script>
+    setInterval(function() {
+        const inputs = window.parent.document.querySelectorAll('div[data-baseweb="select"] input');
+        inputs.forEach(function(input) {
+            // Setting readonly prevents the phone keyboard from ever popping up
+            if (!input.hasAttribute('readonly')) {
+                input.setAttribute('readonly', 'readonly');
+                input.setAttribute('inputmode', 'none');
+            }
+        });
+    }, 500); // Runs in the background to catch newly loaded tabs
+    </script>
+    """,
+    height=0, width=0
+)
+
 
 # 4. AUTHENTICATION & ROLE MANAGEMENT
 
@@ -53,7 +72,7 @@ def to_dict(obj):
 
 config = to_dict(st.secrets)
 
-# Initialize Authenticator directly from your secure secrets.toml
+# Initialize Authenticator using explicit positional arguments to prevent version mismatch errors
 authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
@@ -61,11 +80,27 @@ authenticator = stauth.Authenticate(
     config['cookie']['expiry_days']
 )
 
+# Render the Login Form (Removed the unpacking that caused the TypeError crash)
+authenticator.login(location='main')
+
+# Handle Login States
+if st.session_state.get("authentication_status") is False:
+    st.error('Username/password is incorrect', icon=":material/error:")
+    st.stop()
+    
+elif st.session_state.get("authentication_status") is None:
+    st.warning('Please enter your username and password', icon=":material/warning:")
+    st.stop()
+    
+elif st.session_state.get("authentication_status"):
+    current_username = st.session_state["username"]
+    
 # Render the Login Form
 try:
     authenticator.login()
 except Exception as e:
     pass
+
 # Handle Login States
 if st.session_state.get("authentication_status") is False:
     st.error('Username/password is incorrect', icon=":material/error:")

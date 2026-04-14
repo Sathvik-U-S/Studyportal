@@ -48,13 +48,8 @@ header[data-testid="stHeader"] {
     /* Ensures it takes up space for the anchor to work */
 }
 
-/* Disable mobile keyboard popup on select boxes */
-div[data-baseweb="select"] input {
-    pointer-events: none !important;
-    caret-color: transparent !important;
-}
 
-/* CRITICAL FIX: Hide the hidden search input inside selectboxes to absolutely prevent the mobile keyboard */
+/* CRITICAL FIX: Hide the hidden search input inside selectboxes to absolutely prevent the mobile keyboard 
 div[data-baseweb="select"] input[aria-autocomplete="list"],
 div[data-baseweb="select"] input[role="combobox"] {
     display: none !important;
@@ -62,10 +57,10 @@ div[data-baseweb="select"] input[role="combobox"] {
     caret-color: transparent !important;
 }
 
-/* Ensure the text size prevents iOS Safari from automatically zooming in */
+ Ensure the text size prevents iOS Safari from automatically zooming in 
 div[data-baseweb="select"] {
     font-size: 16px !important; 
-}
+}*/
 
 /* 1C. Option Labels (e.g., "OPTION 1", "SELECT") */
 .option-label {
