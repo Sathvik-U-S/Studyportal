@@ -44,7 +44,7 @@ def get_cached_ai_response(ai_key):
     return result[0] if result else None
 
 def save_ai_cache(ai_key, data, username, metadata=None):
-    """Saves MCQ notes with full metadata."""
+    """Saves MCQ notes with full metadata and automatically resolves any active flags."""
     is_healthy = not is_response_broken(data)
     m = metadata if metadata else {}
     query = """
@@ -57,6 +57,8 @@ def save_ai_cache(ai_key, data, username, metadata=None):
         DO UPDATE SET 
             ai_data = EXCLUDED.ai_data, 
             is_healthy = EXCLUDED.is_healthy,
+            needs_attention = FALSE, 
+            attention_note = NULL,
             updated_at = CURRENT_TIMESTAMP
     """
     execute_query(query, (

@@ -28,8 +28,8 @@ def render_edit_content():
     Renders the Edit Content view for modifying questions, weeks, and structure.
     """
     # Renamed the second tab to reflect it handles more than just videos now
-    tab_edit_q, tab_edit_w, tab_edit_hier, tab_health, tab_overview, tab_sql = st.tabs([
-        "Edit Questions", "Edit Week Details", "Edit Hierarchy", "Content Health", "Content Overview", "Custom SQL"
+    tab_edit_q, tab_flag_q, tab_edit_w, tab_edit_hier, tab_health, tab_overview, tab_sql = st.tabs([
+        "Edit Questions", "Flagged Questions", "Edit Week Details", "Edit Hierarchy", "Content Health", "Content Overview", "Custom SQL"
     ])
     
     # TAB 1: EDIT QUESTIONS (Upgraded Bulk Editor + Add/Delete)
@@ -214,6 +214,36 @@ def render_edit_content():
                                 st.rerun()
                             else:
                                 st.error("Heading cannot be blank.", icon=":material/error:")
+    
+    # NEW TAB: FLAGGED QUESTIONS DATA
+    with tab_flag_q:
+        st.markdown("#### :material/flag: Flagged Question Data")
+        st.info("These questions were flagged by admins during Study Mode due to bad data, missing options, or typos.")
+        
+        flags = fetch_data("""
+            SELECT qi.id as flag_id, qi.issue_description, qi.reported_by, qi.created_at, 
+                   q.id as q_id, q.heading, s.name as sub_name, a.week_number, a.name as act_name
+            FROM question_issues qi
+            JOIN questions q ON qi.question_id = q.id
+            JOIN assessments a ON q.assessment_id = a.id
+            JOIN subjects s ON a.subject_id = s.id
+            ORDER BY qi.created_at DESC
+        """)
+        
+        if not flags:
+            st.success("No flagged questions! Great job.", icon=":material/check_circle:")
+        else:
+            for f in flags:
+                with st.expander(f"🚩 {f['sub_name']} (W{f['week_number']}) | Q_ID: {f['q_id']} | Reported by {f['reported_by']}", expanded=True):
+                    st.error(f"**Issue:** {f['issue_description']}")
+                    st.markdown(f"**Question:** {f['heading']}")
+                    
+                    st.caption(f"Hint: Go to the 'Edit Questions' tab and select `{f['sub_name']}` -> `Week {f['week_number']}` -> `{f['act_name']}` to fix the data.")
+                    if st.button("Mark as Resolved (Delete Flag)", key=f"res_flag_{f['flag_id']}"):
+                        execute_query("DELETE FROM question_issues WHERE id=%s", (f['flag_id'],))
+                        st.success("Flag resolved!")
+                        st.rerun()
+    
     # TAB 2: EDIT WEEK DETAILS (Upgraded with Auto-Title Fetch)
     with tab_edit_w:
         st.markdown("#### :material/play_lesson: Manage Week Details & Videos")
@@ -1152,17 +1182,30 @@ def render_ai_notes():
 
                 broken_qs = []
                 healthy_qs = []
-                
+                flagged_qs = []
+
                 for i, q in enumerate(questions):
                     if q['id'] in cache_map:
                         c_row = cache_map[q['id']]
-                        if c_row['is_healthy']: healthy_qs.append((i, q, c_row))
-                        else: broken_qs.append((i, q, c_row))
+                        # Check for flags first!
+                        if c_row.get('needs_attention'): 
+                            flagged_qs.append((i, q, c_row))
+                        elif c_row['is_healthy']: 
+                            healthy_qs.append((i, q, c_row))
+                        else: 
+                            broken_qs.append((i, q, c_row))
 
-                def render_aimcq_question(i, q, cache_entry):
+                def render_aimcq_question(i, q, cache_entry, is_flagged=False):
                     context_tag = f" `[{q['sub_name']} | W{q['w_num']} | {q['activity_name']}]`" if a_sel == "All Activities" else ""
-
-                    with st.expander(expanded=False, label=f"{context_tag}", icon=":material/question_answer:"):
+                    
+                    # Style it prominently if it's flagged
+                    icon = ":material/warning:" if is_flagged else ":material/question_answer:"
+                    label = f"🚩 FLAGGED {context_tag}" if is_flagged else f"{context_tag}"
+                    
+                    with st.expander(expanded=is_flagged, label=label, icon=icon):
+                        if is_flagged:
+                            st.error(f"**Admin Note:** {cache_entry.get('attention_note', 'No details provided.')}")
+                            
                         st.markdown(f"{q['heading']}")
                         render_content(q['media_type'], q['media_content'])
                         
@@ -1175,8 +1218,19 @@ def render_ai_notes():
                                 content = opt['media_content'] if opt['media_content'] else opt['option_text']
                                 render_option_card(f"OPTION {idx+1}", content, opt['media_type'], status=status)
                                 
-                        # Render the notes
+                        # Render the notes (Clicking Edit here and saving will automatically clear the flag!)
                         render_ai_tutor_response(cache_entry['ai_data'], cache_entry['cache_key'], cache_entry.get('created_by_user', 'System'))
+                        
+                        if is_flagged:
+                            if st.button("Dismiss Flag (Without Editing)", key=f"unflag_{cache_entry['cache_key']}"):
+                                execute_query("UPDATE mcq_cache SET needs_attention=FALSE, attention_note=NULL WHERE cache_key=%s", (cache_entry['cache_key'],))
+                                st.rerun()
+
+                # Render Flagged Items FIRST at the top!
+                if flagged_qs:
+                    st.warning(f"**{len(flagged_qs)} Flagged AI Responses (Needs Review)**", icon="⚠️")
+                    for i, q, cache in flagged_qs:
+                        render_aimcq_question(i, q, cache, is_flagged=True)
 
                 if broken_qs:
                     st.error(f"**{len(broken_qs)} Broken Responses**")
@@ -1188,8 +1242,8 @@ def render_ai_notes():
                     for i, q, cache in healthy_qs:
                         render_aimcq_question(i, q, cache)
                         
-                if not broken_qs and not healthy_qs:
-                    st.info("No AI Notes have been generated for this selection yet. Go to 'Take Assessment' to ask the AI Tutor!", icon=":material/info:")
+                if not broken_qs and not healthy_qs and not flagged_qs:
+                    st.info("No AI Notes have been generated for this selection yet.", icon=":material/info:")
 
     # TAB 2: Video Lecture Notes
     with tab_vid:

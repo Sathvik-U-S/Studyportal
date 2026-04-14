@@ -80,34 +80,37 @@ elif st.session_state.get("authentication_status") is None:
 elif st.session_state.get("authentication_status"):
     current_username = st.session_state["username"]
     
-    # Use the 'name' field from config
     user_config_name = config['credentials']['usernames'][current_username].get('name', 'Sathvik')
-    
-    # Force the session state name to match the capitalized version
     st.session_state["name"] = user_config_name 
     st.session_state["role"] = config['credentials']['usernames'][current_username].get('role', 'user')
     current_user_role = st.session_state["role"]
 
-    # HELPER: Fetch Active API Keys
-    def get_active_api_keys():
-        from database import fetch_data
-        from cryptography.fernet import Fernet
-        
-        res = fetch_data("SELECT api_key FROM user_settings WHERE username = %s", (st.session_state["username"],))
+    # OPTIMIZATION: Pre-fetch and decrypt the user's API keys ONCE per session
+    if "user_api_keys" not in st.session_state:
+        st.session_state["user_api_keys"] = []
+        res = fetch_data("SELECT api_key FROM user_settings WHERE username = %s", (current_username,))
         
         if res and res[0]['api_key']:
             try:
-                # Decrypt the key just in time to use it
                 key = st.secrets.get("ENCRYPTION_KEY")
                 f = Fernet(key.encode())
-                decrypted_key = f.decrypt(res[0]['api_key'].encode()).decode()
-                return [decrypted_key]
-            except Exception as e:
-                st.error("Failed to decrypt your personal API key. Please re-enter it in My Settings.", icon=":material/lock_open:")
-        
-        # Fallbacks
-        if "GEMINI_KEYS" in st.secrets: return st.secrets["GEMINI_KEYS"]
-        return [st.secrets.get("GEMINI_KEY")]
+                raw_data = res[0]['api_key']
+                
+                try:
+                    saved_keys = json.loads(raw_data)
+                    if not isinstance(saved_keys, list): saved_keys = [raw_data]
+                except:
+                    saved_keys = [raw_data]
+                
+                decrypted_keys = []
+                for enc_key in saved_keys:
+                    try:
+                        decrypted_keys.append(f.decrypt(enc_key.encode()).decode())
+                    except: pass
+                
+                st.session_state["user_api_keys"] = decrypted_keys
+            except Exception:
+                st.error("Failed to decrypt your personal API keys. Please check My Settings.", icon=":material/lock_open:")
 
     # SIDEBAR & NAVIGATION
     st.sidebar.markdown(f"## :material/account_circle: Welcome, {st.session_state['name']}")
@@ -128,9 +131,8 @@ elif st.session_state.get("authentication_status"):
     authenticator.logout('Log Out', 'sidebar')
 
     # Routing
-
     if app_mode == "Take Assessment":
-        render_take_assessment(get_active_api_keys)
+        render_take_assessment() # Argument removed
         
     elif app_mode == "Take Test":
         render_take_test()

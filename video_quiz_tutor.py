@@ -55,7 +55,11 @@ def delete_video_quiz(video_id):
 # AI GENERATION LOGIC
 # ==========================================
 def generate_video_quiz(subject, video_url, api_keys):
+    if not api_keys:
+        return {"error": "API Error: No personal API keys configured. Please add them in My Settings."}
+        
     transcript = fetch_transcript(video_url)
+    
     if transcript.startswith("Error"):
         return {"error": transcript}
 
@@ -371,30 +375,25 @@ def render_interactive_quiz(video_id, quiz_data, created_by_user="System"):
         ca1, ca2 = st.columns(2)
         
         with ca1:
-            # Reverted to emoji to ensure standard rendering
-            if st.button("➕ Generate & Add More Questions", width="stretch"):
-                with st.spinner("Analyzing transcript to append more questions..."):
-                    meta = get_video_quiz_meta(video_id)
-                    if meta:
-                        if "GEMINI_VIDEO_KEYS" in st.secrets:
-                            keys = st.secrets["GEMINI_VIDEO_KEYS"]
-                        elif "GEMINI_KEYS" in st.secrets:
-                            keys = st.secrets["GEMINI_KEYS"]
+            if not st.session_state.get("user_api_keys"):
+                st.warning("Add an API key in settings to append questions.", icon=":material/vpn_key:")
+            else:
+                if st.button("➕ Generate & Add More Questions", width="stretch"):
+                    with st.spinner("Analyzing transcript to append more questions..."):
+                        meta = get_video_quiz_meta(video_id)
+                        if meta:
+                            new_quiz = generate_video_quiz(meta['subject_name'], meta['youtube_url'], st.session_state["user_api_keys"])
+                            
+                            if "error" not in new_quiz:
+                                new_count = len(new_quiz['questions'])
+                                quiz_data["questions"].extend(new_quiz["questions"])
+                                update_video_quiz_data(video_id, quiz_data)
+                                st.success(f"Successfully added {new_count} new questions to the bottom!", icon=":material/check_circle:")
+                                st.rerun()
+                            else:
+                                st.error(new_quiz["error"], icon=":material/error:")
                         else:
-                            keys = [st.secrets.get("GEMINI_KEY")]
-                        
-                        new_quiz = generate_video_quiz(meta['subject_name'], meta['youtube_url'], keys)
-                        
-                        if "error" not in new_quiz:
-                            new_count = len(new_quiz['questions'])
-                            quiz_data["questions"].extend(new_quiz["questions"])
-                            update_video_quiz_data(video_id, quiz_data)
-                            st.success(f"Successfully added {new_count} new questions to the bottom!")
-                            st.rerun()
-                        else:
-                            st.error(new_quiz["error"])
-                    else:
-                        st.error("Could not find video metadata to generate more questions.")
+                            st.error("Could not find video metadata.", icon=":material/error:")
         
         with ca2:
             if st.button("🚨 Delete Entire Quiz", width="stretch", type="primary"):

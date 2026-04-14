@@ -40,9 +40,9 @@ def fetch_transcript(video_url):
         return f"Error fetching transcript: {str(e)}"
 
 def ask_video_ai(subject, video_url, api_keys):
-    """
-    Calls Gemini Pro to generate a massive, textbook-style deep dive of the lecture.
-    """
+    if not api_keys:
+        return {"executive_summary": "API Error: No personal API keys configured. Please add them in My Settings."}
+        
     transcript = fetch_transcript(video_url)
     
     if transcript.startswith("Error"):
