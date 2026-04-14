@@ -48,6 +48,12 @@ header[data-testid="stHeader"] {
     /* Ensures it takes up space for the anchor to work */
 }
 
+/* Disable mobile keyboard popup on select boxes */
+div[data-baseweb="select"] input {
+    pointer-events: none !important;
+    caret-color: transparent !important;
+}
+
 /* 1C. Option Labels (e.g., "OPTION 1", "SELECT") */
 .option-label {
     font-size: 12px;

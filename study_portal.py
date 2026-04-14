@@ -236,6 +236,11 @@ elif st.session_state.get("authentication_status"):
                             
                         st.success(f"Key {i+1} removed!", icon=":material/check_circle:")
                         time.sleep(1)
+                        
+                        # --- ADD THIS LINE TO RESET THE CACHE ---
+                        if "user_api_keys" in st.session_state:
+                            del st.session_state["user_api_keys"]
+                            
                         st.rerun()
         else:
             st.warning("No API keys saved. You are currently using the shared global pool.", icon=":material/warning:")
@@ -263,6 +268,11 @@ elif st.session_state.get("authentication_status"):
                         if success:
                             st.success("API Key encrypted and added successfully!", icon=":material/check_circle:")
                             time.sleep(1)
+                            
+                            # --- ADD THIS LINE TO RESET THE CACHE ---
+                            if "user_api_keys" in st.session_state:
+                                del st.session_state["user_api_keys"]
+                                
                             st.rerun()
                         else:
                             st.error("Failed to save to database. Check database connection.", icon=":material/error:")
