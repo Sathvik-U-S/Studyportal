@@ -569,18 +569,12 @@ def render_view_videos():
                                 st.session_state[state_key] = url.strip()
                                 st.rerun()
             with st.expander("AI Tutor: Generate Lecture Notes", expanded=False, icon=":material/model_training:"):
-                # Ai Tutor Integration
-                try:
-                    vid_id = extract_youtube_id(current_url)
-                except NameError:
-                    vid_id = None
-                    st.error("Error: video_ai_tutor logic not imported properly.")
-                    
                 if vid_id:
                     cached_vid = get_cached_video_notes(vid_id)
                     if cached_vid:
                         render_video_notes(cached_vid.get('ai_data', cached_vid), vid_id, cached_vid.get('created_by_user', 'System'))
                     else:
+                        # STRICT FIX: Hide button if no keys
                         if not st.session_state.get("user_api_keys"):
                             st.warning("Please add your Gemini API Key in 'My Settings' to generate AI notes.", icon=":material/vpn_key:")
                         else:
@@ -592,24 +586,20 @@ def render_view_videos():
             
             # Ai Video Quiz Generator
             with st.expander("AI Tutor: Practice Quiz", expanded=False, icon=":material/quiz:"):
-                try:
-                    vid_id = extract_youtube_id(current_url)
-                except NameError:
-                    vid_id = None
-                    
                 if vid_id:
                     cached_quiz = get_cached_video_quiz(vid_id)
                     if cached_quiz:
-                        # Render the sideways interactive UI from the new file
                         render_interactive_quiz(vid_id, cached_quiz)
                     else:
                         st.info("Test your understanding of this lecture. The AI will generate a custom quiz based on the transcript.", icon=":material/info:")
+                        # STRICT FIX: Hide button if no keys
                         if not st.session_state.get("user_api_keys"):
                             st.warning("Please add your Gemini API Key in 'My Settings' to generate quizzes.", icon=":material/vpn_key:")
                         else:
                             if st.button("Generate Practice Quiz", key=f"gen_quiz_{vid_id}", type="primary", width="stretch", icon=":material/quiz:"):
-                                with st.spinner("Analyzing transcript and generating comprehensive quiz (This takes 20-30 seconds)..."):
+                                with st.spinner("Analyzing transcript and generating comprehensive quiz..."):
                                     quiz_data = generate_video_quiz(s_sel, current_url, st.session_state["user_api_keys"])
+                                    # ... (keep your existing save logic here)
                                 
                                 if "error" not in quiz_data:
                                     try:

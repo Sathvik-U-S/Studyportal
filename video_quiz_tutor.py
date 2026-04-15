@@ -374,13 +374,15 @@ def render_interactive_quiz(video_id, quiz_data, created_by_user="System"):
         
         with ca1:
             if not st.session_state.get("user_api_keys"):
-                st.warning("Add an API key in settings to append questions.", icon=":material/vpn_key:")
+                st.warning("Please add your Gemini API Key in 'My Settings' to add more questions.", icon=":material/vpn_key:")
             else:
-                if st.button("➕ Generate & Add More Questions", width="stretch"):
+                if st.button("Generate & Add More Questions", width="stretch", icon=":material/add_circle:"):
                     with st.spinner("Analyzing transcript to append more questions..."):
                         meta = get_video_quiz_meta(video_id)
                         if meta:
-                            new_quiz = generate_video_quiz(meta['subject_name'], meta['youtube_url'], st.session_state["user_api_keys"])
+                            # STRICT FIX: Use session keys, not secrets
+                            keys = st.session_state["user_api_keys"]
+                            new_quiz = generate_video_quiz(meta['subject_name'], meta['youtube_url'], keys)
                             
                             if "error" not in new_quiz:
                                 new_count = len(new_quiz['questions'])
@@ -390,8 +392,6 @@ def render_interactive_quiz(video_id, quiz_data, created_by_user="System"):
                                 st.rerun()
                             else:
                                 st.error(new_quiz["error"], icon=":material/error:")
-                        else:
-                            st.error("Could not find video metadata.", icon=":material/error:")
         
         with ca2:
             if st.button("🚨 Delete Entire Quiz", width="stretch", type="primary"):
