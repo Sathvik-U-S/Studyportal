@@ -16,7 +16,7 @@ import streamlit_authenticator as stauth # type: ignore
 import yaml # type: ignore
 from yaml.loader import SafeLoader # type: ignore
 from video_quiz_tutor import *
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet # type: ignore
 from student_views import *
 from admin_views import *
 
