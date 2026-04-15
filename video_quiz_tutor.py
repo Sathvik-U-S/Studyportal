@@ -121,14 +121,11 @@ def generate_video_quiz(subject, video_url, api_keys):
         }
     }
 
-    last_error = None
-    
-    # Grab the selected model from the global state, defaulting to 1.5-pro just in case
-    model_name = st.session_state.get('gemini_model', 'gemini-1.5-pro')
+    last_error = "Unknown Error"
+    model_name = st.session_state.get('gemini_model', 'gemini-2.5-flash')
     
     for key in api_keys:
-        # Inject the dynamic model name into the URL
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key.strip()}"
         try:
             response = requests.post(url, json=payload, timeout=180)
             if response.status_code == 200:
@@ -154,6 +151,7 @@ def generate_video_quiz(subject, video_url, api_keys):
             continue
             
     return {"error": f"All API keys exhausted. Last error encountered: {last_error}"}
+
 
 # ==========================================
 # INTERACTIVE UI RENDERER (Top-Down List)
