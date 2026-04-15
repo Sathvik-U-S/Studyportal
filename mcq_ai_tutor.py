@@ -199,7 +199,14 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
     1. STRICT MULTIPLE BULLETS: Format EVERY textual section as a bulleted list using `- `. CRITICAL: You MUST insert a newline (`\\n`) before EVERY single bullet point so they render on separate lines. NEVER smash points together. Limit to 1-2 sentences per point.
     2. ARRAY FORMATTING (Core Concepts): For array items, output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
     3. INLINE STYLING: Apply formatting deeply INSIDE the sentences. Use standard markdown **bold** and *italics*. Use them to highlight crucial keywords.
-    4. INLINE COLORS: Use standard Streamlit markdown colors for both text and background. Text color format: `:color[text]`. Background color format: `:color-background[text]`. Supported colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`. Example text color: `:orange[crucial concept]`. Example background color: `:blue-background[important definition]`. Use them often to make the explanation more visually engaging and to highlight key insights.
+    4. INLINE COLORS: Use standard Streamlit markdown colors strictly formatted as ` :color[plain text] `. 
+    - CRITICAL COLOR RULES: 
+     a) There MUST be a space before the colon. 
+     b) NEVER place punctuation (commas, periods) inside the brackets. Color only the exact keywords. 
+     c) NEVER nest bold or italic markdown inside the color brackets. 
+     d) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
+     e) Example of correct usage: The statement is :green[accurate] because it works.
+     f) Example of incorrect usage (DO NOT DO THIS): :red[This statement is false, and here is why.]
     5. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags (NO <u>, NO <span>, NO <ul>, NO <li>).
     6. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
     7. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).

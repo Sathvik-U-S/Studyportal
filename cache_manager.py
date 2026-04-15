@@ -39,7 +39,8 @@ def is_response_broken(ai_data):
 
 def get_cached_ai_response(ai_key):
     """Returns a dict containing data, creator, and health status."""
-    query = "SELECT ai_data, created_by_user, is_healthy FROM mcq_cache WHERE cache_key = %s"
+    # CRITICAL FIX: Added needs_attention and attention_note to the SELECT statement
+    query = "SELECT ai_data, created_by_user, is_healthy, needs_attention, attention_note FROM mcq_cache WHERE cache_key = %s"
     result = fetch_data(query, (ai_key,))
     return result[0] if result else None
 

@@ -193,11 +193,13 @@ def render_edit_content():
     # NEW TAB: FLAGGED QUESTIONS DATA
     with tab_flag_q:
         st.markdown("#### :material/flag: Flagged Question Data")
-        st.info("These questions were flagged by admins during Study Mode due to bad data, missing options, or typos.")
+        st.info("These questions were flagged by admins during Study Mode due to bad data, missing options, or typos.", icon=":material/info:")
         
+        # CRITICAL FIX: Fetch all the necessary question and metadata columns to render the Full Editor
         flags = fetch_data("""
             SELECT qi.id as flag_id, qi.issue_description, qi.reported_by, qi.created_at, 
-                   q.id as q_id, q.heading, s.name as sub_name, a.week_number, a.name as act_name
+                   q.id as q_id, q.heading, q.q_type, q.media_type, q.media_content, q.difficulty, q.points, q.correct_answer, q.manual_explanation,
+                   s.name as sub_name, a.week_number, a.name as act_name
             FROM question_issues qi
             JOIN questions q ON qi.question_id = q.id
             JOIN assessments a ON q.assessment_id = a.id
@@ -208,16 +210,95 @@ def render_edit_content():
         if not flags:
             st.success("No flagged questions! Great job.", icon=":material/check_circle:")
         else:
-            for f in flags:
-                with st.expander(f"🚩 {f['sub_name']} (W{f['week_number']}) | Q_ID: {f['q_id']} | Reported by {f['reported_by']}", expanded=True):
-                    st.error(f"**Issue:** {f['issue_description']}")
-                    st.markdown(f"**Question:** {f['heading']}")
+            @st.fragment
+            def render_flagged_question_editor(idx, f):
+                q_id = f['q_id']
+                flag_id = f['flag_id']
+                short_head = str(f['heading'])[:60] + ("..." if len(str(f['heading'])) > 60 else "")
+                
+                with st.expander(f"FLAGGED: {f['sub_name']} (W{f['week_number']}) | Q_ID: {q_id} | {short_head}", expanded=False, icon=":material/flag:"):
+                    st.error(f"**Admin Note (by {f['reported_by']}):** {f['issue_description']}", icon=":material/error:")
                     
-                    st.caption(f"Hint: Go to the 'Edit Questions' tab and select `{f['sub_name']}` -> `Week {f['week_number']}` -> `{f['act_name']}` to fix the data.")
-                    if st.button("Mark as Resolved (Delete Flag)", key=f"res_flag_{f['flag_id']}"):
-                        execute_query("DELETE FROM question_issues WHERE id=%s", (f['flag_id'],))
-                        st.success("Flag resolved!")
-                        st.rerun()
+                    c_dis1, c_dis2 = st.columns([4, 1])
+                    if c_dis2.button("Dismiss Flag (No Changes)", key=f"res_flag_{flag_id}", type="secondary", use_container_width=True):
+                        execute_query("DELETE FROM question_issues WHERE id=%s", (flag_id,))
+                        st.success("Flag resolved!", icon=":material/check_circle:")
+                        st.rerun() 
+
+                    st.divider()
+                    
+                    opts_data = fetch_data("SELECT * FROM options WHERE question_id = %s ORDER BY id ASC", (q_id,))
+                    
+                    # --- THE FULL EDITOR UI ---
+                    with st.form(f"flag_edit_form_{q_id}"):
+                        st.markdown("#### :material/info: Core Details")
+
+                        raw_heading = str(f['heading']) if f['heading'] is not None else ""
+                        n_head = st.text_area("Heading (Raw DB Value)", value=raw_heading, height="content", key=f"fq_head_{q_id}")
+
+                        c_qm1, c_qm2 = st.columns([1, 4])
+                        curr_q_mtype = f['media_type'] if f['media_type'] else "text"
+                        n_mtype = c_qm1.selectbox("Media Type", ["text", "code", "image"], index=["text", "code", "image"].index(curr_q_mtype), key=f"fq_mtype_{q_id}")
+                        raw_media = str(f['media_content']) if f['media_content'] is not None else ""
+                        n_cont = c_qm2.text_area("Media Content", value=raw_media, height="content", key=f"fq_media_{q_id}")
+
+                        st.markdown("#### :material/notes: Metadata & Explanations")
+                        c_meta1, c_meta2 = st.columns(2)
+                        curr_diff = f.get('difficulty') or "Medium"
+                        n_diff = c_meta1.selectbox("Difficulty", ["Easy", "Medium", "Hard"], index=["Easy", "Medium", "Hard"].index(curr_diff), key=f"fq_diff_{q_id}")
+                        n_pts = c_meta2.number_input("Points", min_value=1, value=int(f.get('points') or 1), key=f"fq_pts_{q_id}")
+                        n_exp = st.text_area("Manual Explanation / Tutor Note", value=f.get('manual_explanation') or "", height=100, key=f"fq_exp_{q_id}")
+
+                        # NUMERICAL LOGIC
+                        if f.get('q_type') == 'numerical' or str(f.get('q_type')).lower() == 'nat':
+                            n_ans = st.text_input("Correct Answer", value=f.get('correct_answer') or "", icon=":material/check:", key=f"fq_ans_{q_id}")
+
+                            if st.form_submit_button("Update Question & Resolve Flag", type="primary", icon=":material/save:"):
+                                final_q_mtype = n_mtype if n_mtype != "text" else None
+                                execute_query("UPDATE questions SET heading=%s, media_type=%s, media_content=%s, correct_answer=%s, difficulty=%s, points=%s, manual_explanation=%s WHERE id=%s", (n_head, final_q_mtype, n_cont, n_ans, n_diff, n_pts, n_exp, q_id))
+                                execute_query("DELETE FROM question_issues WHERE id=%s", (flag_id,))
+                                st.success("Updated Successfully and Flag Dismissed", icon=":material/check_circle:")
+                                st.rerun() 
+
+                        # MCQ LOGIC
+                        else:
+                            st.markdown("#### :material/list: Edit Options")
+                            upd_opts = []
+
+                            for opt in opts_data:
+                                c_a, c_b, c_c, c_d = st.columns([0.2, 0.55, 0.15, 0.1])
+                                curr_type = opt['media_type'] if opt['media_type'] else "text"
+                                nt = c_a.selectbox("Type", ["text", "code", "image"], key=f"fq_type_{opt['id']}", index=["text", "code", "image"].index(curr_type))
+                                raw_option = (str(opt['media_content']) if opt['media_content'] is not None else str(opt['option_text']) if opt['option_text'] is not None else "")
+                                nv = c_b.text_area("Value", value=raw_option, height="content", key=f"fq_option_raw_{opt['id']}")
+                                nc = c_c.checkbox("Correct", value=opt['is_correct'], key=f"fq_correct_{opt['id']}")
+                                ndel = c_d.checkbox("Delete", value=False, key=f"fq_del_opt_{opt['id']}") 
+                                upd_opts.append((opt['id'], nt, nv, nc, ndel))
+
+                            if st.form_submit_button("Update Question & Resolve Flag", type="primary", icon=":material/save:"):
+                                final_q_mtype = n_mtype if n_mtype != "text" else None
+                                execute_query("UPDATE questions SET heading=%s, media_type=%s, media_content=%s, difficulty=%s, points=%s, manual_explanation=%s WHERE id=%s", (n_head, final_q_mtype, n_cont, n_diff, n_pts, n_exp, q_id))
+
+                                for oid, otype, oval, ocorr, odel in upd_opts:
+                                    if odel: execute_query("DELETE FROM options WHERE id=%s", (oid,))
+                                    else:
+                                        if otype == "text": execute_query("UPDATE options SET option_text=%s, media_type=NULL, media_content=NULL, is_correct=%s WHERE id=%s", (oval, ocorr, oid))
+                                        else: execute_query("UPDATE options SET option_text=NULL, media_type=%s, media_content=%s, is_correct=%s WHERE id=%s", (otype, oval, ocorr, oid))
+                                
+                                execute_query("DELETE FROM question_issues WHERE id=%s", (flag_id,))
+                                st.success("Updated Successfully and Flag Dismissed", icon=":material/check_circle:")
+                                st.rerun()
+
+                    # ADD BLANK OPTION BUTTON
+                    if f.get('q_type') != 'numerical' and str(f.get('q_type')).lower() != 'nat':
+                        if st.button(f"Add Blank Option to Q{idx}", key=f"fq_add_opt_btn_{q_id}", use_container_width=True, icon=":material/add:"):
+                            execute_query("INSERT INTO options (question_id, option_text, is_correct, subject_name) VALUES (%s, %s, %s, %s)", (q_id, "New Option", False, f['sub_name']))
+                            st.success("Option Added!", icon=":material/check_circle:")
+                            st.rerun(scope="fragment")
+
+            # Execute the fragment for each flagged question
+            for idx, f in enumerate(flags, start=1):
+                render_flagged_question_editor(idx, f)
     
     # TAB 2: EDIT WEEK DETAILS (Upgraded with Auto-Title Fetch)
     with tab_edit_w:
@@ -1178,7 +1259,8 @@ def render_ai_notes():
                     icon = ":material/warning:" if is_flagged else ":material/question_answer:"
                     label = f"FLAGGED {context_tag}" if is_flagged else f"{context_tag}"
                     
-                    with st.expander(expanded=is_flagged, label=label, icon=icon):
+                    # STRICT FIX: Set expanded to False for all items
+                    with st.expander(expanded=False, label=label, icon=icon):
                         if is_flagged:
                             st.error(f"**Admin Note:** {cache_entry.get('attention_note', 'No details provided.')}", icon=":material/error:")
                             
@@ -1199,11 +1281,12 @@ def render_ai_notes():
                         if is_flagged:
                             if st.button("Dismiss Flag (Without Editing)", key=f"unflag_{cache_entry['cache_key']}"):
                                 execute_query("UPDATE mcq_cache SET needs_attention=FALSE, attention_note=NULL WHERE cache_key=%s", (cache_entry['cache_key'],))
-                                st.rerun(scope="fragment") # Zero lag flag dismissal!
+                                # CRITICAL FIX: Changed to a full rerun so the list actually updates and removes the dismissed item!
+                                st.rerun()
 
                 # Render Flagged Items FIRST at the top!
                 if flagged_qs:
-                    st.warning(f"**{len(flagged_qs)} Flagged AI Responses (Needs Review)**", icon="⚠️")
+                    st.warning(f"**{len(flagged_qs)} Flagged AI Responses (Needs Review)**", icon=":material/warning:")
                     for i, q, cache in flagged_qs:
                         render_aimcq_question(i, q, cache, is_flagged=True)
 

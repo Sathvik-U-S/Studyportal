@@ -77,7 +77,14 @@ def ask_video_ai(subject, video_url, api_keys):
     1. STRICTLY BULLETS ONLY: You MUST heavily rely on bulleted lists (`- `) and nested sub-points (`  - ` or `    * `) to break down logic. YOU ARE STRICTLY FORBIDDEN from using numbered or ordered lists (e.g., 1., 2., 3.). 
     2. MARKDOWN HEADINGS: Use `####` (4 hashes) or `#####` (5 hashes) to create clear, structured subheadings within your text blocks.
     3. RICH TEXT STYLING: Apply deep inline formatting. Use **bold**, *italics*, and ***bold & italics*** for emphasis. Use ~~strikethrough~~ to explicitly highlight common misconceptions or incorrect assumptions debunked in the lecture.
-    4. INLINE CODE: Always wrap technical terms, variable names, algorithms, and hyperparameter names in single backticks (e.g., `learning_rate` or `O(n log n)`).
+    4. INLINE COLORS: Use standard Streamlit markdown colors strictly formatted as ` :color[plain text] `. 
+    - CRITICAL COLOR RULES: 
+     a) There MUST be a space before the colon. 
+     b) NEVER place punctuation (commas, periods) inside the brackets. Color only the exact keywords. 
+     c) NEVER nest bold or italic markdown inside the color brackets. 
+     d) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
+     e) Example of correct usage: The statement is :green[accurate] because it works.
+     f) Example of incorrect usage (DO NOT DO THIS): :red[This statement is false, and here is why.]
     5. STRUCTURAL ELEMENTS: Use `> blockquotes` to emphasize exact definitions, core theorems, or important quotes from the professor. Use horizontal rules (`---`) on a new line to cleanly separate distinct thematic sections within your explanation.
     6. INLINE COLORS: Use standard Streamlit markdown colors for both text and background. Text color format: `:color[text]`. Background color format: `:color-background[text]`. Supported colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`. Example text color: `:orange[crucial concept]`. Use them often to make the explanation visually engaging.
     7. ZERO EMOJIS & ZERO LINKS: You are STRICTLY FORBIDDEN from outputting any emojis (e.g., no 🧠, no 🚀). You are STRICTLY FORBIDDEN from generating any URLs or markdown links to external websites or videos.
