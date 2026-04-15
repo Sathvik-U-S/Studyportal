@@ -121,25 +121,26 @@ def ask_video_ai(subject, video_url, api_keys):
         }
     }
 
-    last_error_code = None
+    last_error_code = "Unknown Error"
     # Grab the selected model from the global state
     model_name = st.session_state.get('gemini_model', 'gemini-1.5-pro')
     
     for key in api_keys:
-        # Inject the dynamic model name into the URL
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key.strip()}"
         
         try:
-            response = requests.post(url, json=payload, timeout=120) # Increased timeout for massive prompts
+            response = requests.post(url, json=payload, timeout=120) 
             
             if response.status_code == 200:
                 res_json = response.json()
                 if "candidates" not in res_json or not res_json["candidates"]:
-                    return {"executive_summary": "API Error: Response blocked by safety filters."}
+                    last_error_code = "Response blocked by safety filters."
+                    continue
                 
                 parts = res_json['candidates'][0].get('content', {}).get('parts', [])
                 if not parts:
-                     return {"executive_summary": "API Error: The AI returned an empty block."}
+                     last_error_code = "The AI returned an empty block."
+                     continue
 
                 raw = parts[0]['text'].strip()
                 clean = re.sub(r'^```json\s*|\s*```$', '', raw, flags=re.MULTILINE)
@@ -147,17 +148,16 @@ def ask_video_ai(subject, video_url, api_keys):
                 
                 return json.loads(clean, strict=False)
                 
-            elif response.status_code == 429:
-                last_error_code = 429
-                continue
             else:
-                return {"executive_summary": f"API Error: {response.status_code}. Request failed."}
+                last_error_code = f"HTTP {response.status_code}: {response.text}"
+                continue # Try next key
                 
         except Exception as e:
-            return {"executive_summary": f"Request Error: {str(e)}"}
+            last_error_code = f"Request Error: {str(e)}"
+            continue # Try next key
             
-    return {"executive_summary": f"API Error: {last_error_code}. All API keys exhausted or rate-limited."}
-
+    return {"executive_summary": f"API Error: All API keys exhausted. Last error: {last_error_code}"}
+    
 
 def render_video_notes(data, video_id, created_by_user="System"):
     import json
