@@ -165,7 +165,10 @@ elif st.session_state.get("authentication_status"):
                 if len(saved_keys) > 0 and len(decrypted_keys) == 0:
                     st.error("CRITICAL ERROR: Keys are saved but cannot be decrypted. Please remove and re-add them in 'My Settings'.", icon=":material/lock_open:")
                 else:
-                    st.session_state["user_api_keys"] = decrypted_keys
+                    # STRICT FIX: Purge any empty strings or blank spaces from the list
+                    valid_keys = [k for k in decrypted_keys if k and str(k).strip()]
+                    st.session_state["user_api_keys"] = valid_keys
+
             except Exception as e:
                 st.error(f"Failed to initialize encryption: {e}", icon=":material/error:")
 
