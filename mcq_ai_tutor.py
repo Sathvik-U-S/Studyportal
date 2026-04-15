@@ -245,24 +245,26 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
             }
         }
     }
-    
-    last_error_code = None
+
+    last_error_code = "Unknown Error"
     # Grab the selected model from the global state
     model_name = st.session_state.get('gemini_model', 'gemini-1.5-pro')
     
     for key in api_keys:
-        # Inject the dynamic model name into the URL
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
+        # Strip spaces to prevent silent auth failures, inject dynamic model
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key.strip()}"
         
         try:
             response = requests.post(url, json=payload, timeout=60)
             if response.status_code == 200:
                 res_json = response.json()
                 if "candidates" not in res_json or not res_json["candidates"]:
-                    return {"choice_analysis": "API Error: Response blocked by safety filters."}
+                    last_error_code = "Response blocked by safety filters."
+                    continue # CRITICAL FIX: Keep trying next key!
                 parts = res_json['candidates'][0].get('content', {}).get('parts', [])
                 if not parts:
-                     return {"choice_analysis": "API Error: The AI returned an empty block."}
+                     last_error_code = "The AI returned an empty block."
+                     continue # Keep trying next key!
 
                 raw = parts[0]['text'].strip()
                 clean = re.sub(r'^```json\s*|\s*```$', '', raw, flags=re.MULTILINE)
@@ -270,16 +272,17 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
                 
                 return json.loads(clean, strict=False)
                 
-            elif response.status_code == 429:
-                last_error_code = 429
-                continue
             else:
-                return {"choice_analysis": f"API Error: {response.status_code}. Request failed."}
+                last_error_code = f"HTTP {response.status_code}: {response.text}"
+                continue # CRITICAL FIX: If key is invalid (400) or exhausted (429), try the next one!
                 
         except Exception as e:
-            return {"choice_analysis": f"Request Error: {str(e)}"}
+            last_error_code = f"Request Error: {str(e)}"
+            continue # CRITICAL FIX: If network fails, try the next one!
             
-    return {"choice_analysis": f"API Error: {last_error_code}. All API keys exhausted."}
+    # If the loop finishes and ALL keys failed
+    return {"choice_analysis": f"API Error: All API keys failed. Last error: {last_error_code}"}
+
 
 def render_ai_tutor_response(data, ai_key, created_by_user="System"):
     import json
