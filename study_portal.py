@@ -136,27 +136,38 @@ elif st.session_state.get("authentication_status"):
                 f = Fernet(key.encode())
                 raw_data = res[0]['api_key']
                 
+                # 1. BULLETPROOF PARSING: Catches single quotes, malformed JSON, and bare strings
+                import ast
                 try:
                     saved_keys = json.loads(raw_data)
-                    if not isinstance(saved_keys, list): saved_keys = [raw_data]
                 except:
-                    saved_keys = [raw_data]
+                    try:
+                        saved_keys = ast.literal_eval(raw_data)
+                    except:
+                        saved_keys = [raw_data]
+                        
+                if not isinstance(saved_keys, list):
+                    saved_keys = [saved_keys]
                 
+                # 2. BULLETPROOF DECRYPTION: Rescues old unencrypted keys
                 decrypted_keys = []
-                corrupted_count = 0
                 for enc_key in saved_keys:
+                    if not enc_key or not isinstance(enc_key, str): 
+                        continue
+                    enc_key = enc_key.strip()
                     try:
                         decrypted_keys.append(f.decrypt(enc_key.encode()).decode())
                     except: 
-                        corrupted_count += 1
+                        # FALLBACK: If decryption fails, check if it is an old unencrypted API key!
+                        if enc_key.startswith("AIza") or enc_key.startswith("gsk_"):
+                            decrypted_keys.append(enc_key)
                 
-                # Warn the user explicitly if decryption fails so they know to reset them!
-                if corrupted_count > 0:
-                    st.error(f"WARNING: {corrupted_count} of your saved API keys are corrupted (likely due to an encryption key change). Please go to 'My Settings', remove the old keys, and re-add them.", icon=":material/warning:")
-                
-                st.session_state["user_api_keys"] = decrypted_keys
-            except Exception:
-                st.error("Failed to decrypt your personal API keys. Please check My Settings.", icon=":material/lock_open:")
+                if len(saved_keys) > 0 and len(decrypted_keys) == 0:
+                    st.error("CRITICAL ERROR: Keys are saved but cannot be decrypted. Please remove and re-add them in 'My Settings'.", icon=":material/lock_open:")
+                else:
+                    st.session_state["user_api_keys"] = decrypted_keys
+            except Exception as e:
+                st.error(f"Failed to initialize encryption: {e}", icon=":material/error:")
 
     # SIDEBAR & NAVIGATION
     st.sidebar.markdown(f"## :material/account_circle: Welcome, {st.session_state['name']}")
