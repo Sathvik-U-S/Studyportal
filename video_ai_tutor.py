@@ -123,7 +123,7 @@ def ask_video_ai(subject, video_url, api_keys):
 
     last_error_code = "Unknown Error"
     # Grab the selected model from the global state
-    model_name = st.session_state.get('gemini_model', 'gemini-1.5-pro')
+    model_name = st.session_state.get('gemini_model', 'gemini-2.5-flash')
     
     for key in api_keys:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key.strip()}"
