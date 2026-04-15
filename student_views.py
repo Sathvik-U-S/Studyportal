@@ -568,6 +568,12 @@ def render_view_videos():
                             if st.button(video_name, key=f"vid_btn_{week_id}_{idx}", type=btn_type, width="stretch", icon=":material/play_circle:"):
                                 st.session_state[state_key] = url.strip()
                                 st.rerun()
+            # --- CRITICAL FIX: Safely extract the video ID before using it ---
+            try:
+                vid_id = extract_youtube_id(current_url)
+            except Exception:
+                vid_id = None
+            
             with st.expander("AI Tutor: Generate Lecture Notes", expanded=False, icon=":material/model_training:"):
                 if vid_id:
                     cached_vid = get_cached_video_notes(vid_id)
