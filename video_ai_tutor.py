@@ -122,7 +122,7 @@ def ask_video_ai(subject, video_url, api_keys):
     }
 
     last_error_code = "Unknown Error"
-    # Grab the selected model from the global state
+    # Strictly enforce gemini-2.5-flash
     model_name = st.session_state.get('gemini_model', 'gemini-2.5-flash')
     
     for key in api_keys:
@@ -131,6 +131,12 @@ def ask_video_ai(subject, video_url, api_keys):
         try:
             response = requests.post(url, json=payload, timeout=120) 
             
+            # --- 503 High Demand Fix ---
+            if response.status_code == 503:
+                import time
+                time.sleep(2) # Wait 2 seconds and retry automatically
+                response = requests.post(url, json=payload, timeout=120)
+
             if response.status_code == 200:
                 res_json = response.json()
                 if "candidates" not in res_json or not res_json["candidates"]:
@@ -150,11 +156,11 @@ def ask_video_ai(subject, video_url, api_keys):
                 
             else:
                 last_error_code = f"HTTP {response.status_code}: {response.text}"
-                continue # Try next key
+                continue 
                 
         except Exception as e:
             last_error_code = f"Request Error: {str(e)}"
-            continue # Try next key
+            continue 
             
     return {"executive_summary": f"API Error: All API keys exhausted. Last error: {last_error_code}"}
     

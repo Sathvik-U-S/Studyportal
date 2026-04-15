@@ -82,6 +82,10 @@ def render_take_assessment():
     # =========================================================================
     @st.fragment
     def render_study_question(i, q, options, s_sel, w_sel, a_sel):
+        # CRITICAL FIX: Fetch AI cache at the top so the admin tools never throw an UnboundLocalError
+        ai_key = f"num_{q['id']}" if q.get('q_type') == 'numerical' else f"mcq_{q['id']}"
+        cached_res = get_cached_ai_response(ai_key)
+
         with st.container(border=True):
             st.markdown(f"Q{i+1}. {q['heading']}")    
             render_content(q['media_type'], q['media_content'])
@@ -93,9 +97,6 @@ def render_take_assessment():
                 if val:
                     if check_numerical_answer(val, q['correct_answer']): st.success("Correct")
                     else: st.error(f"Incorrect. Answer: {q['correct_answer']}")
-                
-                ai_key = f"num_{q['id']}" 
-                cached_res = get_cached_ai_response(ai_key)
                 
                 if cached_res:
                     with st.expander("View AI Tutor Analysis", expanded=False, icon=":material/model_training:"):
@@ -109,9 +110,14 @@ def render_take_assessment():
                                 opt_texts = [] 
                                 c_ans = q['correct_answer']
                                 explanation = ask_ai_tutor(s_sel, q['heading'], q['media_type'], q['media_content'], opt_texts, c_ans, st.session_state["user_api_keys"])
-                                meta = {'q_id': q['id'], 'sub': s_sel, 'heading': q['heading'], 'week': w_sel, 'ass_name': a_sel}
-                                save_ai_cache(ai_key, explanation, st.session_state["name"], metadata=meta)
-                                st.rerun(scope="fragment") # Only reruns this specific question!
+                                
+                                # STRICT FIX: Prevent API Errors from saving to the database
+                                if "choice_analysis" in explanation and str(explanation.get("choice_analysis", "")).startswith("API Error"):
+                                    st.error(explanation["choice_analysis"], icon=":material/error:")
+                                else:
+                                    meta = {'q_id': q['id'], 'sub': s_sel, 'heading': q['heading'], 'week': w_sel, 'ass_name': a_sel}
+                                    save_ai_cache(ai_key, explanation, st.session_state["name"], metadata=meta)
+                                    st.rerun(scope="fragment")
 
             # MCQ LOGIC
             else:
@@ -138,19 +144,18 @@ def render_take_assessment():
                     st.markdown('<span class="option-label">SELECT</span>', unsafe_allow_html=True)
                     if is_multi:
                         sel_idxs = []
-                        for idx, opt in enumerate(options):                            
-                            if st.checkbox(f"{idx+1}", key=f"chk_{q['id']}_{opt['id']}"): 
+                        for idx, opt in enumerate(options):
+                            # The on_change forces mobile browsers to instantly refresh the fragment
+                            if st.checkbox(f"{idx+1}", key=f"chk_{q['id']}_{opt['id']}", on_change=lambda: None): 
                                 sel_idxs.append(idx)
                     else:
                         r_opts = [f"{x+1}" for x in range(len(options))]
-                        choice = st.radio(f"Rad_{i}", r_opts, index=None, label_visibility="collapsed", key=f"rad_{q['id']}")
+                        # The on_change forces mobile browsers to instantly refresh the fragment
+                        choice = st.radio(f"Rad_{i}", r_opts, index=None, label_visibility="collapsed", key=f"rad_{q['id']}", on_change=lambda: None)
 
                 # AI Tutor Logic
                 has_selection = (is_multi and len(sel_idxs) > 0) or (not is_multi and choice is not None)
                 if has_selection:
-                    ai_key = f"mcq_{q['id']}"
-                    cached_res = get_cached_ai_response(ai_key)
-                    
                     if cached_res:
                         with st.expander("View AI Tutor Analysis", expanded=False, icon=":material/model_training:"):
                             render_ai_tutor_response(cached_res.get('ai_data', cached_res), ai_key, cached_res.get('created_by_user', 'System'))
@@ -176,27 +181,74 @@ def render_take_assessment():
                                         c_ans = c_ans_list[0] if c_ans_list else "Unknown"
                                     
                                     explanation = ask_ai_tutor(s_sel, q['heading'], q['media_type'], q['media_content'], opt_texts, c_ans, st.session_state["user_api_keys"])
-                                    meta = {'q_id': q['id'], 'sub': s_sel, 'heading': q['heading'], 'week': w_sel, 'ass_name': a_sel}
-                                    save_ai_cache(ai_key, explanation, st.session_state["name"], metadata=meta) 
-                                    st.rerun(scope="fragment") # Micro-reload!
+                                    
+                                    # STRICT FIX: Prevent API Errors from saving to the database
+                                    if "choice_analysis" in explanation and str(explanation.get("choice_analysis", "")).startswith("API Error"):
+                                        st.error(explanation["choice_analysis"], icon=":material/error:")
+                                    else:
+                                        meta = {'q_id': q['id'], 'sub': s_sel, 'heading': q['heading'], 'week': w_sel, 'ass_name': a_sel}
+                                        save_ai_cache(ai_key, explanation, st.session_state["name"], metadata=meta) 
+                                        st.rerun(scope="fragment")
 
-            # ADMIN CONTROLS
+            # ==========================================
+            # ADMIN CONTROLS (Quick Edit & Locked Flags)
+            # ==========================================
             if st.session_state.get("role") == "admin":
-                c_flag1, c_flag2 = st.columns(2)
                 
-                if c_flag1.toggle("Flag Question Data", key=f"tog_q_{q['id']}"):
-                    q_note = st.text_area("Describe the issue with the Question or Options:", key=f"txt_q_{q['id']}")
-                    if st.button("Save Question Flag", key=f"save_q_{q['id']}", type="primary"):
+                # Check database to see if these are ALREADY flagged
+                q_flagged = bool(fetch_data("SELECT id FROM question_issues WHERE question_id=%s LIMIT 1", (q['id'],)))
+                ai_flagged = bool(cached_res.get('needs_attention', False)) if cached_res else False
+                
+                c_qe, c_flag1, c_flag2 = st.columns(3)
+                
+                # 1. MOBILE-FRIENDLY QUICK EDIT
+                if c_qe.toggle("Quick Edit", key=f"tqe_{q['id']}"):
+                    with st.form(f"qe_f_{q['id']}"):
+                        n_head = st.text_area("Heading", value=q['heading'] or "", height=68)
+                        cm1, cm2 = st.columns([1, 2])
+                        curr_mtype = q['media_type'] or "text"
+                        n_mtype = cm1.selectbox("Media", ["text", "code", "image"], index=["text", "code", "image"].index(curr_mtype), key=f"qemt_{q['id']}", label_visibility="collapsed")
+                        n_cont = cm2.text_input("Content", value=q['media_content'] or "", key=f"qemc_{q['id']}", label_visibility="collapsed", placeholder="Media Content")
+                        
+                        upd_opts = []
+                        if q.get('q_type') != 'numerical':
+                            st.caption("Options")
+                            for idx, opt in enumerate(options):
+                                co1, co2 = st.columns([1, 2])
+                                curr_ot = opt['media_type'] or "text"
+                                ot = co1.selectbox(f"T{idx}", ["text", "code", "image"], index=["text", "code", "image"].index(curr_ot), key=f"qeot_{opt['id']}", label_visibility="collapsed")
+                                raw_val = opt['media_content'] if opt['media_content'] else opt['option_text']
+                                ov = co2.text_input(f"V{idx}", value=raw_val or "", key=f"qeov_{opt['id']}", label_visibility="collapsed")
+                                upd_opts.append((opt['id'], ot, ov))
+                                
+                        if st.form_submit_button("Save Edits", type="primary", use_container_width=True):
+                            final_mtype = n_mtype if n_mtype != "text" else None
+                            execute_query("UPDATE questions SET heading=%s, media_type=%s, media_content=%s WHERE id=%s", (n_head, final_mtype, n_cont, q['id']))
+                            
+                            for oid, ot, ov in upd_opts:
+                                if ot == "text":
+                                    execute_query("UPDATE options SET option_text=%s, media_type=NULL, media_content=NULL WHERE id=%s", (ov, oid))
+                                else:
+                                    execute_query("UPDATE options SET option_text=NULL, media_type=%s, media_content=%s WHERE id=%s", (ot, ov, oid))
+                            st.success("Saved!", icon=":material/check_circle:")
+                            st.rerun(scope="fragment")
+
+                # 2. LOCKED QUESTION FLAG
+                q_toggle = c_flag1.toggle("Flag Q Data", value=q_flagged, disabled=q_flagged, key=f"tog_q_{q['id']}")
+                if q_toggle and not q_flagged:
+                    q_note = st.text_input("Describe issue:", key=f"txt_q_{q['id']}")
+                    if st.button("Save Q Flag", key=f"save_q_{q['id']}", type="primary"):
                         execute_query("INSERT INTO question_issues (question_id, issue_description, reported_by) VALUES (%s, %s, %s)", (q['id'], q_note, st.session_state.get("name")))
-                        st.success("Question Data flagged successfully!", icon=":material/check_circle:")
+                        st.success("Flagged!", icon=":material/check_circle:")
                         st.rerun(scope="fragment")
                 
-                if c_flag2.toggle("Flag AI Response", key=f"tog_ai_{q['id']}"):
-                    ai_note = st.text_area("Describe the issue with the AI explanation:", key=f"txt_ai_{q['id']}")
+                # 3. LOCKED AI FLAG
+                ai_toggle = c_flag2.toggle("Flag AI", value=ai_flagged, disabled=ai_flagged, key=f"tog_ai_{q['id']}")
+                if ai_toggle and not ai_flagged:
+                    ai_note = st.text_input("Describe issue:", key=f"txt_ai_{q['id']}")
                     if st.button("Save AI Flag", key=f"save_ai_{q['id']}", type="primary"):
-                        a_key = f"num_{q['id']}" if q.get('q_type') == 'numerical' else f"mcq_{q['id']}"
-                        execute_query("UPDATE mcq_cache SET needs_attention=TRUE, attention_note=%s WHERE cache_key=%s", (ai_note, a_key))
-                        st.success("AI Response flagged successfully!", icon=":material/check_circle:")
+                        execute_query("UPDATE mcq_cache SET needs_attention=TRUE, attention_note=%s WHERE cache_key=%s", (ai_note, ai_key))
+                        st.success("Flagged!", icon=":material/check_circle:")
                         st.rerun(scope="fragment")
 
 
@@ -537,10 +589,8 @@ def render_view_videos():
                                 remaining_ids = ",".join(all_ids[1:])
                                 playlist_url = f"https://www.youtube.com/embed/{first_id}?playlist={remaining_ids}&autoplay=1&rel=0"
                                 
-                                components.html(
-                                    f'<iframe width="100%" height="450" src="{playlist_url}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>',
-                                    height=460
-                                )
+                                # Replaced deprecated components.html with native iframe
+                                st.components.v1.iframe(playlist_url, height=450)
                             else:
                                 st.video(current_url)
                         except:
@@ -587,8 +637,13 @@ def render_view_videos():
                             if st.button("Generate Deep-Dive Lecture Notes", key=f"gen_notes_{vid_id}", type="secondary", width="stretch", icon=":material/auto_awesome:"):
                                 with st.spinner("Compiling elite notes..."):
                                     ai_response = ask_video_ai(s_sel, current_url, st.session_state["user_api_keys"])
-                                    save_video_cache(vid_id, ai_response, st.session_state["name"]) 
-                                    st.rerun()
+                                    
+                                    # STRICT FIX: Prevent API Errors from saving to the database
+                                    if "executive_summary" in ai_response and str(ai_response.get("executive_summary", "")).startswith("API Error"):
+                                        st.error(ai_response["executive_summary"], icon=":material/error:")
+                                    else:
+                                        save_video_cache(vid_id, ai_response, st.session_state["name"]) 
+                                        st.rerun()
             
             # Ai Video Quiz Generator
             with st.expander("AI Tutor: Practice Quiz", expanded=False, icon=":material/quiz:"):

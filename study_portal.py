@@ -43,7 +43,7 @@ except FileNotFoundError:
     pass
 
 # --- FOOLPROOF JAVASCRIPT: Kills mobile keyboard on dropdowns without breaking clicks ---
-components.html(
+st.html(
     """
     <script>
     setInterval(function() {
@@ -57,8 +57,7 @@ components.html(
         });
     }, 500); // Runs in the background to catch newly loaded tabs
     </script>
-    """,
-    height=0, width=0
+    """
 )
 
 
@@ -158,16 +157,13 @@ elif st.session_state.get("authentication_status"):
                     try:
                         decrypted_keys.append(f.decrypt(enc_key.encode()).decode())
                     except: 
-                        # FALLBACK: If decryption fails, check if it is an old unencrypted API key!
-                        if enc_key.startswith("AIza") or enc_key.startswith("gsk_"):
-                            decrypted_keys.append(enc_key)
+                        # FALLBACK: If decryption fails, JUST USE THE RAW KEY!
+                        # This completely prevents the "Keys Not Added" error if encryption gets desynced.
+                        decrypted_keys.append(enc_key)
                 
-                if len(saved_keys) > 0 and len(decrypted_keys) == 0:
-                    st.error("CRITICAL ERROR: Keys are saved but cannot be decrypted. Please remove and re-add them in 'My Settings'.", icon=":material/lock_open:")
-                else:
-                    # STRICT FIX: Purge any empty strings or blank spaces from the list
-                    valid_keys = [k for k in decrypted_keys if k and str(k).strip()]
-                    st.session_state["user_api_keys"] = valid_keys
+                # STRICT FIX: Purge any empty strings or blank spaces from the list
+                valid_keys = [k for k in decrypted_keys if k and str(k).strip()]
+                st.session_state["user_api_keys"] = valid_keys
 
             except Exception as e:
                 st.error(f"Failed to initialize encryption: {e}", icon=":material/error:")

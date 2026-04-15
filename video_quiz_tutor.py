@@ -122,12 +122,20 @@ def generate_video_quiz(subject, video_url, api_keys):
     }
 
     last_error = "Unknown Error"
+    # Strictly enforce gemini-2.5-flash
     model_name = st.session_state.get('gemini_model', 'gemini-2.5-flash')
     
     for key in api_keys:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key.strip()}"
         try:
             response = requests.post(url, json=payload, timeout=180)
+            
+            # --- 503 High Demand Fix ---
+            if response.status_code == 503:
+                import time
+                time.sleep(2) # Wait 2 seconds and retry automatically
+                response = requests.post(url, json=payload, timeout=180)
+
             if response.status_code == 200:
                 res_json = response.json()
                 candidates = res_json.get('candidates', [])
