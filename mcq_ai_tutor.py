@@ -137,10 +137,8 @@ def check_numerical_answer(user_ans, correct_ans):
 
 def ask_ai_tutor(subject, question, media_type, media_content, all_options, correct_answer, api_keys, retry_count=0):
     if not api_keys:
-        if "GEMINI_KEYS" in st.secrets:
-            api_keys = st.secrets["GEMINI_KEYS"]
-        else:
-            api_keys = [st.secrets.get("GEMINI_KEY")]
+        return {"choice_analysis": "API Error: No personal API keys configured. Please add them in My Settings."}
+
         
     media_context = ""
     image_parts = [] 
