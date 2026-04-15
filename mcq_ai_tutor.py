@@ -248,7 +248,7 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
 
     last_error_code = "Unknown Error"
     # Grab the selected model from the global state
-    model_name = st.session_state.get('gemini_model', 'gemini-1.5-pro')
+    model_name = st.session_state.get('gemini_model', 'gemini-2.5-flash')
     
     for key in api_keys:
         # Strip spaces to prevent silent auth failures, inject dynamic model
