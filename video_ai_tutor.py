@@ -88,24 +88,24 @@ def ask_video_ai(subject, video_url, api_keys):
        - Use sub-sub-bullets (4 spaces: `    * `) for deep, clever insights.
     2. ARRAY FORMATTING (Core Concepts): For array items, output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
     3. INLINE STYLING: Apply formatting deeply INSIDE the sentences. Use standard markdown **bold** and *italics*. Use them to highlight crucial keywords.
-    4. INLINE COLORS: Use standard Streamlit markdown colors strictly formatted as ` :color[plain text] `. 
+    4. INLINE COLORS (STRICT SYMBOL PROHIBITION): Use standard Streamlit markdown colors formatted exactly as ` :color[plain text] `. 
        - CRITICAL COLOR RULES: 
-         a) There MUST be a space before the colon. 
-         b) NEVER place punctuation (commas, periods) inside the brackets. Color only the exact keywords. 
-         c) NEVER nest bold or italic markdown inside the color brackets. 
-         d) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
-         e) Example of correct usage: The statement is :green[accurate] because it works.
-    5. STEP-BY-STEP HIGHLIGHTING: In the 'step_by_step' section, explicitly label each main step using Streamlit colors and bolding like this: `**:blue[Step 1:]**`, `**:blue[Step 2:]**`. Follow each step with its corresponding logic, using indented sub-bullets for sub-points.
+         a) There MUST be a space before the colon (e.g., `word :blue[text]`).
+         b) SYMBOL BAN: You are STRICTLY FORBIDDEN from putting symbols, arrows, or special characters inside the brackets (e.g., NO `:orange[->]`, NO `:red[#]`). Use color ONLY for alphanumeric words.
+         c) NO PUNCTUATION: Never place commas, periods, or parentheses inside the brackets.
+         d) NO NESTING: Never put **bold** or *italics* inside the color brackets.
+         e) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
+    5. STEP-BY-STEP HIGHLIGHTING: In the 'step_by_step' section, explicitly label each main step as `**:blue[Step X:]**` (where X is the number). Follow each step with its corresponding logic, using indented sub-bullets for sub-points.
     6. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags (NO <u>, NO <span>, NO <ul>, NO <li>).
     7. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
     8. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
-    9. MERMAID BULLETPROOF SYNTAX: You MUST use `graph TD`. 
-       - CRITICAL: You are STRICTLY FORBIDDEN from using parentheses `()`, curly braces, single quotes `'`, or brackets `[]` ANYWHERE inside the node labels.
-       - NO MATH/CODE SYMBOLS: You cannot use `<`, `>`, `<=`, `>=`, `==`, `!=`, or `$$`. Translate them to plain English (e.g., write "x is greater than y" instead of "x > y").
-       - SHAPES: Every single node MUST be formatted as `NodeID["Plain English Text"]`. Do not use any other shape syntax.
-       - SUBGRAPHS: Format as `subgraph Title` and close with `end`. DO NOT use curly braces.
+    9. MERMAID BULLETPROOF SYNTAX: You MUST use `graph TD` or `graph LR` (for DBMS). 
+       - NEWLINE RULE (CRITICAL): You MUST insert a newline (`\n`) after the graph declaration, before EVERY `subgraph`, after EVERY subgraph title, after EVERY node definition, and after every `end` tag. NEVER smash code onto one line.
+       - NO SYMBOLS: No parentheses `()`, curly braces, single quotes `'`, or brackets `[]` ANYWHERE inside the node labels.
+       - SHAPES: Every single node MUST be formatted as `NodeID["Plain English Text"]`.
+       - SUBGRAPHS: Format as `subgraph Title` and close with `end`.
     10. JSON FORMAT: Return ONLY valid JSON block. NO markdown wrapper.
-    11. LATEX & COLOR SEPARATION: CRITICAL - NEVER use Streamlit color tags (like :blue[text]) near any numerical variables, formulas, or LaTeX. In fact, DO NOT use Streamlit syntax for emphasis at all. Use standard markdown bolding `**text**`. Color tags surrounding `$$` crash the renderer.
+    11. LATEX & COLOR SEPARATION: NEVER use Streamlit color tags near numerical variables, formulas, or LaTeX. Use standard markdown bolding `**text**` instead.
     """
 
     payload = {
@@ -312,50 +312,48 @@ def render_video_notes(data, video_id, created_by_user="System"):
                 st.markdown(data["code_architectures"])
 
         # 7. Mermaid Diagrams
-        if data.get("mermaid_diagram") and data["mermaid_diagram"] != "N/A":
-            st.markdown("#### Visual Architecture")
+        # 2. STRICT FLOWCHART CLEANER (Only applies to graph/flowchart to avoid breaking ER/Sequence diagrams)
+        if final_mermaid.strip().startswith("graph ") or final_mermaid.strip().startswith("flowchart "):
             
-            raw_mermaid = data["mermaid_diagram"].replace('```mermaid', '').replace('```', '').strip()
-            clean_mermaid = raw_mermaid.replace('\xa0', ' ').replace(';', '')
+            # Emergency fix for smashed graph declarations (Safe string replacement, no regex slicing)
+            final_mermaid = final_mermaid.replace("graph LRsubgraph", "graph LR\nsubgraph")
+            final_mermaid = final_mermaid.replace("graph TDsubgraph", "graph TD\nsubgraph")
             
-            # 1. Universal Cleaner
-            final_mermaid = clean_mermaid.replace('$$', '').replace('\\', '')
+            # Strip unsupported arrow labels
+            final_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', final_mermaid)
+            final_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', final_mermaid)
             
-            # 2. STRICT FLOWCHART CLEANER (Protects ER & Sequence Diagrams)
-            if final_mermaid.strip().startswith("graph ") or final_mermaid.strip().startswith("flowchart "):
-                # Strip unsupported arrow labels
-                final_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', final_mermaid)
-                final_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', final_mermaid)
-                
-                # Translate dangerous symbols
-                final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
-                final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
-                final_mermaid = final_mermaid.replace('!=', ' not equal to ')
-                final_mermaid = final_mermaid.replace('==', ' equals ')
-                final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
-                final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
-                
-                # Strip quotes and HTML breaks
-                final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
-                final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
-                
-                # Safety Net for node shapes
-                final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
-                # Safety Net for Subgraphs: Forcefully strips parentheses and brackets that crash the parser
-                final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", lambda m: "subgraph " + re.sub(r'[()[\]{}]', '', m.group(1)), final_mermaid)
-
+            # Translate dangerous symbols
+            final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
+            final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
+            final_mermaid = final_mermaid.replace('!=', ' not equal to ')
+            final_mermaid = final_mermaid.replace('==', ' equals ')
+            final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
+            final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
+            
+            # Strip quotes and HTML breaks
+            final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
+            final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
+            
+            # Safety Net for node shapes
+            final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
+            
+            # Safety Net for Subgraphs: Fixes spaces, parentheses, and brackets by dynamically assigning a valid ID
+            final_mermaid = re.sub(
+                r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", 
+                lambda m: m.group(0) if "[" in m.group(0) else f'subgraph {re.sub(r"[^A-Za-z0-9]", "_", m.group(1).strip())} ["{re.sub(r"[()[\]{}]", "", m.group(1).strip())}"]', 
+                final_mermaid
+            )
             try:
                 compressed = zlib.compress(final_mermaid.encode('utf-8'), 9)
                 b64_mermaid = base64.urlsafe_b64encode(compressed).decode('utf-8').replace('=', '')
                 mermaid_url = f"https://kroki.io/mermaid/svg/{b64_mermaid}"
                 
-                # ... [Keep your existing components.html rendering logic exactly as it is] ...
-
                 # --- FULLY DYNAMIC THEME-AWARE COMPONENT ---
                 components.html(
                     f"""
+                    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
                     <style>
-                        /* Fallback default variables */
                         :root {{
                             --text-color: #31333F;
                             --bg-color: transparent;
@@ -375,11 +373,15 @@ def render_video_notes(data, video_id, created_by_user="System"):
                             top: 0; 
                             z-index: 100; 
                             display: flex; 
-                            gap: 8px; 
+                            gap: 12px; 
                             background-color: transparent; 
                             padding-bottom: 10px;
+                            align-items: center;
                         }}
                         button {{
+                            display: flex;
+                            align-items: center;
+                            gap: 5px;
                             padding: 6px 12px; 
                             cursor: pointer; 
                             border-radius: 6px; 
@@ -387,8 +389,10 @@ def render_video_notes(data, video_id, created_by_user="System"):
                             background: var(--btn-bg); 
                             color: var(--text-color); 
                             font-weight: bold;
+                            font-size: 13px;
                             transition: background 0.2s;
                         }}
+                        button .material-icons {{ font-size: 18px; }}
                         button:hover {{ background: var(--btn-hover); }}
                         
                         #wrapper {{
@@ -398,11 +402,10 @@ def render_video_notes(data, video_id, created_by_user="System"):
                             border: 1px solid var(--border-color); 
                             border-radius: 8px; 
                             background: var(--container-bg);
-                            cursor: grab; /* Shows the open hand icon */
+                            cursor: grab;
                         }}
-                        #wrapper:active {{ cursor: grabbing; /* Shows the closed hand icon */ }}
+                        #wrapper:active {{ cursor: grabbing; }}
                         
-                        /* Custom Scrollbars tied to dynamic variables */
                         #wrapper::-webkit-scrollbar {{ width: 10px; height: 10px; }}
                         #wrapper::-webkit-scrollbar-track {{ background: transparent; }}
                         #wrapper::-webkit-scrollbar-thumb {{
@@ -421,15 +424,15 @@ def render_video_notes(data, video_id, created_by_user="System"):
                         #mermaid-img {{
                             display: block; 
                             width: 100%;
-                            pointer-events: none; /* Stops the browser from "dragging" the raw image file */
-                            transition: filter 0.3s ease; /* Smooth transition for dark mode inversion */
+                            pointer-events: none;
+                            transition: filter 0.3s ease;
                         }}
                     </style>
                     
                     <div class="controls">
-                        <button type="button" onclick="zoom(1.2)">Zoom In</button>
-                        <button type="button" onclick="zoom(0.8)">Zoom Out</button>
-                        <button type="button" onclick="resetZoom()">Reset</button>
+                        <button type="button" onclick="zoom(1.2)"><span class="material-icons">zoom_in</span> Zoom In</button>
+                        <button type="button" onclick="zoom(0.8)"><span class="material-icons">zoom_out</span> Zoom Out</button>
+                        <button type="button" onclick="resetZoom()"><span class="material-icons">restart_alt</span> Reset</button>
                         <span id="zoom-level" style="margin-left: 10px; align-self: center; font-weight: 500;">100%</span>
                     </div>
                     
