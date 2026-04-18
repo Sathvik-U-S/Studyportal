@@ -2,15 +2,13 @@ import streamlit as st # type: ignore
 import os
 import requests # type: ignore
 import json
-import re
 import base64
 import zlib
 import streamlit.components.v1 as components # type: ignore
 from cache_manager import save_ai_cache, delete_ai_cache
 import mimetypes
 import re
-
-import re
+import urllib.parse
 
 def detect_language(code_str):
     """A highly robust heuristic text classifier for syntax highlighting."""
@@ -506,8 +504,7 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
                 mermaid_url = f"https://kroki.io/mermaid/svg/{b64_mermaid}"
                 
                 # --- FULLY DYNAMIC THEME-AWARE COMPONENT ---
-                components.html(
-                    f"""
+                html_content = f"""
                     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
                     <style>
                         :root {{
@@ -698,12 +695,10 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
                             wrapper.scrollTop = scrollTop - (y - startY) * 1.5;
                         }}, {{ passive: false }});
                     </script>
-                    """,
-                    height=600,
-                )
-
-                with st.expander("View Diagram Code"):
-                    st.code(final_mermaid, language="text")
+                """
+                # REPLACEMENT: Wraps HTML in Data URI for components.iframe
+                components.iframe(f"data:text/html;charset=utf-8,{urllib.parse.quote(html_content)}", height=600)
+                
             except Exception:
                 st.code(final_mermaid, language="text")
 

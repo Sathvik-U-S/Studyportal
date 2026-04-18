@@ -19,6 +19,7 @@ from video_quiz_tutor import *
 from cryptography.fernet import Fernet # type: ignore
 from student_views import *
 from admin_views import *
+import urllib.parse
 
 # 1. ESSENTIAL CONFIG & STYLING 
 st.set_page_config(layout="wide", page_title="Academic Portal", initial_sidebar_state="collapsed")
@@ -43,8 +44,7 @@ except FileNotFoundError:
     pass
 
 # --- FOOLPROOF JAVASCRIPT: Aggressively kills mobile keyboard on ALL dropdowns ---
-components.html(
-    """
+js_killer = """
     <script>
     function lockDropdowns() {
         const inputs = window.parent.document.querySelectorAll('div[data-baseweb="select"] input');
@@ -67,11 +67,9 @@ components.html(
     const observer = new MutationObserver(lockDropdowns);
     observer.observe(window.parent.document.body, { childList: true, subtree: true });
     </script>
-    """,
-    height=0, width=0
-)
-
-
+"""
+# EXACT REPLACEMENT: Uses iframe with a data URI to bypass deprecation
+components.iframe(f"data:text/html;charset=utf-8,{urllib.parse.quote(js_killer)}", height=0, width=0)
 # Create a fully mutable deep-copy of secrets
 def to_dict(obj):
     if hasattr(obj, 'items'):

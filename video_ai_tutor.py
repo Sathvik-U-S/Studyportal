@@ -7,7 +7,7 @@ import streamlit as st # type: ignore
 import base64
 import zlib
 import streamlit.components.v1 as components # type: ignore
-
+import urllib.parse
 from cache_manager import save_video_cache, delete_video_cache
 
 def extract_youtube_id(url):
@@ -350,8 +350,7 @@ def render_video_notes(data, video_id, created_by_user="System"):
                 mermaid_url = f"https://kroki.io/mermaid/svg/{b64_mermaid}"
                 
                 # --- FULLY DYNAMIC THEME-AWARE COMPONENT ---
-                components.html(
-                    f"""
+                html_content = f"""
                     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
                     <style>
                         :root {{
@@ -446,12 +445,10 @@ def render_video_notes(data, video_id, created_by_user="System"):
                         // --- DYNAMIC STREAMLIT THEME SYNC ---
                         function syncTheme() {{
                             try {{
-                                // Read Streamlit's root styles directly from the parent browser window
                                 const parentStyle = window.parent.getComputedStyle(window.parent.document.querySelector('.stApp') || window.parent.document.body);
                                 const bgColor = parentStyle.backgroundColor;
                                 const textColor = parentStyle.color;
                                 
-                                // Determine if Streamlit is currently in Dark Mode by checking background brightness
                                 const rgb = bgColor.match(/\\d+/g);
                                 let isDark = false;
                                 if (rgb && rgb.length >= 3) {{
@@ -459,10 +456,7 @@ def render_video_notes(data, video_id, created_by_user="System"):
                                     isDark = brightness < 128;
                                 }}
 
-                                // Update CSS Variables dynamically to match Streamlit exactly
                                 document.documentElement.style.setProperty('--text-color', textColor);
-                                
-                                // Generate intelligent semi-transparent colors based on the text color
                                 const textRgba = textColor.replace('rgb', 'rgba').replace(')', ', 0.2)');
                                 const btnBg = textColor.replace('rgb', 'rgba').replace(')', ', 0.05)');
                                 const btnHover = textColor.replace('rgb', 'rgba').replace(')', ', 0.1)');
@@ -473,21 +467,17 @@ def render_video_notes(data, video_id, created_by_user="System"):
                                 document.documentElement.style.setProperty('--btn-hover', btnHover);
                                 document.documentElement.style.setProperty('--container-bg', containerBg);
 
-                                // THE MAGIC TRICK: If Streamlit is in dark mode, invert the Light Mermaid SVG!
                                 const img = document.getElementById('mermaid-img');
                                 if (isDark) {{
-                                    // Invert colors and rotate hues back to keep specific node colors mostly intact
                                     img.style.filter = 'invert(0.85) hue-rotate(180deg)';
                                 }} else {{
                                     img.style.filter = 'none';
                                 }}
-
                             }} catch (e) {{
-                                console.log("Theme sync blocked by CORS or unavailable. Using fallback.");
+                                console.log("Theme sync fallback.");
                             }}
                         }}
 
-                        // Sync instantly, and then check every second in case the user changes themes in the Streamlit menu
                         syncTheme();
                         setInterval(syncTheme, 1000);
 
@@ -511,12 +501,9 @@ def render_video_notes(data, video_id, created_by_user="System"):
                             zoomLevel.innerText = "100%";
                         }}
 
-                        // --- Click and Drag to Pan ---
+                        // --- Desktop Mouse Events ---
                         let isDown = false;
-                        let startX;
-                        let startY;
-                        let scrollLeft;
-                        let scrollTop;
+                        let startX, startY, scrollLeft, scrollTop;
 
                         wrapper.addEventListener('mousedown', (e) => {{
                             isDown = true;
@@ -525,24 +512,39 @@ def render_video_notes(data, video_id, created_by_user="System"):
                             scrollLeft = wrapper.scrollLeft;
                             scrollTop = wrapper.scrollTop;
                         }});
-
                         wrapper.addEventListener('mouseleave', () => {{ isDown = false; }});
                         wrapper.addEventListener('mouseup', () => {{ isDown = false; }});
-
                         wrapper.addEventListener('mousemove', (e) => {{
                             if (!isDown) return;
                             e.preventDefault();
                             const x = e.pageX - wrapper.offsetLeft;
                             const y = e.pageY - wrapper.offsetTop;
-                            wrapper.scrollLeft = scrollLeft - (x - startX) * 1.5; // Multiply by 1.5 for faster dragging
+                            wrapper.scrollLeft = scrollLeft - (x - startX) * 1.5; 
                             wrapper.scrollTop = scrollTop - (y - startY) * 1.5;
                         }});
+
+                        // --- Mobile Touch Events ---
+                        wrapper.addEventListener('touchstart', (e) => {{
+                            isDown = true;
+                            startX = e.touches[0].pageX - wrapper.offsetLeft;
+                            startY = e.touches[0].pageY - wrapper.offsetTop;
+                            scrollLeft = wrapper.scrollLeft;
+                            scrollTop = wrapper.scrollTop;
+                        }});
+                        wrapper.addEventListener('touchend', () => {{ isDown = false; }});
+                        wrapper.addEventListener('touchmove', (e) => {{
+                            if (!isDown) return;
+                            e.preventDefault(); 
+                            const x = e.touches[0].pageX - wrapper.offsetLeft;
+                            const y = e.touches[0].pageY - wrapper.offsetTop;
+                            wrapper.scrollLeft = scrollLeft - (x - startX) * 1.5;
+                            wrapper.scrollTop = scrollTop - (y - startY) * 1.5;
+                        }}, {{ passive: false }});
                     </script>
-                    """,
-                    height=550,
-                )
-                with st.expander("View Diagram Code"):
-                    st.code(final_mermaid, language="text")
+                """
+                # REPLACEMENT: Wraps HTML in Data URI for components.iframe
+                components.iframe(f"data:text/html;charset=utf-8,{urllib.parse.quote(html_content)}", height=600)
+                
             except Exception:
                 st.code(final_mermaid, language="text")
         # 8. Interview Prep
