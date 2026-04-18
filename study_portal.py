@@ -42,22 +42,33 @@ try:
 except FileNotFoundError:
     pass
 
-# --- FOOLPROOF JAVASCRIPT: Kills mobile keyboard on dropdowns without breaking clicks ---
-st.html(
+# --- FOOLPROOF JAVASCRIPT: Aggressively kills mobile keyboard on ALL dropdowns ---
+components.html(
     """
     <script>
-    setInterval(function() {
+    function lockDropdowns() {
         const inputs = window.parent.document.querySelectorAll('div[data-baseweb="select"] input');
         inputs.forEach(function(input) {
-            // Setting readonly prevents the phone keyboard from ever popping up
+            // Setting readonly prevents the phone keyboard from ever popping up, but allows clicks!
             if (!input.hasAttribute('readonly')) {
                 input.setAttribute('readonly', 'readonly');
                 input.setAttribute('inputmode', 'none');
             }
         });
-    }, 500); // Runs in the background to catch newly loaded tabs
+    }
+
+    // 1. Run immediately for dropdowns already on the screen (Subject, Week)
+    lockDropdowns();
+
+    // 2. Run aggressively on a loop to catch anything Streamlit renders late
+    setInterval(lockDropdowns, 200);
+
+    // 3. Watch for dynamic changes (Activity, Mode)
+    const observer = new MutationObserver(lockDropdowns);
+    observer.observe(window.parent.document.body, { childList: true, subtree: true });
     </script>
-    """
+    """,
+    height=0, width=0
 )
 
 
@@ -69,7 +80,7 @@ def to_dict(obj):
 
 config = to_dict(st.secrets)
 
-# Initialize Authenticator 
+# 1. INITIALIZE AUTHENTICATOR
 authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
@@ -77,7 +88,7 @@ authenticator = stauth.Authenticate(
     config['cookie']['expiry_days']
 )
 
-# Render the Login Form 
+# 2. RENDER LOGIN FORM
 authenticator.login(location='main')
 
 # --- THE STREAMLIT CLOUD "COOKIE LATENCY" HACK ---
@@ -85,11 +96,10 @@ authenticator.login(location='main')
 if st.session_state.get("authentication_status") is None:
     if "cloud_cookie_sync" not in st.session_state:
         st.session_state["cloud_cookie_sync"] = True
-        import time
-        time.sleep(0.3) # Give the browser 300ms to send the cookie over the internet
+        time.sleep(0.3) 
         st.rerun()
 
-# Handle Login States
+# 3. HANDLE LOGIN STATES
 if st.session_state.get("authentication_status") is False:
     st.error('Username/password is incorrect', icon=":material/error:")
     st.stop()
@@ -101,72 +111,60 @@ elif st.session_state.get("authentication_status") is None:
 elif st.session_state.get("authentication_status"):
     current_username = st.session_state["username"]
     
-# Render the Login Form
-try:
-    authenticator.login()
-except Exception as e:
-    pass
-
-# Handle Login States
-if st.session_state.get("authentication_status") is False:
-    st.error('Username/password is incorrect', icon=":material/error:")
-    st.stop()
-    
-elif st.session_state.get("authentication_status") is None:
-    st.warning('Please enter your username and password', icon=":material/warning:")
-    st.stop()
-    
-elif st.session_state.get("authentication_status"):
-    current_username = st.session_state["username"]
-    
+    # Setup session user info
     user_config_name = config['credentials']['usernames'][current_username].get('name', 'Sathvik')
     st.session_state["name"] = user_config_name 
     st.session_state["role"] = config['credentials']['usernames'][current_username].get('role', 'user')
     current_user_role = st.session_state["role"]
 
-    # OPTIMIZATION: Pre-fetch and decrypt the user's API keys ONCE per session
-    if "user_api_keys" not in st.session_state:
-        st.session_state["user_api_keys"] = []
+    # ==========================================
+    # "CURIOUS" API KEY SYNC & EDGE CASE HANDLER
+    # ==========================================
+    # Check every page load if the list is empty to solve the mobile sync lag.
+    if not st.session_state.get("user_api_keys"):
         res = fetch_data("SELECT api_key FROM user_settings WHERE username = %s", (current_username,))
         
         if res and res[0]['api_key']:
             try:
-                key = st.secrets.get("ENCRYPTION_KEY")
-                f = Fernet(key.encode())
-                raw_data = res[0]['api_key']
+                # Initialize the decryptor
+                enc_secret = st.secrets.get("ENCRYPTION_KEY")
+                f = Fernet(enc_secret.encode())
+                raw_db_value = res[0]['api_key']
                 
-                # 1. BULLETPROOF PARSING: Catches single quotes, malformed JSON, and bare strings
+                # Handle JSON vs Python Literals (single quotes)
                 import ast
                 try:
-                    saved_keys = json.loads(raw_data)
+                    saved_list = json.loads(raw_db_value)
                 except:
                     try:
-                        saved_keys = ast.literal_eval(raw_data)
+                        saved_list = ast.literal_eval(raw_db_value)
                     except:
-                        saved_keys = [raw_data]
-                        
-                if not isinstance(saved_keys, list):
-                    saved_keys = [saved_keys]
-                
-                # 2. BULLETPROOF DECRYPTION: Rescues old unencrypted keys
-                decrypted_keys = []
-                for enc_key in saved_keys:
-                    if not enc_key or not isinstance(enc_key, str): 
-                        continue
-                    enc_key = enc_key.strip()
-                    try:
-                        decrypted_keys.append(f.decrypt(enc_key.encode()).decode())
-                    except: 
-                        # FALLBACK: If decryption fails, JUST USE THE RAW KEY!
-                        # This completely prevents the "Keys Not Added" error if encryption gets desynced.
-                        decrypted_keys.append(enc_key)
-                
-                # STRICT FIX: Purge any empty strings or blank spaces from the list
-                valid_keys = [k for k in decrypted_keys if k and str(k).strip()]
-                st.session_state["user_api_keys"] = valid_keys
+                        saved_list = [raw_db_value]
 
+                if not isinstance(saved_list, list):
+                    saved_list = [saved_list]
+
+                # Decryption Mismatch Handshake & Raw Fallback
+                decrypted_list = []
+                for entry in saved_list:
+                    if not entry or not isinstance(entry, str):
+                        continue
+                    
+                    clean_entry = entry.strip()
+                    try:
+                        decrypted_val = f.decrypt(clean_entry.encode()).decode()
+                        decrypted_list.append(decrypted_val)
+                    except Exception:
+                        # Rescue raw keys if decryption fails due to secret key mismatch
+                        if clean_entry.startswith("AIza"):
+                            decrypted_list.append(clean_entry)
+                
+                # Final Cleanup: Remove duplicates and blanks
+                final_keys = list(dict.fromkeys([k for k in decrypted_list if k and k.strip()]))
+                st.session_state["user_api_keys"] = final_keys
+                
             except Exception as e:
-                st.error(f"Failed to initialize encryption: {e}", icon=":material/error:")
+                st.sidebar.error(f"API Sync Warning: {e}")
 
     # SIDEBAR & NAVIGATION
     st.sidebar.markdown(f"## :material/account_circle: Welcome, {st.session_state['name']}")

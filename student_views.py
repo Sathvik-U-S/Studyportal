@@ -191,64 +191,88 @@ def render_take_assessment():
                                         st.rerun(scope="fragment")
 
             # ==========================================
-            # ADMIN CONTROLS (Quick Edit & Locked Flags)
+            # ADMIN CONTROLS (Button-based Quick Edit & Flags)
             # ==========================================
-            if st.session_state.get("role") == "admin":
-                
-                # Check database to see if these are ALREADY flagged
+            if st.session_state.get("role") == "admin":                
+                # Check database status for flags
                 q_flagged = bool(fetch_data("SELECT id FROM question_issues WHERE question_id=%s LIMIT 1", (q['id'],)))
                 ai_flagged = bool(cached_res.get('needs_attention', False)) if cached_res else False
                 
-                c_qe, c_flag1, c_flag2 = st.columns(3)
-                
-                # 1. MOBILE-FRIENDLY QUICK EDIT
-                if c_qe.toggle("Quick Edit", key=f"tqe_{q['id']}"):
-                    with st.form(f"qe_f_{q['id']}"):
-                        n_head = st.text_area("Heading", value=q['heading'] or "", height=68)
-                        cm1, cm2 = st.columns([1, 2])
-                        curr_mtype = q['media_type'] or "text"
-                        n_mtype = cm1.selectbox("Media", ["text", "code", "image"], index=["text", "code", "image"].index(curr_mtype), key=f"qemt_{q['id']}", label_visibility="collapsed")
-                        n_cont = cm2.text_input("Content", value=q['media_content'] or "", key=f"qemc_{q['id']}", label_visibility="collapsed", placeholder="Media Content")
+                # Initialize edit state for this specific question
+                qe_state_key = f"qe_mode_{q['id']}"
+                if qe_state_key not in st.session_state:
+                    st.session_state[qe_state_key] = False
+
+                ca1, ca2, ca3 = st.columns([1, 1, 1])
+
+                with ca1:
+                    if not st.session_state[qe_state_key]:
+                        if st.button(":material/edit: Edit", key=f"btn_qe_{q['id']}", use_container_width=True):
+                            st.session_state[qe_state_key] = True
+                            st.rerun(scope="fragment")
+                    else:
+                        if st.button(":material/close: Cancel", key=f"btn_can_{q['id']}", use_container_width=True):
+                            st.session_state[qe_state_key] = False
+                            st.rerun(scope="fragment")
+
+
+                with ca2:
+                    # Question Data Flag (Locked if already flagged)
+                    if st.button(":material/flag: Flag Q", key=f"btn_fq_{q['id']}", disabled=q_flagged, use_container_width=True):
+                        st.session_state[f"show_fn_{q['id']}"] = True
+
+                with ca3:
+                    # AI Response Flag (Locked if already flagged)
+                    if st.button(":material/smart_toy: Flag AI", key=f"btn_fai_{q['id']}", disabled=ai_flagged or not cached_res, use_container_width=True):
+                        st.session_state[f"show_afn_{q['id']}"] = True
+
+                # --- QUICK EDIT FORM (Minimal Mobile Layout) ---
+                if st.session_state[qe_state_key]:
+                    with st.form(f"qe_form_logic_{q['id']}"):
+                        n_head = st.text_area("Heading", value=q['heading'] or "", height=100, label_visibility="collapsed")
+                        
+                        c_m1, c_m2 = st.columns([1, 2])
+                        curr_mt = q['media_type'] or "text"
+                        n_mt = c_m1.selectbox("Type", ["text", "code", "image"], index=["text", "code", "image"].index(curr_mt), key=f"qemt_sel_{q['id']}")
+                        n_mc = c_m2.text_input("Media Content", value=q['media_content'] or "", placeholder="URL or Text", key=f"qemc_in_{q['id']}")
                         
                         upd_opts = []
                         if q.get('q_type') != 'numerical':
-                            st.caption("Options")
                             for idx, opt in enumerate(options):
+                                st.divider()
                                 co1, co2 = st.columns([1, 2])
                                 curr_ot = opt['media_type'] or "text"
-                                ot = co1.selectbox(f"T{idx}", ["text", "code", "image"], index=["text", "code", "image"].index(curr_ot), key=f"qeot_{opt['id']}", label_visibility="collapsed")
+                                ot = co1.selectbox(f"Opt {idx+1} Type", ["text", "code", "image"], index=["text", "code", "image"].index(curr_ot), key=f"qeot_s_{opt['id']}")
                                 raw_val = opt['media_content'] if opt['media_content'] else opt['option_text']
-                                ov = co2.text_input(f"V{idx}", value=raw_val or "", key=f"qeov_{opt['id']}", label_visibility="collapsed")
+                                ov = co2.text_input(f"Opt {idx+1} Val", value=raw_val or "", key=f"qeov_i_{opt['id']}")
                                 upd_opts.append((opt['id'], ot, ov))
-                                
-                        if st.form_submit_button("Save Edits", type="primary", use_container_width=True):
-                            final_mtype = n_mtype if n_mtype != "text" else None
-                            execute_query("UPDATE questions SET heading=%s, media_type=%s, media_content=%s WHERE id=%s", (n_head, final_mtype, n_cont, q['id']))
+                        
+                        if st.form_submit_button(":material/save: Save & Update", type="primary", use_container_width=True):
+                            final_mt = n_mt if n_mt != "text" else None
+                            execute_query("UPDATE questions SET heading=%s, media_type=%s, media_content=%s WHERE id=%s", (n_head, final_mt, n_mc, q['id']))
                             
                             for oid, ot, ov in upd_opts:
                                 if ot == "text":
                                     execute_query("UPDATE options SET option_text=%s, media_type=NULL, media_content=NULL WHERE id=%s", (ov, oid))
                                 else:
                                     execute_query("UPDATE options SET option_text=NULL, media_type=%s, media_content=%s WHERE id=%s", (ot, ov, oid))
-                            st.success("Saved!", icon=":material/check_circle:")
+                            
+                            st.session_state[qe_state_key] = False
                             st.rerun(scope="fragment")
 
-                # 2. LOCKED QUESTION FLAG
-                q_toggle = c_flag1.toggle("Flag Q Data", value=q_flagged, disabled=q_flagged, key=f"tog_q_{q['id']}")
-                if q_toggle and not q_flagged:
-                    q_note = st.text_input("Describe issue:", key=f"txt_q_{q['id']}")
-                    if st.button("Save Q Flag", key=f"save_q_{q['id']}", type="primary"):
-                        execute_query("INSERT INTO question_issues (question_id, issue_description, reported_by) VALUES (%s, %s, %s)", (q['id'], q_note, st.session_state.get("name")))
-                        st.success("Flagged!", icon=":material/check_circle:")
+                # --- MINI FLAG INPUTS ---
+                if st.session_state.get(f"show_fn_{q['id']}"):
+                    fn = st.text_input("Question Issue Description:", key=f"fn_in_{q['id']}")
+                    if st.button("Submit Q Flag", key=f"sfn_{q['id']}"):
+                        execute_query("INSERT INTO question_issues (question_id, issue_description, reported_by) VALUES (%s, %s, %s)", (q['id'], fn, st.session_state.get("name")))
+                        st.session_state[f"show_fn_{q['id']}"] = False
                         st.rerun(scope="fragment")
-                
-                # 3. LOCKED AI FLAG
-                ai_toggle = c_flag2.toggle("Flag AI", value=ai_flagged, disabled=ai_flagged, key=f"tog_ai_{q['id']}")
-                if ai_toggle and not ai_flagged:
-                    ai_note = st.text_input("Describe issue:", key=f"txt_ai_{q['id']}")
-                    if st.button("Save AI Flag", key=f"save_ai_{q['id']}", type="primary"):
-                        execute_query("UPDATE mcq_cache SET needs_attention=TRUE, attention_note=%s WHERE cache_key=%s", (ai_note, ai_key))
-                        st.success("Flagged!", icon=":material/check_circle:")
+
+                if st.session_state.get(f"show_afn_{q['id']}"):
+                    afn = st.text_input("AI Issue Description:", key=f"afn_in_{q['id']}")
+                    if st.button("Submit AI Flag", key=f"safn_{q['id']}"):
+                        execute_query("UPDATE mcq_cache SET needs_attention=TRUE, attention_note=%s WHERE cache_key=%s", (afn, ai_key))
+                        st.session_state[f"show_afn_{q['id']}"] = False
                         st.rerun(scope="fragment")
 
 
