@@ -9,22 +9,47 @@ import base64
 # --- HEALTH CHECK LOGIC (Moved here to run ONCE during save) ---
 def verify_mermaid_with_kroki(mermaid_str):
     if not mermaid_str or str(mermaid_str).strip() in ["", "N/A", "None"]: return True 
+    
     raw_mermaid = str(mermaid_str).replace('```mermaid', '').replace('```', '').strip()
+    
+    # 1. Universal Cleanups
     clean_mermaid = raw_mermaid.replace('\xa0', ' ').replace(';', '')
-    clean_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', clean_mermaid)
-    clean_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', clean_mermaid)
+    final_mermaid = clean_mermaid.replace('$$', '').replace('\\', '')
     
-    # Kroki supports a lot, so we just remove double dollar signs and HTML which clash with simple string definitions.
-    final_mermaid = clean_mermaid.replace('$$', '').replace('<br>', ' ').replace('<br/>', ' ')
-    
+    # 2. STRICT FLOWCHART CLEANER (Only applies to graph/flowchart to avoid breaking ER/Sequence diagrams)
+    if final_mermaid.strip().startswith("graph ") or final_mermaid.strip().startswith("flowchart "):
+        # Strip unsupported arrow labels
+        final_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', final_mermaid)
+        final_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', final_mermaid)
+        
+        # Translate dangerous symbols
+        final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
+        final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
+        final_mermaid = final_mermaid.replace('!=', ' not equal to ')
+        final_mermaid = final_mermaid.replace('==', ' equals ')
+        final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
+        final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
+        
+        # Strip quotes and HTML breaks
+        final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
+        final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
+        
+        # Safety Net for node shapes
+        final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
+        
+        # Safety Net for Subgraphs: Forcefully strips parentheses and brackets that crash the parser
+        final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", lambda m: "subgraph " + re.sub(r'[()[\]{}]', '', m.group(1)), final_mermaid)
+
     try:
         compressed = zlib.compress(final_mermaid.encode('utf-8'), 9)
         b64_mermaid = base64.urlsafe_b64encode(compressed).decode('utf-8').replace('=', '')
         mermaid_url = f"https://kroki.io/mermaid/svg/{b64_mermaid}"
+        
         res = requests.get(mermaid_url, timeout=4)
         if res.status_code == 400: return False 
         return True 
-    except: return True 
+    except: 
+        return True
 
 def is_response_broken(ai_data):
     if not isinstance(ai_data, dict): return True 

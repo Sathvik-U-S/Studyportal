@@ -175,7 +175,15 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
 
     sub_l = subject.strip().lower() if subject else ""
     SUBJECT_GUIDANCE = {
-        "dbms": "Focus on ACID properties, relational algebra, SQL query execution plans, normalization, indexing, joins, and database state transitions.",
+        "dbms": """
+        Focus on ACID properties, relational algebra, SQL query execution plans, normalization, indexing, joins, and database state transitions.
+        **DBMS SPECIAL INSTRUCTIONS FOR MERMAID DIAGRAMS:**
+        - For Indexing or B+ Tree questions, use `graph TD` to draw the tree structure, showing the root, internal nodes, and leaf node pointers.
+        - For Concurrency, Deadlock, or Transaction Schedule questions, use `sequenceDiagram` to plot T1 and T2 interacting with database variables over time.
+        - For Normalization questions, use `graph LR` to draw the Functional Dependency graph (e.g., A --> B) to visually expose partial or transitive dependencies.
+        - For Schema or Entity-Relationship questions, use `erDiagram` (or `classDiagram`) to map the tables, list their Primary/Foreign Keys, and draw their relationship cardinality.
+        - For SQL or Relational Algebra questions, use `graph BT` (Bottom-Up) to draw the visual Execution Plan tree, starting from base tables up to the final projection.
+        """,
         "mad 1": "Simulate execution step-by-step. Track variable scope, control flow, function calls, memory state, and edge cases.",
         "mad 2": "Simulate execution step-by-step. Focus on asynchronous execution, event loop behavior, callbacks, promises, and UI lifecycle.",
         "java": "Trace object creation, OOP principles, inheritance, polymorphism, memory allocation, and runtime execution order.",
@@ -196,27 +204,30 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
     SUBJECT SPECIFIC FOCUS: {guidance}
     
     STRICT FORMATTING & PEDAGOGY RULES:
-    1. STRICT MULTIPLE BULLETS: Format EVERY textual section as a bulleted list using `- `. CRITICAL: You MUST insert a newline (`\\n`) before EVERY single bullet point so they render on separate lines. NEVER smash points together. Limit to 1-2 sentences per point.
+    1. CLEVER POINT-WISE HIERARCHY: For the `choice_analysis`, `wrong_options_analysis`, `common_mistake_trigger`, and `practical_relevance` sections, you MUST use a highly structured, point-wise format. NEVER write thick, blocky paragraphs for these sections. 
+       - Use main bullets (`- `) for core ideas.
+       - Use indented sub-bullets (2 spaces: `  - `) for supporting details.
+       - Use sub-sub-bullets (4 spaces: `    * `) for deep, clever insights.
     2. ARRAY FORMATTING (Core Concepts): For array items, output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
     3. INLINE STYLING: Apply formatting deeply INSIDE the sentences. Use standard markdown **bold** and *italics*. Use them to highlight crucial keywords.
     4. INLINE COLORS: Use standard Streamlit markdown colors strictly formatted as ` :color[plain text] `. 
-    - CRITICAL COLOR RULES: 
-     a) There MUST be a space before the colon. 
-     b) NEVER place punctuation (commas, periods) inside the brackets. Color only the exact keywords. 
-     c) NEVER nest bold or italic markdown inside the color brackets. 
-     d) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
-     e) Example of correct usage: The statement is :green[accurate] because it works.
-     f) Example of incorrect usage (DO NOT DO THIS): :red[This statement is false, and here is why.]
-    5. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags (NO <u>, NO <span>, NO <ul>, NO <li>).
-    6. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
-    7. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
-    8. MERMAID BULLETPROOF SYNTAX: You MUST use `graph TD`. 
+       - CRITICAL COLOR RULES: 
+         a) There MUST be a space before the colon. 
+         b) NEVER place punctuation (commas, periods) inside the brackets. Color only the exact keywords. 
+         c) NEVER nest bold or italic markdown inside the color brackets. 
+         d) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
+         e) Example of correct usage: The statement is :green[accurate] because it works.
+    5. STEP-BY-STEP HIGHLIGHTING: In the 'step_by_step' section, explicitly label each main step using Streamlit colors and bolding like this: `**:blue[Step 1:]**`, `**:blue[Step 2:]**`. Follow each step with its corresponding logic, using indented sub-bullets for sub-points.
+    6. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags (NO <u>, NO <span>, NO <ul>, NO <li>).
+    7. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
+    8. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
+    9. MERMAID BULLETPROOF SYNTAX: You MUST use `graph TD`. 
        - CRITICAL: You are STRICTLY FORBIDDEN from using parentheses `()`, curly braces, single quotes `'`, or brackets `[]` ANYWHERE inside the node labels.
        - NO MATH/CODE SYMBOLS: You cannot use `<`, `>`, `<=`, `>=`, `==`, `!=`, or `$$`. Translate them to plain English (e.g., write "x is greater than y" instead of "x > y").
        - SHAPES: Every single node MUST be formatted as `NodeID["Plain English Text"]`. Do not use any other shape syntax.
        - SUBGRAPHS: Format as `subgraph Title` and close with `end`. DO NOT use curly braces.
-    9. JSON FORMAT: Return ONLY valid JSON block. NO markdown wrapper.
-    10. LATEX & COLOR SEPARATION: CRITICAL - NEVER use Streamlit color tags (like :blue[text]) near any numerical variables, formulas, or LaTeX. In fact, DO NOT use Streamlit syntax for emphasis at all. Use standard markdown bolding `**text**`. Color tags surrounding `$$` crash the renderer.
+    10. JSON FORMAT: Return ONLY valid JSON block. NO markdown wrapper.
+    11. LATEX & COLOR SEPARATION: CRITICAL - NEVER use Streamlit color tags (like :blue[text]) near any numerical variables, formulas, or LaTeX. In fact, DO NOT use Streamlit syntax for emphasis at all. Use standard markdown bolding `**text**`. Color tags surrounding `$$` crash the renderer.
     """
     api_parts = [{"text": prompt_text}]
     
@@ -392,12 +403,21 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
                 return False
             return True
 
-        # PYTHON AUTO-CORRECTOR: Fixes smashed bullet points
+        # PYTHON AUTO-CORRECTOR: Fixes formatting and guarantees "Step X" styling
         def format_bullets(val):
             if not val: return ""
             v_str = str(val).strip()
-            # Finds periods/punctuation followed by a hyphen and forces a double line break
-            v_str = re.sub(r'([.?!])\s*-\s+', r'\1\n\n- ', v_str)
+            
+            # 1. Gentle fix for smashed bullets
+            # Only forces a line break if punctuation is immediately followed by a hyphen without a newline. 
+            # This stops the aggressive sentence-slicing from the previous version.
+            v_str = re.sub(r'(?<!\n)([a-z0-9.?!])\s+(-\s+[A-Z])', r'\1\n\n\2', v_str)
+            
+            # 2. THE STEP HIGHLIGHTER (Native Streamlit Syntax)
+            # This dynamically catches "Step 1:", "**Step 1:**", ":blue[Step 1:]", etc.
+            # It strips out the AI's messy attempts and forcefully re-wraps them in perfect `**:blue[Step X:]**` syntax.
+            v_str = re.sub(r'\**(?::[a-z]+\[)?([Ss]tep\s+\d+:?)(?:\])?\**', r'**:blue[\1]**', v_str)
+            
             return v_str
 
         
@@ -438,26 +458,37 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
             ct = re.sub(r'\n?```$', '', ct)
             st.markdown(ct)
 
-        # 6. Mermaid Flowchart
-        # 7. Mermaid Diagrams
+        # 6. Mermaid Diagrams (Context-Aware Rendering)
         if data.get("mermaid_diagram") and data["mermaid_diagram"] != "N/A":
             st.markdown("#### :material/architecture: Visual Architecture")
             raw_mermaid = data["mermaid_diagram"].replace('```mermaid', '').replace('```', '').strip()
-            clean_mermaid = raw_mermaid.replace('\xa0', ' ').replace(';', '')
-            clean_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', clean_mermaid)
-            clean_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', clean_mermaid)
-            final_mermaid = clean_mermaid
-            final_mermaid = final_mermaid.replace('$$', '').replace('\\', '')
-            final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
-            final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
-            final_mermaid = final_mermaid.replace('!=', ' not equal to ')
-            final_mermaid = final_mermaid.replace('==', ' equals ')
-            final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
-            final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
-            final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
-            final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
-            final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
-            final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", r"subgraph \1", final_mermaid)
+            
+            # 1. Universal Cleanups
+            clean_mermaid = raw_mermaid.replace('\xa0', ' ')
+            final_mermaid = clean_mermaid.replace('$$', '').replace('\\', '')
+            
+            # 2. STRICT FLOWCHART CLEANER (Only applies to graph/flowchart to avoid breaking ER/Sequence diagrams)
+            if final_mermaid.strip().startswith("graph ") or final_mermaid.strip().startswith("flowchart "):
+                # Strip unsupported arrow labels
+                final_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', final_mermaid)
+                final_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', final_mermaid)
+                
+                # Translate dangerous symbols
+                final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
+                final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
+                final_mermaid = final_mermaid.replace('!=', ' not equal to ')
+                final_mermaid = final_mermaid.replace('==', ' equals ')
+                final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
+                final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
+                
+                # Strip quotes and HTML breaks
+                final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
+                final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
+                
+                # Safety Net for node shapes
+                final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
+                # Safety Net for Subgraphs: Forcefully strips parentheses and brackets that crash the parser
+                final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", lambda m: "subgraph " + re.sub(r'[()[\]{}]', '', m.group(1)), final_mermaid)
 
             try:
                 compressed = zlib.compress(final_mermaid.encode('utf-8'), 9)

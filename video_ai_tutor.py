@@ -55,7 +55,15 @@ def ask_video_ai(subject, video_url, api_keys):
         "mlf": "Focus heavily on mathematical foundations, statistical theory, linear algebra, and calculus. If the professor skips a derivation step, YOU must fill in the missing mathematical proofs using LaTeX. Visualize matrix dimensional changes.",
         "mlt": "Focus on algorithms in practice, loss function optimization, hyperparameter tuning, and implementation details. Detail the mathematical formula alongside its conceptual Python/NumPy implementation. Highlight common pitfalls like data leakage or overfitting.",
         "mad 2": "Focus on full-stack architecture, API design, asynchronous execution, and component lifecycles (Vue/React). Trace data flow from the frontend, through the backend, to the database using Mermaid sequence diagrams.",
-        "dbms": "Focus on ACID properties, relational algebra, execution plans, normal forms, and transaction states.",
+        "dbms": """
+        Focus on ACID properties, relational algebra, SQL query execution plans, normalization, indexing, joins, and database state transitions.
+        **DBMS SPECIAL INSTRUCTIONS FOR MERMAID DIAGRAMS:**
+        - For Indexing or B+ Tree topics, use `graph TD` to draw the tree structure, showing the root, internal nodes, and leaf node pointers.
+        - For Concurrency, Deadlock, or Transaction topics, use `sequenceDiagram` to plot T1 and T2 interacting with database variables over time.
+        - For Normalization topics, use `graph LR` to draw the Functional Dependency graph (e.g., A --> B) to visually expose dependencies.
+        - For Schema or Entity-Relationship topics, use `erDiagram` to map the tables, list Primary/Foreign Keys, and draw relationship cardinality.
+        - For SQL or Relational Algebra topics, use `graph BT` (Bottom-Up) to draw the visual Execution Plan tree.
+        """,
         "java": "Focus on JVM memory management, OOP architecture, inheritance trees, and multithreading behavior.",
         "pdsa": "Focus on algorithmic time/space complexity, data structure state changes, and recursion trees."
     }
@@ -74,32 +82,30 @@ def ask_video_ai(subject, video_url, api_keys):
     {guidance}
     
     STRICT FORMATTING & PEDAGOGY RULES:
-    1. STRICTLY BULLETS ONLY: You MUST heavily rely on bulleted lists (`- `) and nested sub-points (`  - ` or `    * `) to break down logic. YOU ARE STRICTLY FORBIDDEN from using numbered or ordered lists (e.g., 1., 2., 3.). 
-    2. MARKDOWN HEADINGS: Use `####` (4 hashes) or `#####` (5 hashes) to create clear, structured subheadings within your text blocks.
-    3. RICH TEXT STYLING: Apply deep inline formatting. Use **bold**, *italics*, and ***bold & italics*** for emphasis. Use ~~strikethrough~~ to explicitly highlight common misconceptions or incorrect assumptions debunked in the lecture.
+    1. CLEVER POINT-WISE HIERARCHY: For the `choice_analysis`, `wrong_options_analysis`, `common_mistake_trigger`, and `practical_relevance` sections, you MUST use a highly structured, point-wise format. NEVER write thick, blocky paragraphs for these sections. 
+       - Use main bullets (`- `) for core ideas.
+       - Use indented sub-bullets (2 spaces: `  - `) for supporting details.
+       - Use sub-sub-bullets (4 spaces: `    * `) for deep, clever insights.
+    2. ARRAY FORMATTING (Core Concepts): For array items, output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
+    3. INLINE STYLING: Apply formatting deeply INSIDE the sentences. Use standard markdown **bold** and *italics*. Use them to highlight crucial keywords.
     4. INLINE COLORS: Use standard Streamlit markdown colors strictly formatted as ` :color[plain text] `. 
-    - CRITICAL COLOR RULES: 
-     a) There MUST be a space before the colon. 
-     b) NEVER place punctuation (commas, periods) inside the brackets. Color only the exact keywords. 
-     c) NEVER nest bold or italic markdown inside the color brackets. 
-     d) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
-     e) Example of correct usage: The statement is :green[accurate] because it works.
-     f) Example of incorrect usage (DO NOT DO THIS): :red[This statement is false, and here is why.]
-    5. STRUCTURAL ELEMENTS: Use `> blockquotes` to emphasize exact definitions, core theorems, or important quotes from the professor. Use horizontal rules (`---`) on a new line to cleanly separate distinct thematic sections within your explanation.
-    6. INLINE COLORS: Use standard Streamlit markdown colors for both text and background. Text color format: `:color[text]`. Background color format: `:color-background[text]`. Supported colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`. Example text color: `:orange[crucial concept]`. Use them often to make the explanation visually engaging.
-    7. ZERO EMOJIS & ZERO LINKS: You are STRICTLY FORBIDDEN from outputting any emojis (e.g., no 🧠, no 🚀). You are STRICTLY FORBIDDEN from generating any URLs or markdown links to external websites or videos.
-    8. EXECUTIVE SUMMARY: Provide a comprehensive summary covering EVERY core concept discussed. Do not write a wall of text. Use a short intro paragraph, then use headings (`####`) and bullet points to map out the paradigms.
-    9. ARRAY FORMATTING (Core Concepts): For array items, output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
-    10. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags (NO <u>, NO <span>, NO <ul>, NO <li>).
-    11. CONDITIONAL RELEVANCE: If a section is irrelevant to the video, output EXACTLY "N/A".
-    12. MATH & EXECUTION TRACES: Use well-formatted Markdown Tables for traces. Use LaTeX delimiters (`$` for inline, `$$` for block) for mathematical proofs. 
-    8. MERMAID BULLETPROOF SYNTAX: You MUST use `graph TD`. 
+       - CRITICAL COLOR RULES: 
+         a) There MUST be a space before the colon. 
+         b) NEVER place punctuation (commas, periods) inside the brackets. Color only the exact keywords. 
+         c) NEVER nest bold or italic markdown inside the color brackets. 
+         d) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
+         e) Example of correct usage: The statement is :green[accurate] because it works.
+    5. STEP-BY-STEP HIGHLIGHTING: In the 'step_by_step' section, explicitly label each main step using Streamlit colors and bolding like this: `**:blue[Step 1:]**`, `**:blue[Step 2:]**`. Follow each step with its corresponding logic, using indented sub-bullets for sub-points.
+    6. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags (NO <u>, NO <span>, NO <ul>, NO <li>).
+    7. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
+    8. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
+    9. MERMAID BULLETPROOF SYNTAX: You MUST use `graph TD`. 
        - CRITICAL: You are STRICTLY FORBIDDEN from using parentheses `()`, curly braces, single quotes `'`, or brackets `[]` ANYWHERE inside the node labels.
        - NO MATH/CODE SYMBOLS: You cannot use `<`, `>`, `<=`, `>=`, `==`, `!=`, or `$$`. Translate them to plain English (e.g., write "x is greater than y" instead of "x > y").
        - SHAPES: Every single node MUST be formatted as `NodeID["Plain English Text"]`. Do not use any other shape syntax.
        - SUBGRAPHS: Format as `subgraph Title` and close with `end`. DO NOT use curly braces.
-    14. JSON SAFETY: Escape internal double quotes with \\". Use \\n for newlines.
-    15. LATEX & COLOR SEPARATION: CRITICAL - NEVER use Streamlit color tags (like :red[text]) near any math or LaTeX variables. In fact, avoid Streamlit syntax entirely for emphasis. Use standard markdown bold `**text**`. Overlapping color tags with `$$` breaks the engine entirely.
+    10. JSON FORMAT: Return ONLY valid JSON block. NO markdown wrapper.
+    11. LATEX & COLOR SEPARATION: CRITICAL - NEVER use Streamlit color tags (like :blue[text]) near any numerical variables, formulas, or LaTeX. In fact, DO NOT use Streamlit syntax for emphasis at all. Use standard markdown bolding `**text**`. Color tags surrounding `$$` crash the renderer.
     """
 
     payload = {
@@ -308,55 +314,42 @@ def render_video_notes(data, video_id, created_by_user="System"):
         # 7. Mermaid Diagrams
         if data.get("mermaid_diagram") and data["mermaid_diagram"] != "N/A":
             st.markdown("#### Visual Architecture")
-            # Strip unsupported arrow labels
-            # 1. Clean up markdown wrappers
-            # 1. Clean up markdown wrappers and invisible characters
-            # 1. Clean up markdown wrappers and invisible characters
-            # 1. Clean up markdown wrappers and invisible characters
+            
             raw_mermaid = data["mermaid_diagram"].replace('```mermaid', '').replace('```', '').strip()
             clean_mermaid = raw_mermaid.replace('\xa0', ' ').replace(';', '')
             
-            # 2. Strip unsupported arrow labels (Kroki/Mermaid fix)
-            clean_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', clean_mermaid)
-            clean_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', clean_mermaid)
+            # 1. Universal Cleaner
+            final_mermaid = clean_mermaid.replace('$$', '').replace('\\', '')
             
-            final_mermaid = clean_mermaid
-            
-            # --- THE UNIVERSAL MASTER CLEANER ---
-            # Remove LaTeX and math backslashes (Crucial for MATHS 2 / MLF)
-            # --- THE UNIVERSAL MASTER CLEANER (V3 - MATH FIX) ---
-            # Remove LaTeX and math backslashes
-            final_mermaid = final_mermaid.replace('$$', '').replace('\\', '')
-            
-            # Translate dangerous symbols to English
-            final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
-            final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
-            final_mermaid = final_mermaid.replace('!=', ' not equal to ')
-            final_mermaid = final_mermaid.replace('==', ' equals ')
-            
-            # Safe replacement for isolated < and >
-            final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
-            final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
-            
-            # Strip single quotes and HTML breaks
-            final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
-
-            # 1. THE QUOTE STRIPPER: Runs FIRST to clear out rogue internal quotes.
-            # Safely turns A{"Text"} into A{Text} so the Safety Net can process it cleanly.
-            final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
-            
-            # 2. THE SAFETY NET: Convert Diamond {}, Round (), and Square [] nodes into ID["Text"]
-            # The new lookahead (?=\s*[-=\.%]|\s*$|\s*\n) guarantees it won't aggressively chop internal parentheses like (A*)
-            final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
-            
-            # 3. Fix Subgraph syntax
-            final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", r"subgraph \1", final_mermaid)
+            # 2. STRICT FLOWCHART CLEANER (Protects ER & Sequence Diagrams)
+            if final_mermaid.strip().startswith("graph ") or final_mermaid.strip().startswith("flowchart "):
+                # Strip unsupported arrow labels
+                final_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', final_mermaid)
+                final_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', final_mermaid)
+                
+                # Translate dangerous symbols
+                final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
+                final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
+                final_mermaid = final_mermaid.replace('!=', ' not equal to ')
+                final_mermaid = final_mermaid.replace('==', ' equals ')
+                final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
+                final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
+                
+                # Strip quotes and HTML breaks
+                final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
+                final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
+                
+                # Safety Net for node shapes
+                final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
+                # Safety Net for Subgraphs: Forcefully strips parentheses and brackets that crash the parser
+                final_mermaid = re.sub(r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", lambda m: "subgraph " + re.sub(r'[()[\]{}]', '', m.group(1)), final_mermaid)
 
             try:
                 compressed = zlib.compress(final_mermaid.encode('utf-8'), 9)
                 b64_mermaid = base64.urlsafe_b64encode(compressed).decode('utf-8').replace('=', '')
                 mermaid_url = f"https://kroki.io/mermaid/svg/{b64_mermaid}"
                 
+                # ... [Keep your existing components.html rendering logic exactly as it is] ...
 
                 # --- FULLY DYNAMIC THEME-AWARE COMPONENT ---
                 components.html(
