@@ -118,10 +118,16 @@ elif st.session_state.get("authentication_status"):
     current_user_role = st.session_state["role"]
 
     # ==========================================
-    # "CURIOUS" API KEY SYNC & EDGE CASE HANDLER
+    # "CURIOUS" API KEY SYNC & CROSS-ACCOUNT LEAK FIX
     # ==========================================
-    # Check every page load if the list is empty to solve the mobile sync lag.
-    if not st.session_state.get("user_api_keys"):
+    # We check if the list is empty OR if the logged-in user changed (Session Leakage Fix)
+    if not st.session_state.get("user_api_keys") or st.session_state.get("api_key_owner") != current_username:
+        
+        # 1. Instantly clear any inherited keys from a previous logout and lock the owner
+        st.session_state["user_api_keys"] = []
+        st.session_state["api_key_owner"] = current_username
+        
+        # 2. Fetch the raw encrypted data from the database
         res = fetch_data("SELECT api_key FROM user_settings WHERE username = %s", (current_username,))
         
         if res and res[0]['api_key']:
@@ -135,10 +141,10 @@ elif st.session_state.get("authentication_status"):
                 import ast
                 try:
                     saved_list = json.loads(raw_db_value)
-                except:
+                except (json.JSONDecodeError, TypeError):
                     try:
                         saved_list = ast.literal_eval(raw_db_value)
-                    except:
+                    except Exception:
                         saved_list = [raw_db_value]
 
                 if not isinstance(saved_list, list):
@@ -155,16 +161,16 @@ elif st.session_state.get("authentication_status"):
                         decrypted_val = f.decrypt(clean_entry.encode()).decode()
                         decrypted_list.append(decrypted_val)
                     except Exception:
-                        # Rescue raw keys if decryption fails due to secret key mismatch
+                        # Rescue raw keys if decryption fails
                         if clean_entry.startswith("AIza"):
                             decrypted_list.append(clean_entry)
                 
-                # Final Cleanup: Remove duplicates and blanks
+                # Final Cleanup: Purge any remaining empty strings or duplicates
                 final_keys = list(dict.fromkeys([k for k in decrypted_list if k and k.strip()]))
                 st.session_state["user_api_keys"] = final_keys
                 
             except Exception as e:
-                st.sidebar.error(f"API Sync Warning: {e}")
+                print(f"API Sync Error: {e}")
 
     # SIDEBAR & NAVIGATION
     st.sidebar.markdown(f"## :material/account_circle: Welcome, {st.session_state['name']}")
