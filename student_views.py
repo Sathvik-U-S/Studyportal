@@ -7,7 +7,7 @@ from video_ai_tutor import *
 from mcq_ai_tutor import *
 from cache_manager import *
 from video_quiz_tutor import *
-import streamlit.components.v1 as components # type: ignore
+#import streamlit.components.v1 as components # type: ignore
 
 @st.cache_data(show_spinner=False, ttl=604800) # Caches the title for a week so the app stays lightning fast
 def fetch_youtube_title(url):
@@ -605,16 +605,17 @@ def render_view_videos():
                     use_playlist = c_vid2.toggle("Autoplay", value=False, help="Autoplays all videos in this week. Note: You must still manually select a video from the list to use the AI features.")
                     
                     if use_playlist and len(urls) > 1:
-                        # 2. Extract all IDs and build a YouTube Playlist URL
+                        # 2. Extract all IDs and build a native YouTube Playlist URL
                         try:
                             all_ids = [extract_youtube_id(u) for u in urls if extract_youtube_id(u)]
                             if all_ids:
                                 first_id = all_ids[0]
-                                remaining_ids = ",".join(all_ids[1:])
-                                playlist_url = f"https://www.youtube.com/embed/{first_id}?playlist={remaining_ids}&autoplay=1&rel=0"
+                                # For st.video, we use the standard watch URL with the playlist parameter
+                                remaining_ids = ",".join(all_ids) 
+                                playlist_url = f"https://www.youtube.com/watch?v={first_id}&playlist={remaining_ids}"
                                 
-                                # Replaced deprecated components.html with native iframe
-                                st.components.v1.iframe(playlist_url, height=450)
+                                # Use native st.video with the new autoplay parameter
+                                st.video(playlist_url, autoplay=True)
                             else:
                                 st.video(current_url)
                         except:

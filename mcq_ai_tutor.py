@@ -4,12 +4,11 @@ import requests # type: ignore
 import json
 import base64
 import zlib
-import streamlit.components.v1 as components # type: ignore
 from cache_manager import save_ai_cache, delete_ai_cache
 import mimetypes
 import re
 import urllib.parse
-
+import streamlit.components.v1 as components
 def detect_language(code_str):
     """A highly robust heuristic text classifier for syntax highlighting."""
     if not code_str: return "python"
@@ -202,7 +201,8 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
     SUBJECT SPECIFIC FOCUS: {guidance}
     
     STRICT FORMATTING & PEDAGOGY RULES:
-    1. CLEVER POINT-WISE HIERARCHY: For the `choice_analysis`, `wrong_options_analysis`, `common_mistake_trigger`, and `practical_relevance` sections, you MUST use a highly structured, point-wise format. NEVER write thick, blocky paragraphs for these sections. 
+    1. CLEVER POINT-WISE HIERARCHY: For the `choice_analysis`, `wrong_options_analysis`, `common_mistake_trigger`, and `practical_relevance` sections, you MUST use a highly structured, point-wise format. 
+       - NEWLINE RULE (CRITICAL): EVERY single bullet point MUST start on a completely new line. NEVER put a bullet (`- `) in the middle of a paragraph.
        - Use main bullets (`- `) for core ideas.
        - Use indented sub-bullets (2 spaces: `  - `) for supporting details.
        - Use sub-sub-bullets (4 spaces: `    * `) for deep, clever insights.
@@ -215,7 +215,7 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
          c) NO PUNCTUATION: Never place commas, periods, or parentheses inside the brackets.
          d) NO NESTING: Never put **bold** or *italics* inside the color brackets.
          e) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
-    5. STEP-BY-STEP HIGHLIGHTING: In the 'step_by_step' section, explicitly label each main step as `**:blue[Step X:]**` (where X is the number). Follow each step with its corresponding logic, using indented sub-bullets for sub-points.
+    5. STEP-BY-STEP HIGHLIGHTING: In the 'step_by_step' section, explicitly label each main step as `**:blue[Step X:]**` (where X is the number). EVERY single Step MUST start on a completely new line. Follow each step with its corresponding logic, using indented sub-bullets for sub-points.
     6. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags (NO <u>, NO <span>, NO <ul>, NO <li>).
     7. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
     8. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
@@ -401,23 +401,18 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
                 return False
             return True
 
-        # PYTHON AUTO-CORRECTOR: Fixes formatting and guarantees "Step X" styling
+        # PYTHON AUTO-CORRECTOR: Stable Version
         def format_bullets(val):
             if not val: return ""
             v_str = str(val).strip()
             
-            # 1. Gentle fix for smashed bullets
-            # Only forces a line break if punctuation is immediately followed by a hyphen without a newline. 
-            # This stops the aggressive sentence-slicing from the previous version.
+            # Gentle fix for smashed bullets
             v_str = re.sub(r'(?<!\n)([a-z0-9.?!])\s+(-\s+[A-Z])', r'\1\n\n\2', v_str)
             
-            # 2. THE STEP HIGHLIGHTER (Native Streamlit Syntax)
-            # This dynamically catches "Step 1:", "**Step 1:**", ":blue[Step 1:]", etc.
-            # It strips out the AI's messy attempts and forcefully re-wraps them in perfect `**:blue[Step X:]**` syntax.
+            # THE STEP HIGHLIGHTER (Native Streamlit Syntax)
             v_str = re.sub(r'\**(?::[a-z]+\[)?([Ss]tep\s+\d+:?)(?:\])?\**', r'**:blue[\1]**', v_str)
             
             return v_str
-
         
         # 1. Choice Analysis
         ca = format_bullets(data.get("choice_analysis"))
@@ -696,9 +691,8 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
                         }}, {{ passive: false }});
                     </script>
                 """
-                # REPLACEMENT: Wraps HTML in Data URI for components.iframe
-                components.iframe(f"data:text/html;charset=utf-8,{urllib.parse.quote(html_content)}", height=600)
-                
+                # STABLE RENDERER
+                components.html(html_content, height=600)
             except Exception:
                 st.code(final_mermaid, language="text")
 

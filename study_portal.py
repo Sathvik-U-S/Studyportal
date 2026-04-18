@@ -6,7 +6,7 @@ import json
 import re
 import base64
 import zlib
-import streamlit.components.v1 as components # type: ignore
+#import streamlit.components.v1 as components # type: ignore
 import pandas as pd  # type: ignore
 from video_ai_tutor import *
 from database import *
@@ -43,33 +43,41 @@ try:
 except FileNotFoundError:
     pass
 
-# --- FOOLPROOF JAVASCRIPT: Aggressively kills mobile keyboard on ALL dropdowns ---
-js_killer = """
+# --- FOOLPROOF JAVASCRIPT: Kills keyboard AND hides text cursor ---
+st.html(
+    """
     <script>
     function lockDropdowns() {
+        // 1. Target all Streamlit selectbox inputs
         const inputs = window.parent.document.querySelectorAll('div[data-baseweb="select"] input');
+        
         inputs.forEach(function(input) {
-            // Setting readonly prevents the phone keyboard from ever popping up, but allows clicks!
+            // 2. Prevent the keyboard
             if (!input.hasAttribute('readonly')) {
                 input.setAttribute('readonly', 'readonly');
                 input.setAttribute('inputmode', 'none');
             }
+            
+            // 3. Disable the blinking cursor (caret) and change pointer
+            input.style.caretColor = 'transparent'; 
+            input.style.cursor = 'pointer';
+            
+            // 4. Ensure the parent container doesn't look like a text field
+            const container = input.closest('div[data-baseweb="select"]');
+            if (container) {
+                container.style.cursor = 'pointer';
+            }
         });
     }
 
-    // 1. Run immediately for dropdowns already on the screen (Subject, Week)
+    // Run immediately and then monitor for new dropdowns (like when switching weeks)
     lockDropdowns();
-
-    // 2. Run aggressively on a loop to catch anything Streamlit renders late
-    setInterval(lockDropdowns, 200);
-
-    // 3. Watch for dynamic changes (Activity, Mode)
+    setInterval(lockDropdowns, 500);
     const observer = new MutationObserver(lockDropdowns);
     observer.observe(window.parent.document.body, { childList: true, subtree: true });
     </script>
-"""
-# EXACT REPLACEMENT: Uses iframe with a data URI to bypass deprecation
-components.iframe(f"data:text/html;charset=utf-8,{urllib.parse.quote(js_killer)}", height=0, width=0)
+    """
+)
 # Create a fully mutable deep-copy of secrets
 def to_dict(obj):
     if hasattr(obj, 'items'):
