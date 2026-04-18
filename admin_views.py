@@ -11,6 +11,273 @@ from mcq_ai_tutor import *
 from cache_manager import *
 from video_ai_tutor import *
 
+def generate_traditional_er():
+    """Dynamically generates a traditional ERD (Chen notation) using Mermaid Flowchart."""
+    from database import fetch_data
+    
+    er_code = "graph TD\n"
+    
+    # 1. Define styling classes to match classic ERD tools like ERDPlus
+    er_code += "    %% Styling\n"
+    er_code += "    classDef entity fill:#BBDEFB,stroke:#0288D1,stroke-width:2px,color:#000;\n"
+    er_code += "    classDef attribute fill:#FFFFFF,stroke:#757575,stroke-width:1px,color:#000;\n"
+    er_code += "    classDef relation fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px,color:#000;\n\n"
+    
+    tables = fetch_data("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+    if not tables: return er_code
+    
+    # 2. Generate Entities (Rectangles) and Attributes (Ovals)
+    for t in tables:
+        t_name = str(t['table_name']).upper()
+        # Create Entity Rectangle
+        er_code += f"    {t_name}[\"<b>{t_name}</b>\"]:::entity\n"
+        
+        # Fetch columns (Limit to 5 so the diagram doesn't get overwhelmingly massive)
+        cols = fetch_data("SELECT column_name FROM information_schema.columns WHERE table_name = %s ORDER BY ordinal_position LIMIT 5", (t['table_name'],))
+        if cols:
+            for c in cols:
+                c_name = c['column_name']
+                node_id = f"{t_name}_{c_name}"
+                
+                # Underline Primary Keys for authentic ERD look
+                label = f"<u>{c_name}</u>" if c_name == 'id' else c_name
+                    
+                # Create Attribute Oval (Stadium shape) and link it to the Entity
+                er_code += f"    {node_id}([\"{label}\"]):::attribute\n"
+                er_code += f"    {t_name} --- {node_id}\n"
+        er_code += "\n"
+                
+    # 3. Generate Relationships (Diamonds) using Foreign Keys
+    fk_query = """
+        SELECT
+            tc.table_name AS child_table, 
+            ccu.table_name AS parent_table
+        FROM information_schema.table_constraints AS tc
+        JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name
+        WHERE tc.constraint_type = 'FOREIGN KEY';
+    """
+    fks = fetch_data(fk_query)
+    if fks:
+        added_rels = set()
+        for i, fk in enumerate(fks):
+            parent = str(fk['parent_table']).upper()
+            child = str(fk['child_table']).upper()
+            
+            # Prevent duplicate relationship diamonds between the same two tables
+            rel_key = f"{parent}_{child}"
+            if rel_key not in added_rels:
+                rel_node = f"REL_{i}"
+                
+                # Create Relationship Diamond and link it (1 to N)
+                er_code += f"    {rel_node}{{\"relates\"}}:::relation\n"
+                er_code += f"    {parent} ---|1| {rel_node}\n"
+                er_code += f"    {rel_node} ---|N| {child}\n"
+                added_rels.add(rel_key)
+                
+    return er_code
+
+def generate_dynamic_er():
+    """Dynamically generates Mermaid ER code by querying the PostgreSQL schema."""
+    from database import fetch_data
+    
+    # 1. Fetch Foreign Keys to draw the relationship lines
+    fk_query = """
+        SELECT
+            tc.table_name AS child_table, 
+            ccu.table_name AS parent_table
+        FROM information_schema.table_constraints AS tc
+        JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name
+        WHERE tc.constraint_type = 'FOREIGN KEY';
+    """
+    fks = fetch_data(fk_query)
+    
+    er_code = "erDiagram\n"
+    
+    # Render Relationships
+    if fks:
+        added_fks = set()
+        for fk in fks:
+            parent = str(fk['parent_table']).upper()
+            child = str(fk['child_table']).upper()
+            rel = f"    {parent} ||--o{{ {child} : \"has\""
+            if rel not in added_fks:
+                er_code += rel + "\n"
+                added_fks.add(rel)
+    er_code += "\n"
+    
+    # 2. Fetch Tables and populate Columns
+    tables = fetch_data("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+    if tables:
+        for t in tables:
+            t_name_lower = t['table_name']
+            t_name = t_name_lower.upper()
+            
+            # Fetch up to 6 columns per table to keep the diagram clean
+            cols = fetch_data("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = %s ORDER BY ordinal_position LIMIT 6", (t_name_lower,))
+            
+            er_code += f"    {t_name} {{\n"
+            if cols:
+                for c in cols:
+                    raw_type = str(c['data_type']).lower()
+                    
+                    # Simplify PostgreSQL types for visual cleanliness
+                    if "int" in raw_type: c_type = "int"
+                    elif "char" in raw_type or "text" in raw_type: c_type = "varchar"
+                    elif "bool" in raw_type: c_type = "boolean"
+                    elif "time" in raw_type or "date" in raw_type: c_type = "timestamp"
+                    elif "json" in raw_type: c_type = "jsonb"
+                    else: c_type = "type"
+                    
+                    pk_tag = " PK" if c['column_name'] == 'id' else ""
+                    fk_tag = " FK" if c['column_name'].endswith('_id') else ""
+                    
+                    er_code += f"        {c_type} {c['column_name']}{pk_tag}{fk_tag}\n"
+            er_code += "    }\n"
+            
+    return er_code
+
+def render_mermaid_diagram(mermaid_code, height=600):
+    """Reusable function to render Mermaid code with Zoom/Pan controls."""
+    import base64
+    import zlib
+    import streamlit.components.v1 as components
+    
+    final_mermaid = mermaid_code.replace('```mermaid', '').replace('```', '').strip()
+    
+    try:
+        compressed = zlib.compress(final_mermaid.encode('utf-8'), 9)
+        b64_mermaid = base64.urlsafe_b64encode(compressed).decode('utf-8').replace('=', '')
+        mermaid_url = f"https://kroki.io/mermaid/svg/{b64_mermaid}"
+        
+        html_content = f"""
+            <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+            <style>
+                :root {{ --text-color: #31333F; --bg-color: transparent; --border-color: rgba(49, 51, 63, 0.2); --btn-bg: rgba(49, 51, 63, 0.05); --btn-hover: rgba(49, 51, 63, 0.1); --container-bg: rgba(255, 255, 255, 0.5); }}
+                body {{ margin: 0; background-color: var(--bg-color); color: var(--text-color); font-family: sans-serif; }}
+                .controls {{ position: sticky; top: 0; z-index: 100; display: flex; gap: 12px; background-color: transparent; padding-bottom: 10px; align-items: center; }}
+                button {{ display: flex; align-items: center; gap: 5px; padding: 6px 12px; cursor: pointer; border-radius: 6px; border: 1px solid var(--border-color); background: var(--btn-bg); color: var(--text-color); font-weight: bold; font-size: 13px; transition: background 0.2s; }}
+                button .material-icons {{ font-size: 18px; }}
+                button:hover {{ background: var(--btn-hover); }}
+                #wrapper {{ width: 100%; height: {height-100}px; overflow: auto; border: 1px solid var(--border-color); border-radius: 8px; background: var(--container-bg); cursor: grab; }}
+                #wrapper:active {{ cursor: grabbing; }}
+                #wrapper::-webkit-scrollbar {{ width: 10px; height: 10px; }}
+                #wrapper::-webkit-scrollbar-track {{ background: transparent; }}
+                #wrapper::-webkit-scrollbar-thumb {{ background-color: var(--border-color); border-radius: 8px; }}
+                #wrapper::-webkit-scrollbar-thumb:hover {{ background-color: var(--text-color); }}
+                #container {{ transform-origin: 0 0; transition: transform 0.1s ease-out; display: inline-block; min-width: 100%; user-select: none; }}
+                #mermaid-img {{ display: block; width: 100%; pointer-events: none; transition: filter 0.3s ease; }}
+            </style>
+            
+            <div class="controls">
+                <button type="button" onclick="zoom(1.2)"><span class="material-icons">zoom_in</span> Zoom In</button>
+                <button type="button" onclick="zoom(0.8)"><span class="material-icons">zoom_out</span> Zoom Out</button>
+                <button type="button" onclick="resetZoom()"><span class="material-icons">restart_alt</span> Reset</button>
+                <span id="zoom-level" style="margin-left: 10px; align-self: center; font-weight: 500;">100%</span>
+            </div>
+            
+            <div id="wrapper">
+                <div id="container">
+                    <img id="mermaid-img" src="{mermaid_url}">
+                </div>
+            </div>
+
+            <script>
+                function syncTheme() {{
+                    try {{
+                        const parentStyle = window.parent.getComputedStyle(window.parent.document.querySelector('.stApp') || window.parent.document.body);
+                        const bgColor = parentStyle.backgroundColor;
+                        const textColor = parentStyle.color;
+                        
+                        const rgb = bgColor.match(/\\d+/g);
+                        let isDark = false;
+                        if (rgb && rgb.length >= 3) {{
+                            const brightness = (parseInt(rgb[0]) * 299 + parseInt(rgb[1]) * 587 + parseInt(rgb[2]) * 114) / 1000;
+                            isDark = brightness < 128;
+                        }}
+
+                        document.documentElement.style.setProperty('--text-color', textColor);
+                        const textRgba = textColor.replace('rgb', 'rgba').replace(')', ', 0.2)');
+                        const btnBg = textColor.replace('rgb', 'rgba').replace(')', ', 0.05)');
+                        const btnHover = textColor.replace('rgb', 'rgba').replace(')', ', 0.1)');
+                        const containerBg = isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.5)';
+
+                        document.documentElement.style.setProperty('--border-color', textRgba);
+                        document.documentElement.style.setProperty('--btn-bg', btnBg);
+                        document.documentElement.style.setProperty('--btn-hover', btnHover);
+                        document.documentElement.style.setProperty('--container-bg', containerBg);
+
+                        const img = document.getElementById('mermaid-img');
+                        if (isDark) {{ img.style.filter = 'invert(0.85) hue-rotate(180deg)'; }} 
+                        else {{ img.style.filter = 'none'; }}
+                    }} catch (e) {{}}
+                }}
+
+                syncTheme();
+                setInterval(syncTheme, 1000);
+
+                let scale = 1.0;
+                const container = document.getElementById('container');
+                const zoomLevel = document.getElementById('zoom-level');
+                const wrapper = document.getElementById('wrapper');
+
+                function zoom(factor) {{
+                    scale *= factor;
+                    if (scale < 0.2) scale = 0.2;
+                    if (scale > 10.0) scale = 10.0;
+                    container.style.transform = `scale(${{scale}})`;
+                    zoomLevel.innerText = Math.round(scale * 100) + "%";
+                }}
+
+                function resetZoom() {{
+                    scale = 1.0;
+                    container.style.transform = 'scale(1)';
+                    zoomLevel.innerText = "100%";
+                }}
+
+                let isDown = false;
+                let startX, startY, scrollLeft, scrollTop;
+
+                wrapper.addEventListener('mousedown', (e) => {{
+                    isDown = true;
+                    startX = e.pageX - wrapper.offsetLeft;
+                    startY = e.pageY - wrapper.offsetTop;
+                    scrollLeft = wrapper.scrollLeft;
+                    scrollTop = wrapper.scrollTop;
+                }});
+                wrapper.addEventListener('mouseleave', () => {{ isDown = false; }});
+                wrapper.addEventListener('mouseup', () => {{ isDown = false; }});
+                wrapper.addEventListener('mousemove', (e) => {{
+                    if (!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX - wrapper.offsetLeft;
+                    const y = e.pageY - wrapper.offsetTop;
+                    wrapper.scrollLeft = scrollLeft - (x - startX) * 1.5; 
+                    wrapper.scrollTop = scrollTop - (y - startY) * 1.5;
+                }});
+
+                wrapper.addEventListener('touchstart', (e) => {{
+                    isDown = true;
+                    startX = e.touches[0].pageX - wrapper.offsetLeft;
+                    startY = e.touches[0].pageY - wrapper.offsetTop;
+                    scrollLeft = wrapper.scrollLeft;
+                    scrollTop = wrapper.scrollTop;
+                }});
+                wrapper.addEventListener('touchend', () => {{ isDown = false; }});
+                wrapper.addEventListener('touchmove', (e) => {{
+                    if (!isDown) return;
+                    e.preventDefault(); 
+                    const x = e.touches[0].pageX - wrapper.offsetLeft;
+                    const y = e.touches[0].pageY - wrapper.offsetTop;
+                    wrapper.scrollLeft = scrollLeft - (x - startX) * 1.5;
+                    wrapper.scrollTop = scrollTop - (y - startY) * 1.5;
+                }}, {{ passive: false }});
+            </script>
+        """
+        components.html(html_content, height=height)
+    except Exception as e:
+        st.error(f"Diagram failed to render. {e}")
+        st.code(final_mermaid, language="text")
+
 @st.cache_data(show_spinner=False, ttl=604800) 
 def fetch_youtube_title(url):
     """Fetches the actual video title directly from YouTube's public oEmbed API."""
@@ -1038,73 +1305,198 @@ def render_view_database():
             if stat_data:
                 st.dataframe(stat_data, width="stretch", hide_index=True)
 
-    # TOOL 10: Export Hub
+    # TOOL 10: Export Hub & Architecture
     with tab_export:
-        st.markdown("#### :material/downloading: Download Table Data (CSV)")
-        if table_names:
-            export_table = st.selectbox("Select Table to Export", table_names, key="export_tab")
-            if st.button(f"Generate CSV for {export_table}", icon=":material/download:"):
-                with st.spinner("Generating file..."):
-                    export_data = fetch_data(f"SELECT * FROM {export_table}")
-                    if export_data:
-                        import csv, io
-                        output = io.StringIO()
-                        writer = csv.DictWriter(output, fieldnames=export_data[0].keys())
-                        writer.writeheader()
-                        writer.writerows(export_data)
+        st.markdown("#### :material/database: Architecture & Export Hub")
+        #st.info("Manage data backups and view live system architecture rules directly from the database engine.", icon=":material/info:")
+
+        t_data, t_er, t_rel, t_chk, t_trg, t_sql = st.tabs([
+            ":material/table_view: Data Backup",
+            ":material/account_tree: ER Diagram",
+            ":material/link: Relations",
+            ":material/security: Constraints",
+            ":material/bolt: Triggers",
+            ":material/code: Schema Export"
+        ])
+
+        # ==========================================
+        # TAB 1: CSV DATA BACKUP
+        # ==========================================
+        with t_data:
+            st.markdown("##### :material/downloading: Download Table Data (CSV)")
+            if table_names:
+                export_table = st.selectbox("Select Table to Export", table_names, key="export_tab")
+                if st.button(f"Generate CSV for {export_table}", icon=":material/download:"):
+                    with st.spinner("Generating file..."):
+                        export_data = fetch_data(f"SELECT * FROM {export_table}")
+                        if export_data:
+                            import csv, io
+                            output = io.StringIO()
+                            writer = csv.DictWriter(output, fieldnames=export_data[0].keys())
+                            writer.writeheader()
+                            writer.writerows(export_data)
+                            st.download_button(
+                                label=f"Download {export_table}.csv",
+                                data=output.getvalue(),
+                                file_name=f"{export_table}_backup.csv",
+                                mime="text/csv",
+                                type="primary",
+                                icon=":material/save_alt:"
+                            )
+                        else:
+                            st.warning(f"`{export_table}` is empty.", icon=":material/warning:")
+
+        # ==========================================
+        # TAB 2: ER DIAGRAMS (DUAL MODE)
+        # ==========================================
+        with t_er:
+            st.markdown("##### :material/schema: Database Visualizations")
+            st.info("These diagrams are generated live directly from your PostgreSQL structure.", icon=":material/info:")
+            
+            # Create sub-tabs so you can keep the original one and view the new one!
+            sub_tab_schema, sub_tab_chen = st.tabs([
+                "Relational Schema (Tables)", 
+                "Traditional ERD (Chen Notation)"
+            ])
+            
+            with sub_tab_schema:
+                with st.spinner("Mapping relational schema..."):
+                    schema_code = generate_dynamic_er()
+                render_mermaid_diagram(schema_code, height=700)
+                
+                with st.expander("View/Copy Schema Code", icon=":material/code:"):
+                    st.code(schema_code, language="mermaid")
+                    
+            with sub_tab_chen:
+                with st.spinner("Drawing traditional ERD..."):
+                    erd_code = generate_traditional_er()
+                render_mermaid_diagram(erd_code, height=700)
+                
+                with st.expander("View/Copy Traditional ERD Code", icon=":material/code:"):
+                    st.code(erd_code, language="mermaid")
+
+        # ==========================================
+        # TAB 3: RELATIONS (FOREIGN KEYS)
+        # ==========================================
+        with t_rel:
+            st.markdown("##### :material/account_tree: Active Foreign Keys (Cascades)")
+            st.write("These rules ensure Referential Integrity. If a parent is deleted, children are safely cascaded.")
+            fk_query = """
+                SELECT
+                    tc.table_name AS "Child Table", 
+                    kcu.column_name AS "Foreign Key",
+                    ccu.table_name AS "Parent Table",
+                    ccu.column_name AS "Target Key",
+                    rc.delete_rule AS "On Delete"
+                FROM information_schema.table_constraints AS tc
+                JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name
+                JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name
+                JOIN information_schema.referential_constraints AS rc ON tc.constraint_name = rc.constraint_name
+                WHERE tc.constraint_type = 'FOREIGN KEY';
+            """
+            fks = fetch_data(fk_query)
+            if fks: st.dataframe(fks, use_container_width=True, hide_index=True)
+            else: st.warning("No foreign keys detected.", icon=":material/warning:")
+
+        # ==========================================
+        # TAB 4: DOMAIN INTEGRITY (CONSTRAINTS)
+        # ==========================================
+        with t_chk:
+            st.markdown("##### :material/gpp_good: Domain Integrity Constraints")
+            st.write("These rules prevent invalid logic (like negative scores) from entering the database.")
+            chk_query = """
+                SELECT 
+                    conrelid::regclass AS "Table Name", 
+                    conname AS "Constraint Name", 
+                    pg_get_constraintdef(c.oid) AS "Rule Definition"
+                FROM pg_constraint c
+                WHERE contype IN ('c', 'u') AND connamespace = 'public'::regnamespace;
+            """
+            chks = fetch_data(chk_query)
+            if chks: st.dataframe(chks, use_container_width=True, hide_index=True)
+            else: st.warning("No constraints detected.", icon=":material/warning:")
+
+        # ==========================================
+        # TAB 5: TRIGGERS (MAGIC FUNCTIONS)
+        # ==========================================
+        with t_trg:
+            st.markdown("##### :material/memory: Active Database Triggers")
+            st.write("These 'Magic Functions' automatically execute during INSERTS/UPDATES to sync metadata.")
+            trg_query = """
+                SELECT 
+                    event_object_table AS "Target Table", 
+                    trigger_name AS "Trigger Name", 
+                    event_manipulation AS "Action Event", 
+                    action_statement AS "Function Call"
+                FROM information_schema.triggers
+                WHERE trigger_schema = 'public';
+            """
+            trgs = fetch_data(trg_query)
+            if trgs: st.dataframe(trgs, use_container_width=True, hide_index=True)
+            else: st.warning("No triggers detected.", icon=":material/warning:")
+
+        # ==========================================
+        # TAB 6: UPGRADED SCHEMA EXPORT
+        # ==========================================
+        with t_sql:
+            st.markdown("##### :material/description: Download Database Schema (.sql)")
+            st.info("This generates a file containing the structure of all tables, plus your professional constraints.", icon=":material/info:")
+            
+            if st.button("Generate Schema File", type="secondary", icon=":material/code:"):
+                with st.spinner("Mapping database structure..."):
+                    # Fetch basic columns
+                    schema_query = """
+                        SELECT table_name, column_name, data_type, is_nullable, column_default
+                        FROM information_schema.columns 
+                        WHERE table_schema = 'public'
+                        ORDER BY table_name, ordinal_position;
+                    """
+                    all_columns = fetch_data(schema_query)
+                    
+                    # Fetch advanced constraints to append
+                    constraint_query = """
+                        SELECT 'ALTER TABLE ' || conrelid::regclass || ' ADD CONSTRAINT ' || conname || ' ' || pg_get_constraintdef(c.oid) || ';' AS def
+                        FROM pg_constraint c
+                        WHERE connamespace = 'public'::regnamespace;
+                    """
+                    all_constraints = fetch_data(constraint_query)
+                    
+                    if all_columns:
+                        import time
+                        schema_text = "-- ACADEMIC PORTAL DATABASE SCHEMA (V2) --\n"
+                        schema_text += f"-- Generated on: {time.strftime('%Y-%m-%d %H:%M:%S')} --\n\n"
+                        
+                        # Build Tables
+                        current_table = ""
+                        for col in all_columns:
+                            if col['table_name'] != current_table:
+                                if current_table != "": schema_text += "\n);\n\n"
+                                current_table = col['table_name']
+                                schema_text += f"CREATE TABLE {current_table} (\n"
+                                schema_text += f"    {col['column_name']} {col['data_type']}"
+                            else:
+                                schema_text += f",\n    {col['column_name']} {col['data_type']}"
+                            
+                            if col['is_nullable'] == "NO": schema_text += " NOT NULL"
+                            if col['column_default']: schema_text += f" DEFAULT {col['column_default']}"
+                        schema_text += "\n);\n\n"
+                        
+                        # Append Constraints (PKs, FKs, CHECKs)
+                        schema_text += "-- SYSTEM CONSTRAINTS & FOREIGN KEYS --\n"
+                        if all_constraints:
+                            for con in all_constraints:
+                                schema_text += f"{con['def']}\n"
+                        
                         st.download_button(
-                            label=f"Download {export_table}.csv",
-                            data=output.getvalue(),
-                            file_name=f"{export_table}_backup.csv",
-                            mime="text/csv",
-                            type="primary"
+                            label="Download full_schema.sql",
+                            data=schema_text,
+                            file_name="academic_portal_schema.sql",
+                            mime="text/sql",
+                            type="primary",
+                            icon=":material/download:"
                         )
                     else:
-                        st.warning(f"`{export_table}` is empty.")
-        st.divider()
-
-        # SECTION B: EXPORT SCHEMA
-        st.write("##### 2. Download Database Schema (.sql)")
-        st.info("This will generate a single file containing the structure of all your tables.", icon=":material/info:")
-        
-        if st.button("Generate Schema File", type="secondary", icon=":material/schema:"):
-            with st.spinner("Mapping database structure..."):
-                # Fetch all columns and types for all public tables
-                schema_query = """
-                    SELECT table_name, column_name, data_type, is_nullable
-                    FROM information_schema.columns 
-                    WHERE table_schema = 'public'
-                    ORDER BY table_name, ordinal_position;
-                """
-                all_columns = fetch_data(schema_query)
-                
-                if all_columns:
-                    schema_text = "-- ACADEMIC PORTAL DATABASE SCHEMA --\n"
-                    schema_text += f"-- Generated on: {time.strftime('%Y-%m-%d %H:%M:%S')} --\n\n"
-                    
-                    current_table = ""
-                    for col in all_columns:
-                        if col['table_name'] != current_table:
-                            if current_table != "": schema_text += ");\n\n"
-                            current_table = col['table_name']
-                            schema_text += f"CREATE TABLE {current_table} (\n"
-                            schema_text += f"    {col['column_name']} {col['data_type']}"
-                        else:
-                            schema_text += f",\n    {col['column_name']} {col['data_type']}"
-                        
-                        if col['is_nullable'] == "NO": schema_text += " NOT NULL"
-                    
-                    schema_text += "\n);"
-                    
-                    st.download_button(
-                        label="Download full_schema.sql",
-                        data=schema_text,
-                        file_name="academic_portal_schema.sql",
-                        mime="text/sql",
-                        type="primary"
-                    )
-                else:
-                    st.error("Could not retrieve schema information.")
+                        st.error("Could not retrieve schema information.", icon=":material/error:")
 
 def render_ai_notes():
     """
