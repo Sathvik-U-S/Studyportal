@@ -11,6 +11,83 @@ from mcq_ai_tutor import *
 from cache_manager import *
 from video_ai_tutor import *
 
+def render_user_analytics():
+    """Displays a comprehensive dashboard of user telemetry and AI usage."""
+    import pandas as pd
+    from database import fetch_data
+    
+    st.markdown("#### :material/monitoring: User Analytics Dashboard")
+    st.info("Tracks total active time, login frequency, and total AI Tutor generations per student.", icon=":material/info:")
+    
+    # Efficiently fetch from both tables, using COALESCE to prevent NULL math errors
+    query = """
+        SELECT 
+            u.username AS "Username",
+            COALESCE(u.login_count, 0) AS "Total Logins",
+            u.last_login AS "Last Seen",
+            COALESCE(u.total_time_seconds, 0) AS raw_seconds,
+            COALESCE(s.ai_generations, 0) AS "AI Generations"
+        FROM user_settings u
+        LEFT JOIN user_stats s ON u.username = s.username
+        ORDER BY u.last_login DESC NULLS LAST;
+    """
+    
+    data = fetch_data(query)
+    
+    if data:
+        df = pd.DataFrame(data)
+        
+        # Helper to safely format seconds into HH:MM
+        def format_time(seconds):
+            if pd.isna(seconds) or seconds == 0: 
+                return "0h 0m"
+            hrs, remainder = divmod(int(seconds), 3600)
+            mins, _ = divmod(remainder, 60)
+            return f"{hrs}h {mins}m"
+            
+        # Apply formatting and drop the raw data column
+        df["Active Time Spent"] = df["raw_seconds"].apply(format_time)
+        df = df.drop(columns=["raw_seconds"])
+        
+        # Safely format dates, handling users who have never logged in
+        df["Last Seen"] = pd.to_datetime(df["Last Seen"]).dt.strftime("%Y-%m-%d %I:%M %p")
+        df["Last Seen"] = df["Last Seen"].fillna("Never Logged In")
+        
+        # Top-Level Metrics Row
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Total Students", len(df))
+        c2.metric("Total AI Successes", int(df["AI Generations"].sum()))
+        
+        total_sec = sum(d['raw_seconds'] for d in data if d['raw_seconds'])
+        c3.metric("Total Platform Time", format_time(total_sec))
+        
+        st.divider()
+        
+        # Safely calculate the max logins for the progress bar (avoiding divide-by-zero)
+        max_logins = int(df["Total Logins"].max())
+        bar_max = max_logins if max_logins > 0 else 100
+        
+        # Interactive Table with Visual Progress Bars
+        st.dataframe(
+            df, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "Total Logins": st.column_config.ProgressColumn(
+                    "Total Logins", 
+                    format="%d", 
+                    min_value=0, 
+                    max_value=bar_max
+                ),
+                "AI Generations": st.column_config.NumberColumn(
+                    "AI Generations", 
+                    help="Total successful AI hits authored by this user."
+                )
+            }
+        )
+    else:
+        st.warning("No user telemetry data found yet.", icon=":material/warning:")
+        
 def generate_traditional_er():
     """Dynamically generates a traditional ERD (Chen notation) using Mermaid Flowchart."""
     from database import fetch_data
@@ -936,10 +1013,14 @@ def render_view_database():
         "Visual Dashboard",                
         "Schema Viewer", 
         "DB Stats", 
-        "Export Hub"
+        "Export Hub",
+        "User Analytics"
     ])
-    tab_hier, tab_browse, tab_search, tab_viz, tab_schema, tab_stats, tab_export = tabs
+    tab_hier, tab_browse, tab_search, tab_viz, tab_schema, tab_stats, tab_export, tab_users = tabs
     
+    with tab_users:
+        render_user_analytics()
+
     # TOOL 1: Hierarchy Explorer (With Option Drill-down)
     with tab_hier:
         c1, c2, c3 = st.columns(3)
