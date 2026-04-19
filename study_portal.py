@@ -289,8 +289,8 @@ elif st.session_state.get("authentication_status"):
                 st.stop()
             return Fernet(key.encode())
 
-        current_user = st.session_state["username"]
-        res = fetch_data("SELECT api_key FROM user_settings WHERE username = %s", (current_user,))
+        current_user = st.session_state["name"] # Changed from "username"
+        res = fetch_data("SELECT api_key FROM user_settings WHERE username = %s", (current_user,))        
         
         saved_keys = []
         if res and res[0]['api_key']:
