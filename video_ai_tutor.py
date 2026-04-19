@@ -259,8 +259,7 @@ def render_video_notes(data, video_id, created_by_user="System"):
                     "important_keywords": [k.strip() for k in new_kw.split("\n") if k.strip()]
                 }
                 # Save to the VIDEO cache, not the MCQ cache!
-                save_video_cache(video_id, updated_data, st.session_state.get("username", "System"))
-                
+                save_video_cache(video_id, updated_data, st.session_state.get("name", "System"))                
                 st.session_state[edit_state_key] = False
                 st.rerun()
                 

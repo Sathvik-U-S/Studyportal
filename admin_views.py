@@ -14,80 +14,108 @@ from video_ai_tutor import *
 def render_user_analytics():
     """Displays a comprehensive dashboard of user telemetry and AI usage."""
     import pandas as pd
+    import pytz
     from database import fetch_data
+    import streamlit as st
     
     st.markdown("#### :material/monitoring: User Analytics Dashboard")
     st.info("Tracks total active time, login frequency, and total AI Tutor generations per student.", icon=":material/info:")
     
-    # Efficiently fetch from both tables, using COALESCE to prevent NULL math errors
-    query = """
-        SELECT 
-            u.username AS "Username",
-            COALESCE(u.login_count, 0) AS "Total Logins",
-            u.last_login AS "Last Seen",
-            COALESCE(u.total_time_seconds, 0) AS raw_seconds,
-            COALESCE(s.ai_generations, 0) AS "AI Generations"
-        FROM user_settings u
-        LEFT JOIN user_stats s ON u.username = s.username
-        ORDER BY u.last_login DESC NULLS LAST;
+    # 1. Fetch Database Telemetry
+    tel_data = fetch_data("SELECT username, login_count, last_login, total_time_seconds FROM user_settings")
+    tel_map = {r['username']: r for r in tel_data} if tel_data else {}
+    
+    # 2. Fetch AI Generations accurately using a unified query
+    ai_query = """
+        SELECT created_by_user, COUNT(*) as cnt
+        FROM (
+            SELECT created_by_user FROM mcq_cache WHERE created_by_user IS NOT NULL
+            UNION ALL
+            SELECT created_by_user FROM video_cache WHERE created_by_user IS NOT NULL
+            UNION ALL
+            SELECT created_by_user FROM video_quizzes WHERE created_by_user IS NOT NULL
+        ) combined
+        GROUP BY created_by_user
     """
+    ai_data = fetch_data(ai_query)
+    ai_map = {r['created_by_user']: r['cnt'] for r in ai_data} if ai_data else {}
     
-    data = fetch_data(query)
+    # 3. THE FIX: Compile a Master Roster using the Capitalized 'name' attribute
+    master_users = set()
+    try:
+        for uname, u_data in st.secrets["credentials"]["usernames"].items():
+            # Grab the actual capitalized name from the config
+            master_users.add(u_data.get("name", uname.title()))
+    except:
+        pass
+        
+    master_users.update(tel_map.keys())
+    master_users.update(ai_map.keys())
     
-    if data:
-        df = pd.DataFrame(data)
+    # 4. Build the final Dataset
+    final_rows = []
+    for uname in master_users:
+        t = tel_map.get(uname, {})
+        final_rows.append({
+            "Username": uname,
+            "Total Logins": t.get('login_count') or 0,
+            "Last Seen": t.get('last_login'),
+            "raw_seconds": t.get('total_time_seconds') or 0,
+            "AI Generations": ai_map.get(uname) or 0
+        })
         
-        # Helper to safely format seconds into HH:MM
-        def format_time(seconds):
-            if pd.isna(seconds) or seconds == 0: 
-                return "0h 0m"
-            hrs, remainder = divmod(int(seconds), 3600)
-            mins, _ = divmod(remainder, 60)
-            return f"{hrs}h {mins}m"
-            
-        # Apply formatting and drop the raw data column
-        df["Active Time Spent"] = df["raw_seconds"].apply(format_time)
-        df = df.drop(columns=["raw_seconds"])
+    if not final_rows:
+        st.warning("No user data found.")
+        return
         
-        # Safely format dates, handling users who have never logged in
-        df["Last Seen"] = pd.to_datetime(df["Last Seen"]).dt.strftime("%Y-%m-%d %I:%M %p")
-        df["Last Seen"] = df["Last Seen"].fillna("Never Logged In")
+    df = pd.DataFrame(final_rows)
+    
+    # 5. Formatting Helpers
+    def format_time(seconds):
+        if pd.isna(seconds) or seconds == 0: return "0h 0m"
+        hrs, remainder = divmod(int(seconds), 3600)
+        mins, _ = divmod(remainder, 60)
+        return f"{hrs}h {mins}m"
         
-        # Top-Level Metrics Row
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Total Students", len(df))
-        c2.metric("Total AI Successes", int(df["AI Generations"].sum()))
-        
-        total_sec = sum(d['raw_seconds'] for d in data if d['raw_seconds'])
-        c3.metric("Total Platform Time", format_time(total_sec))
-        
-        st.divider()
-        
-        # Safely calculate the max logins for the progress bar (avoiding divide-by-zero)
-        max_logins = int(df["Total Logins"].max())
-        bar_max = max_logins if max_logins > 0 else 100
-        
-        # Interactive Table with Visual Progress Bars
-        st.dataframe(
-            df, 
-            use_container_width=True, 
-            hide_index=True,
-            column_config={
-                "Total Logins": st.column_config.ProgressColumn(
-                    "Total Logins", 
-                    format="%d", 
-                    min_value=0, 
-                    max_value=bar_max
-                ),
-                "AI Generations": st.column_config.NumberColumn(
-                    "AI Generations", 
-                    help="Total successful AI hits authored by this user."
-                )
-            }
-        )
-    else:
-        st.warning("No user telemetry data found yet.", icon=":material/warning:")
-        
+    df["Active Time Spent"] = df["raw_seconds"].apply(format_time)
+    df = df.drop(columns=["raw_seconds"])
+    
+    # Timezone Conversion to IST
+    df["Last Seen"] = pd.to_datetime(df["Last Seen"], errors='coerce')
+    if not df["Last Seen"].isna().all():
+        ist_tz = pytz.timezone('Asia/Kolkata')
+        df["Last Seen"] = df["Last Seen"].dt.tz_localize('UTC').dt.tz_convert(ist_tz)
+        df["Last Seen"] = df["Last Seen"].dt.strftime("%Y-%m-%d %I:%M %p")
+    df["Last Seen"] = df["Last Seen"].fillna("Never Logged In")
+    
+    # Sort by activity
+    df = df.sort_values(by="Total Logins", ascending=False)
+    
+    # 6. Render the Metrics
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total Students", len(df))
+    c2.metric("Total AI Successes", int(df["AI Generations"].sum()))
+    total_sec = sum(r.get('raw_seconds', 0) for r in final_rows)
+    c3.metric("Total Platform Time", format_time(total_sec))
+    
+    st.divider()
+    max_logins = int(df["Total Logins"].max())
+    bar_max = max_logins if max_logins > 0 else 100
+    
+    st.dataframe(
+        df, 
+        use_container_width=True, 
+        hide_index=True,
+        column_config={
+            "Total Logins": st.column_config.ProgressColumn(
+                "Total Logins", format="%d", min_value=0, max_value=bar_max
+            ),
+            "AI Generations": st.column_config.NumberColumn(
+                "AI Generations", help="Total successful AI hits authored by this user."
+            )
+        }
+    )
+    
 def generate_traditional_er():
     """Dynamically generates a traditional ERD (Chen notation) using Mermaid Flowchart."""
     from database import fetch_data

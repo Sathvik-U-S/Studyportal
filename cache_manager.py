@@ -86,10 +86,6 @@ def save_ai_cache(ai_key, data, username, metadata=None):
         ai_key, json.dumps(data), username, is_healthy,
         m.get('q_id'), m.get('sub'), m.get('heading'), m.get('week'), m.get('ass_name')
     ))
-    execute_query("""
-        INSERT INTO user_stats (username, ai_generations) VALUES (%s, 1)
-        ON CONFLICT (username) DO UPDATE SET ai_generations = user_stats.ai_generations + 1
-    """, (username,))
 
 def get_cached_video_notes(video_id):
     query = "SELECT ai_data, created_by_user, is_healthy FROM video_cache WHERE video_id = %s"

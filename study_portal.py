@@ -115,25 +115,51 @@ elif st.session_state.get("authentication_status") is None:
     st.stop()
     
 elif st.session_state.get("authentication_status"):
-    current_username = st.session_state["username"]
+    auth_id = st.session_state["username"] # The lowercase Auth ID
+    now = time.time()
     
-    # Setup session user info
-    user_config_name = config['credentials']['usernames'][current_username].get('name', 'Sathvik')
-    st.session_state["name"] = user_config_name 
-    st.session_state["role"] = config['credentials']['usernames'][current_username].get('role', 'user')
+    # 1. FETCH EXACT DISPLAY NAME IMMEDIATELY
+    display_name = config['credentials']['usernames'][auth_id].get('name', auth_id.title())
+    st.session_state["name"] = display_name 
+    st.session_state["role"] = config['credentials']['usernames'][auth_id].get('role', 'user')
     current_user_role = st.session_state["role"]
+    
+    # 2. USE THE CAPITALIZED NAME FOR ALL DATABASE TRACKING
+    current_username = display_name 
+    
+    # ==========================================
+    # --- SMART TELEMETRY ENGINE ---
+    # ==========================================
+    if "session_logged" not in st.session_state:
+        execute_query("""
+            INSERT INTO user_settings (username, last_login, login_count) 
+            VALUES (%s, CURRENT_TIMESTAMP, 1)
+            ON CONFLICT (username) DO UPDATE 
+            SET last_login = CURRENT_TIMESTAMP, 
+                login_count = COALESCE(user_settings.login_count, 0) + 1
+        """, (current_username,))
+        st.session_state["session_logged"] = True
+        st.session_state["last_ping"] = now
+
+    else:
+        last_ping = st.session_state.get("last_ping", now)
+        delta = now - last_ping
+        if 0 < delta < 1800:
+            execute_query("""
+                UPDATE user_settings 
+                SET total_time_seconds = COALESCE(total_time_seconds, 0) + %s
+                WHERE username = %s
+            """, (int(delta), current_username))
+        st.session_state["last_ping"] = now
 
     # ==========================================
     # "CURIOUS" API KEY SYNC & CROSS-ACCOUNT LEAK FIX
     # ==========================================
-    # We check if the list is empty OR if the logged-in user changed (Session Leakage Fix)
     if not st.session_state.get("user_api_keys") or st.session_state.get("api_key_owner") != current_username:
-        
-        # 1. Instantly clear any inherited keys from a previous logout and lock the owner
         st.session_state["user_api_keys"] = []
         st.session_state["api_key_owner"] = current_username
         
-        # 2. Fetch the raw encrypted data from the database
+        # Fetching using the Capitalized Name
         res = fetch_data("SELECT api_key FROM user_settings WHERE username = %s", (current_username,))
         
         if res and res[0]['api_key']:

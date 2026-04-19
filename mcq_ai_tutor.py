@@ -379,7 +379,7 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
                     "practical_relevance": new_pr
                 }
                 
-                save_ai_cache(ai_key, updated_data, st.session_state.get("username", "System"))
+                save_ai_cache(ai_key, updated_data, st.session_state.get("name", "System"))
                 st.session_state[edit_state_key] = False
                 st.rerun()
             if cancel_btn:
