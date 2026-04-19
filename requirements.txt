@@ -5,3 +5,6 @@ youtube-transcript-api
 pandas
 streamlit-authenticator
 bcrypt
+pytz
+cryptography
+pyyaml
