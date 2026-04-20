@@ -43,42 +43,25 @@ try:
 except FileNotFoundError:
     pass
 
-# --- FOOLPROOF JAVASCRIPT: Kills keyboard AND hides text cursor ---
-st.html(
+components.html(
     """
     <script>
-    function lockDropdowns() {
-        // 1. Target all Streamlit selectbox inputs
+    const observer = new MutationObserver(function(mutations) {
         const inputs = window.parent.document.querySelectorAll('div[data-baseweb="select"] input');
-        
         inputs.forEach(function(input) {
-            // 2. Prevent the keyboard
+            // Setting readonly prevents the phone keyboard from ever popping up, but allows clicks!
             if (!input.hasAttribute('readonly')) {
                 input.setAttribute('readonly', 'readonly');
                 input.setAttribute('inputmode', 'none');
             }
-            
-            // 3. Disable the blinking cursor (caret) and change pointer
-            input.style.caretColor = 'transparent'; 
-            input.style.cursor = 'pointer';
-            
-            // 4. Ensure the parent container doesn't look like a text field
-            const container = input.closest('div[data-baseweb="select"]');
-            if (container) {
-                container.style.cursor = 'pointer';
-            }
         });
-    }
-
-    // Run immediately and then monitor for new dropdowns (like when switching weeks)
-    lockDropdowns();
-    setInterval(lockDropdowns, 500);
-    const observer = new MutationObserver(lockDropdowns);
+    });
+    // Watch the entire Streamlit body for new dropdowns loading in the future
     observer.observe(window.parent.document.body, { childList: true, subtree: true });
     </script>
-    """
+    """,
+    height=0, width=0
 )
-# Create a fully mutable deep-copy of secrets
 def to_dict(obj):
     if hasattr(obj, 'items'):
         return {k: to_dict(v) for k, v in obj.items()}
