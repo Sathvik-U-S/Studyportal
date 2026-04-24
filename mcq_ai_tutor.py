@@ -216,8 +216,12 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
     7. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags.
     8. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
     9. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
-    10. MERMAID BULLETPROOF SYNTAX: You MUST use `graph TD` or `graph LR` (for DBMS). 
-       - NEWLINE RULE (CRITICAL): You MUST insert a newline (`\\n`) after the graph declaration, before EVERY `subgraph`, after EVERY subgraph title, after EVERY node definition, and after every `end` tag.
+    10. MERMAID BULLETPROOF SYNTAX (CRITICAL):
+       - NO TYPE PARAMETERS: In ER Diagrams, NEVER use parentheses for types (e.g., use `string`, NOT `VARCHAR(50)`; use `float`, NOT `DECIMAL(10,2)`).
+       - NO HYPHENS: Use underscores (`_`) instead of hyphens (`-`) for table or node names.
+       - NO MARKDOWN OR COLORS inside the diagram code.
+       - NO MULTILINE LABELS: Use `<br>` for line breaks.
+       - FORMAT: `NodeID["Plain English Text"]` for graphs, or `Type Name Constraint` for ER diagrams.
     11. JSON FORMAT: Return ONLY valid JSON block. NO markdown wrapper.
     12. LATEX & COLOR SEPARATION: NEVER use Streamlit color tags near numerical variables, formulas, or LaTeX.
     """
