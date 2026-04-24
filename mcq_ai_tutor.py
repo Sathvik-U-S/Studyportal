@@ -202,28 +202,32 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
     
     STRICT FORMATTING & PEDAGOGY RULES:
     1. STRICT POINT-WISE FORMATTING: You MUST structure EVERY text section as a series of distinct points.
-    2. THE DELIMITER RULE (CRITICAL): Do NOT use newlines (`\n`) or standard markdown bullets (`-` or `*`) to separate your points. You MUST separate every single distinct point, sub-point, or Step using the exact string `|||`.
-       - Example: `First concept.|||Supporting detail.|||**:blue[Step 1:]** Doing x.|||**:blue[Step 2:]** Doing y.`
-    3. ARRAY FORMATTING (Core Concepts): For array items, output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
-    4. INLINE STYLING & BOLDING: Apply standard markdown **bold** carefully. DO NOT leave trailing unmatched asterisks.
-    5. INLINE COLORS: Use standard Streamlit markdown colors formatted exactly as ` :color[text] `. 
+    2. THE DELIMITER RULE (CRITICAL): Do NOT use newlines (`\\n`) or standard markdown bullets (`-` or `*`) to separate your points. You MUST separate every single distinct point, sub-point, or Step using the exact string `|||`.
+       - Example: `First concept.|||Supporting detail.|||**:blue[Step 1:]** Doing x.`
+    3. NO DELIMITERS IN MERMAID: You are STRICTLY FORBIDDEN from using the `|||` delimiter inside the `mermaid_diagram` JSON field. Use standard newlines (`\\n`) only.
+    4. ARRAY FORMATTING: For array items (Core Concepts), output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
+    5. INLINE STYLING & BOLDING: Apply standard markdown **bold** carefully. DO NOT leave trailing unmatched asterisks.
+    6. INLINE COLORS: Use standard Streamlit markdown colors formatted exactly as ` :color[text] `. 
        - CRITICAL COLOR RULES: 
          a) There MUST be a space before the colon (e.g., `word :blue[text]`).
          b) BOLD COLORS (CRITICAL RULE): To make colored text bold, you MUST put the asterisks OUTSIDE the brackets: `**:blue[Text]**`. NEVER put asterisks inside (`:blue[**Text**]` is INVALID).
-         c) NO PUNCTUATION inside brackets unless it is part of the bolded phrase.
+         c) NO SYMBOLS: No `->`, `#`, `@` inside color brackets.
          d) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
-    6. HIGHLIGHTING HEADERS & STEPS: Explicitly label steps and main headers as `:blue[**Step X:**]` or `:blue[**Topic:**]`.
-    7. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags.
-    8. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
-    9. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
-    10. MERMAID BULLETPROOF SYNTAX (CRITICAL):
+    7. HIGHLIGHTING HEADERS & STEPS: Explicitly label steps and main headers as `**:blue[Step X:]**` or `**:blue[Topic Name:]**`.
+    8. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags.
+    9. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
+    10. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
+    11. MERMAID BULLETPROOF SYNTAX (CRITICAL):
+       - NEWLINE AFTER HEADER: You MUST start a new line immediately after `graph LR`, `graph TD`, or `erDiagram`.
        - NO TYPE PARAMETERS: In ER Diagrams, NEVER use parentheses for types (e.g., use `string`, NOT `VARCHAR(50)`; use `float`, NOT `DECIMAL(10,2)`).
        - NO HYPHENS: Use underscores (`_`) instead of hyphens (`-`) for table or node names.
        - NO MARKDOWN OR COLORS inside the diagram code.
+       - NO SYMBOLS: No parentheses `()` or brackets `[]` inside node text.
        - NO MULTILINE LABELS: Use `<br>` for line breaks.
+       - SUBGRAPHS: Use simple IDs without spaces (e.g., `subgraph Data_Process`).
        - FORMAT: `NodeID["Plain English Text"]` for graphs, or `Type Name Constraint` for ER diagrams.
-    11. JSON FORMAT: Return ONLY valid JSON block. NO markdown wrapper.
-    12. LATEX & COLOR SEPARATION: NEVER use Streamlit color tags near numerical variables, formulas, or LaTeX.
+    12. JSON FORMAT: Return ONLY a valid JSON block. NO markdown wrapper.
+    13. LATEX & COLOR SEPARATION: NEVER use Streamlit color tags near numerical variables, formulas, or LaTeX. Use standard markdown bolding `**text**` instead.
     """
     api_parts = [{"text": prompt_text}]
     
