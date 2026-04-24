@@ -201,31 +201,27 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
     SUBJECT SPECIFIC FOCUS: {guidance}
     
     STRICT FORMATTING & PEDAGOGY RULES:
-    1. CLEVER POINT-WISE HIERARCHY: For the `choice_analysis`, `wrong_options_analysis`, `common_mistake_trigger`, and `practical_relevance` sections, you MUST use a highly structured, point-wise format. 
-       - NEWLINE RULE (CRITICAL): EVERY single bullet point MUST start on a completely new line. NEVER put a bullet (`- `) in the middle of a paragraph.
-       - Use main bullets (`- `) for core ideas.
-       - Use indented sub-bullets (2 spaces: `  - `) for supporting details.
-       - Use sub-sub-bullets (4 spaces: `    * `) for deep, clever insights.
-    2. ARRAY FORMATTING (Core Concepts): For array items, output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
-    3. INLINE STYLING: Apply formatting deeply INSIDE the sentences. Use standard markdown **bold** and *italics*. Use them to highlight crucial keywords.
-    4. INLINE COLORS (STRICT SYMBOL PROHIBITION): Use standard Streamlit markdown colors formatted exactly as ` :color[plain text] `. 
+    1. STRICT POINT-WISE FORMATTING: You MUST structure EVERY text section as a series of distinct points.
+    2. THE DELIMITER RULE (CRITICAL): Do NOT use newlines (`\\n`) or standard markdown bullets (`-` or `*`) to separate your points. You MUST separate every single distinct point, sub-point, or Step using the exact string `|||`.
+       - Example: `First main concept.|||Supporting detail.|||**:blue[Step 1:]** Doing x.|||**:blue[Step 2:]** Doing y.`
+    3. ARRAY FORMATTING (Core Concepts): For array items, output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
+    4. INLINE STYLING: Apply formatting deeply INSIDE the sentences. Use standard markdown **bold** and *italics*.
+    5. INLINE COLORS (STRICT SYMBOL PROHIBITION): Use standard Streamlit markdown colors formatted exactly as ` :color[plain text] `. 
        - CRITICAL COLOR RULES: 
          a) There MUST be a space before the colon (e.g., `word :blue[text]`).
-         b) SYMBOL BAN: You are STRICTLY FORBIDDEN from putting symbols, arrows, or special characters inside the brackets (e.g., NO `:orange[->]`, NO `:red[#]`). Use color ONLY for alphanumeric words.
-         c) NO PUNCTUATION: Never place commas, periods, or parentheses inside the brackets.
-         d) NO NESTING: Never put **bold** or *italics* inside the color brackets.
-         e) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
-    5. STEP-BY-STEP HIGHLIGHTING: In the 'step_by_step' section, explicitly label each main step as `**:blue[Step X:]**` (where X is the number). EVERY single Step MUST start on a completely new line. Follow each step with its corresponding logic, using indented sub-bullets for sub-points.
-    6. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags (NO <u>, NO <span>, NO <ul>, NO <li>).
-    7. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
-    8. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
-    9. MERMAID BULLETPROOF SYNTAX: You MUST use `graph TD` or `graph LR` (for DBMS). 
-       - NEWLINE RULE (CRITICAL): You MUST insert a newline (`\n`) after the graph declaration, before EVERY `subgraph`, after EVERY subgraph title, after EVERY node definition, and after every `end` tag. NEVER smash code onto one line.
-       - NO SYMBOLS: No parentheses `()`, curly braces, single quotes `'`, or brackets `[]` ANYWHERE inside the node labels.
+         b) SYMBOL BAN: NO `:orange[->]`, NO `:red[#]`. Use color ONLY for alphanumeric words.
+         c) NO PUNCTUATION inside brackets.
+         d) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
+    6. STEP-BY-STEP HIGHLIGHTING: Explicitly label steps as `**:blue[Step X:]**`. Remember to separate every step with `|||`.
+    7. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags.
+    8. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
+    9. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
+    10. MERMAID BULLETPROOF SYNTAX: You MUST use `graph TD` or `graph LR` (for DBMS). 
+       - NEWLINE RULE (CRITICAL): You MUST insert a newline (`\\n`) after the graph declaration, before EVERY `subgraph`, after EVERY subgraph title, after EVERY node definition, and after every `end` tag.
+       - NO SYMBOLS in node labels.
        - SHAPES: Every single node MUST be formatted as `NodeID["Plain English Text"]`.
-       - SUBGRAPHS: Format as `subgraph Title` and close with `end`.
-    10. JSON FORMAT: Return ONLY valid JSON block. NO markdown wrapper.
-    11. LATEX & COLOR SEPARATION: NEVER use Streamlit color tags near numerical variables, formulas, or LaTeX. Use standard markdown bolding `**text**` instead.
+    11. JSON FORMAT: Return ONLY valid JSON block. NO markdown wrapper.
+    12. LATEX & COLOR SEPARATION: NEVER use Streamlit color tags near numerical variables, formulas, or LaTeX.
     """
     api_parts = [{"text": prompt_text}]
     
@@ -401,18 +397,31 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
                 return False
             return True
 
-        # PYTHON AUTO-CORRECTOR: Stable Version
+        # PYTHON AUTO-CORRECTOR: Delimiter Version
         def format_bullets(val):
-            if not val: return ""
+            if not val or str(val).strip() in ["N/A", "None", ""]: return ""
             v_str = str(val).strip()
             
-            # Gentle fix for smashed bullets
-            v_str = re.sub(r'(?<!\n)([a-z0-9.?!])\s+(-\s+[A-Z])', r'\1\n\n\2', v_str)
-            
-            # THE STEP HIGHLIGHTER (Native Streamlit Syntax)
-            v_str = re.sub(r'\**(?::[a-z]+\[)?([Ss]tep\s+\d+:?)(?:\])?\**', r'**:blue[\1]**', v_str)
-            
-            return v_str
+            # 1. Split exclusively by the AI's special delimiter
+            if "|||" in v_str:
+                points = [p.strip() for p in v_str.split("|||") if p.strip()]
+            else:
+                # Safe fallback for older cached notes
+                points = [p.strip("- *").strip() for p in v_str.split('\n') if p.strip()]
+                
+            formatted_points = []
+            for p in points:
+                # Clean up any leftover literal newlines or rogue dashes
+                p = p.replace('\\n', ' ').replace('\n', ' ')
+                p = re.sub(r'^[-*]\s*', '', p)
+                
+                # Highlight Steps natively for Streamlit
+                p = re.sub(r'\**(?::[a-z]+\[)?([Ss]tep\s+\d+:?)(?:\])?\**', r'**:blue[\1]**', p)
+                
+                # Force perfect bullet rendering with double newlines
+                formatted_points.append(f"- {p}")
+                
+            return "\n\n".join(formatted_points)
         
         # 1. Choice Analysis
         ca = format_bullets(data.get("choice_analysis"))

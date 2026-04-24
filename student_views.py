@@ -552,7 +552,7 @@ def render_view_videos():
     Renders the View Videos view for lectures and quizzes.
     """
     # ---------- SUBJECT / WEEK ----------------
-    c0, c1, c2 = st.columns([2, .7, 1])
+    c0, c1, c2 = st.columns([1.75, .5, 1])
     
     subjects = fetch_data("SELECT * FROM subjects ORDER BY name ASC")
     if not subjects: 
@@ -594,7 +594,7 @@ def render_view_videos():
             if state_key not in st.session_state:
                 st.session_state[state_key] = urls[0]
 
-            col_player, col_playlist = st.columns([2.5, .8])
+            col_player, col_playlist = st.columns([2.25, 1])
 
             with col_player:
                 with st.container(border=True):
