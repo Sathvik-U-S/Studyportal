@@ -202,30 +202,25 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
     
     STRICT FORMATTING & PEDAGOGY RULES:
     1. STRICT POINT-WISE FORMATTING: You MUST structure EVERY text section as a series of distinct points.
-    2. THE DELIMITER RULE (CRITICAL): Do NOT use newlines (`\\n`) or standard markdown bullets (`-` or `*`) to separate your points. You MUST separate every single distinct point, sub-point, or Step using the exact string `|||`.
+    2. THE DELIMITER RULE (CRITICAL): Separate every distinct point or Step using the exact string `|||`.
        - Example: `First concept.|||Supporting detail.|||**:blue[Step 1:]** Doing x.`
-    3. NO DELIMITERS IN MERMAID: You are STRICTLY FORBIDDEN from using the `|||` delimiter inside the `mermaid_diagram` JSON field. Use standard newlines (`\\n`) only.
-    4. ARRAY FORMATTING: For array items (Core Concepts), output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
-    5. INLINE STYLING & BOLDING: Apply standard markdown **bold** carefully. DO NOT leave trailing unmatched asterisks.
-    6. INLINE COLORS: Use standard Streamlit markdown colors formatted exactly as ` :color[text] `. 
-       - CRITICAL COLOR RULES: 
-         a) There MUST be a space before the colon (e.g., `word :blue[text]`).
-         b) BOLD COLORS (CRITICAL RULE): To make colored text bold, you MUST put the asterisks OUTSIDE the brackets: `**:blue[Text]**`. NEVER put asterisks inside (`:blue[**Text**]` is INVALID).
-         c) NO SYMBOLS: No `->`, `#`, `@` inside color brackets.
-         d) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
-    7. HIGHLIGHTING HEADERS & STEPS: Explicitly label steps and main headers as `**:blue[Step X:]**` or `**:blue[Topic Name:]**`.
-    8. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags.
-    9. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
-    10. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
+    3. TABLE EXCEPTION: If you are generating a Markdown Table (e.g., Execution Trace), output the ENTIRE table as ONE single point. Use standard newlines (`\n`) for the table rows. Do NOT put `|||` inside the table.
+    4. NO DELIMITERS IN MERMAID: You are STRICTLY FORBIDDEN from using the `|||` delimiter inside the `mermaid_diagram` JSON field. Use standard newlines (`\n`) only.
+    5. ARRAY FORMATTING: For array items, output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
+    6. INLINE COLORS & BOLDING: Use standard Streamlit colors: ` :color[text] `.
+       - BOLD COLORS (MANDATORY): Put asterisks OUTSIDE the brackets: `**:blue[Text]**`. 
+       - SPACE RULE: Always ensure there is a space before the first colon (e.g., `word :blue[text]`).
+    7. HIGHLIGHTING HEADERS & STEPS: Explicitly label steps as `**:blue[Step X:]**`.
+    8. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
+    9. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags.
+    10. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
     11. MERMAID BULLETPROOF SYNTAX (CRITICAL):
        - NEWLINE AFTER HEADER: You MUST start a new line immediately after `graph LR`, `graph TD`, or `erDiagram`.
-       - NO TYPE PARAMETERS: In ER Diagrams, NEVER use parentheses for types (e.g., use `string`, NOT `VARCHAR(50)`; use `float`, NOT `DECIMAL(10,2)`).
-       - NO HYPHENS: Use underscores (`_`) instead of hyphens (`-`) for table or node names.
-       - NO MARKDOWN OR COLORS inside the diagram code.
+       - NO TYPE PARAMETERS: In ER Diagrams, NEVER use parentheses for types (e.g., use `string`, NOT `VARCHAR(50)`).
+       - NO HYPHENS: Use underscores (`_`) instead of hyphens (`-`).
+       - NO MARKDOWN/COLORS: Never use `**` or `:blue[]` inside Mermaid code.
        - NO SYMBOLS: No parentheses `()` or brackets `[]` inside node text.
-       - NO MULTILINE LABELS: Use `<br>` for line breaks.
        - SUBGRAPHS: Use simple IDs without spaces (e.g., `subgraph Data_Process`).
-       - FORMAT: `NodeID["Plain English Text"]` for graphs, or `Type Name Constraint` for ER diagrams.
     12. JSON FORMAT: Return ONLY a valid JSON block. NO markdown wrapper.
     13. LATEX & COLOR SEPARATION: NEVER use Streamlit color tags near numerical variables, formulas, or LaTeX. Use standard markdown bolding `**text**` instead.
     """
@@ -405,9 +400,10 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
 
         # PYTHON AUTO-CORRECTOR: Delimiter Version
         def format_bullets(val):
-            if not val or str(val).strip() in ["N/A", "None", ""]: return "N/A" # Use "" for mcq_ai_tutor
+            if not val or str(val).strip() in ["N/A", "None", ""]: return "" 
             v_str = str(val).strip()
             
+            # 1. Split by delimiter
             if "|||" in v_str:
                 points = [p.strip() for p in v_str.split("|||") if p.strip()]
             else:
@@ -415,22 +411,29 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
             
             formatted_points = []
             for p in points:
-                p = p.replace('\\n', ' ').replace('\n', ' ')
-                
-                # CRITICAL FIX 1: Only strip bullets if they are followed by a space!
-                # This prevents it from accidentally eating the first asterisk of a **bold** tag.
-                p = re.sub(r'^[-*]\s+', '', p)
-                
-                # FIX 2: Automatically flip inverted bold/color tags (e.g. :blue[**Text**] -> **:blue[Text]**)
-                p = re.sub(r':([a-z]+)\[\*\*(.*?)\*\*\]', r'**:\1[\2]**', p)
-                
-                # FIX 3: Highlight Steps natively for Streamlit
-                p = re.sub(r'(?<!\[)\*\*(Step\s+\d+:?)\*\*', r'**:blue[\1]**', p, flags=re.IGNORECASE)
-                
-                # FIX 4: Clean up rogue trailing asterisks
-                p = re.sub(r'\*\*([.,:;]?)$', r'\1', p) 
-                
-                formatted_points.append(f"- {p}")
+                # --- CRITICAL FIX: TABLE DETECTOR ---
+                # If this chunk contains the markdown table separator row, treat it as a table!
+                if re.search(r'\|[\-\s:]+\|', p):
+                    clean_table = p.replace('\\n', '\n') # Restore standard newlines
+                    formatted_points.append(f"\n{clean_table}\n") # Add it without a bullet
+                else:
+                    # --- STANDARD TEXT POINT ---
+                    p = p.replace('\\n', ' ').replace('\n', ' ')
+                    
+                    # Strip bullets ONLY if followed by a space (prevents eating **bold**)
+                    p = re.sub(r'^[-*•]\s+', '', p)
+                    
+                    # Flip inverted bold/color tags (e.g. :blue[**Text**] -> **:blue[Text]**)
+                    p = re.sub(r':([a-z]+)\[\*\*(.*?)\*\*\]', r'**:\1[\2]**', p)
+                    
+                    # Force highlight Steps
+                    p = re.sub(r'(?<!\[)\*?\*?(Step\s+\d+:?)\*?\*?', r'**:blue[\1]**', p, flags=re.IGNORECASE)
+                    
+                    # Clean rogue trailing asterisks and leading/trailing bold fragments
+                    p = p.strip().rstrip("*").strip()
+                    if p.startswith("**") and not p.endswith("**"): p += "**"
+                    
+                    formatted_points.append(f"- {p}")
                 
             return "\n\n".join(formatted_points)
         
