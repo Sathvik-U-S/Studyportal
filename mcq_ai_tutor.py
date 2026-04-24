@@ -202,14 +202,14 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
     
     STRICT FORMATTING & PEDAGOGY RULES:
     1. STRICT POINT-WISE FORMATTING: You MUST structure EVERY text section as a series of distinct points.
-    2. THE DELIMITER RULE (CRITICAL): Do NOT use newlines (`\\n`) or standard markdown bullets (`-` or `*`) to separate your points. You MUST separate every single distinct point, sub-point, or Step using the exact string `|||`.
-       - Example: `First main concept.|||Supporting detail.|||:blue[**Step 1:**] Doing x.|||:blue[**Step 2:**] Doing y.`
+    2. THE DELIMITER RULE (CRITICAL): Do NOT use newlines (`\n`) or standard markdown bullets (`-` or `*`) to separate your points. You MUST separate every single distinct point, sub-point, or Step using the exact string `|||`.
+       - Example: `First concept.|||Supporting detail.|||**:blue[Step 1:]** Doing x.|||**:blue[Step 2:]** Doing y.`
     3. ARRAY FORMATTING (Core Concepts): For array items, output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
-    4. INLINE STYLING: Apply formatting deeply INSIDE the sentences. Use standard markdown **bold** and *italics*.
+    4. INLINE STYLING & BOLDING: Apply standard markdown **bold** carefully. DO NOT leave trailing unmatched asterisks.
     5. INLINE COLORS: Use standard Streamlit markdown colors formatted exactly as ` :color[text] `. 
        - CRITICAL COLOR RULES: 
          a) There MUST be a space before the colon (e.g., `word :blue[text]`).
-         b) BOLD COLORS: To make colored text bold, you MUST put the asterisks INSIDE the brackets like this: `:blue[**Text**]`. NEVER put asterisks outside like `**:blue[Text]**`.
+         b) BOLD COLORS (CRITICAL RULE): To make colored text bold, you MUST put the asterisks OUTSIDE the brackets: `**:blue[Text]**`. NEVER put asterisks inside (`:blue[**Text**]` is INVALID).
          c) NO PUNCTUATION inside brackets unless it is part of the bolded phrase.
          d) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
     6. HIGHLIGHTING HEADERS & STEPS: Explicitly label steps and main headers as `:blue[**Step X:**]` or `:blue[**Topic:**]`.
@@ -397,26 +397,31 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
 
         # PYTHON AUTO-CORRECTOR: Delimiter Version
         def format_bullets(val):
-            if not val or str(val).strip() in ["N/A", "None", ""]: return ""
+            if not val or str(val).strip() in ["N/A", "None", ""]: return "N/A" # Use "" for mcq_ai_tutor
             v_str = str(val).strip()
             
             if "|||" in v_str:
                 points = [p.strip() for p in v_str.split("|||") if p.strip()]
             else:
                 points = [p.strip("- *").strip() for p in v_str.split('\n') if p.strip()]
-                
+            
             formatted_points = []
             for p in points:
                 p = p.replace('\\n', ' ').replace('\n', ' ')
-                p = re.sub(r'^[-*]\s*', '', p)
                 
-                # FIX: Automatically correct broken Streamlit bold-color nesting (**:blue[Text]** -> :blue[**Text**])
-                p = re.sub(r'\*\*:([a-z]+)\[(.*?)\]\*\*', r':\1[**\2**]', p)
+                # CRITICAL FIX 1: Only strip bullets if they are followed by a space!
+                # This prevents it from accidentally eating the first asterisk of a **bold** tag.
+                p = re.sub(r'^[-*]\s+', '', p)
                 
-                # Highlight Steps natively for Streamlit
-                p = re.sub(r'\**(?::[a-z]+\[)?([Ss]tep\s+\d+:?)(?:\])?\**', r':blue[**\1**]', p)
+                # FIX 2: Automatically flip inverted bold/color tags (e.g. :blue[**Text**] -> **:blue[Text]**)
+                p = re.sub(r':([a-z]+)\[\*\*(.*?)\*\*\]', r'**:\1[\2]**', p)
                 
-                # Force perfect bullet rendering with double newlines
+                # FIX 3: Highlight Steps natively for Streamlit
+                p = re.sub(r'(?<!\[)\*\*(Step\s+\d+:?)\*\*', r'**:blue[\1]**', p, flags=re.IGNORECASE)
+                
+                # FIX 4: Clean up rogue trailing asterisks
+                p = re.sub(r'\*\*([.,:;]?)$', r'\1', p) 
+                
                 formatted_points.append(f"- {p}")
                 
             return "\n\n".join(formatted_points)
@@ -458,48 +463,49 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
             ct = re.sub(r'\n?```$', '', ct)
             st.markdown(ct)
 
-        # 6. Mermaid Diagrams (Context-Aware Rendering)
+        # 7. Mermaid Diagrams (Or Visual Architecture)
         if data.get("mermaid_diagram") and data["mermaid_diagram"] != "N/A":
-            st.markdown("#### :material/architecture: Visual Architecture")
+            st.markdown("#### Visual Architecture")
             raw_mermaid = data["mermaid_diagram"].replace('```mermaid', '').replace('```', '').strip()
             
-            # 1. Universal Cleanups
-            clean_mermaid = raw_mermaid.replace('\xa0', ' ')
+            # --- AGGRESSIVE MERMAID SANITIZER ---
+            # Universal Cleanups (CRITICAL FIX: HTML Entity translation for arrows)
+            clean_mermaid = raw_mermaid.replace('\xa0', ' ').replace('&gt;', '>').replace('&lt;', '<')
             final_mermaid = clean_mermaid.replace('$$', '').replace('\\', '')
             
-            # 2. STRICT FLOWCHART CLEANER (Only applies to graph/flowchart to avoid breaking ER/Sequence diagrams)
-            # 2. STRICT FLOWCHART CLEANER (Only applies to graph/flowchart to avoid breaking ER/Sequence diagrams)
+            final_mermaid = re.sub(r':[a-z]+\[(.*?)\]', r'\1', final_mermaid) # Strip rogue colors
+            final_mermaid = final_mermaid.replace('**', '').replace('*', '') # Strip rogue markdown
+            
+            # Force all node labels into double quotes and convert newlines to <br>
+            def sanitize_node_label(match):
+                inner_text = match.group(1).replace('"', '').replace("'", "")
+                inner_text = inner_text.replace('\n', '<br>')
+                return f'["{inner_text}"]'
+            final_mermaid = re.sub(r'\[(.*?)\]', sanitize_node_label, final_mermaid, flags=re.DOTALL)
+            
             if final_mermaid.strip().startswith("graph ") or final_mermaid.strip().startswith("flowchart "):
-                
-                # Emergency fix for smashed graph declarations (Safe string replacement, no regex slicing)
                 final_mermaid = final_mermaid.replace("graph LRsubgraph", "graph LR\nsubgraph")
                 final_mermaid = final_mermaid.replace("graph TDsubgraph", "graph TD\nsubgraph")
-                
-                # Strip unsupported arrow labels
                 final_mermaid = re.sub(r'--\s*".*?"\s*-->', '-->', final_mermaid)
                 final_mermaid = re.sub(r'--\s*.*?\s*-->', '-->', final_mermaid)
-                
-                # Translate dangerous symbols
                 final_mermaid = final_mermaid.replace('<=', ' less than or equal to ')
                 final_mermaid = final_mermaid.replace('>=', ' greater than or equal to ')
                 final_mermaid = final_mermaid.replace('!=', ' not equal to ')
                 final_mermaid = final_mermaid.replace('==', ' equals ')
                 final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
                 final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
+                final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(]"(.*?)"[\}\)](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
                 
-                # Strip quotes and HTML breaks
-                final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
-                final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
-                
-                # Safety Net for node shapes
-                final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
-                
-                # Safety Net for Subgraphs: Fixes spaces, parentheses, and brackets by dynamically assigning a valid ID
-                final_mermaid = re.sub(
-                    r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", 
-                    lambda m: m.group(0) if "[" in m.group(0) else f'subgraph {re.sub(r"[^A-Za-z0-9]", "_", m.group(1).strip())} ["{re.sub(r"[()[\]{}]", "", m.group(1).strip())}"]', 
-                    final_mermaid
-                )
+                # CRITICAL FIX: Kroki does not support `subgraph ID ["Title"]`. 
+                # We strip brackets and replace spaces with underscores to guarantee rendering.
+                def make_safe_subgraph(match):
+                    raw_title = match.group(1)
+                    if '[' in raw_title:
+                        raw_title = raw_title.split('[')[0] # Isolate just the ID
+                    safe_id = re.sub(r'[^A-Za-z0-9]', '_', raw_title.strip())
+                    return f"subgraph {safe_id}"
+                final_mermaid = re.sub(r'subgraph\s+(.*?)(?=\n|$)', make_safe_subgraph, final_mermaid)
+            
             try:
                 compressed = zlib.compress(final_mermaid.encode('utf-8'), 9)
                 b64_mermaid = base64.urlsafe_b64encode(compressed).decode('utf-8').replace('=', '')
@@ -509,140 +515,63 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
                 html_content = f"""
                     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
                     <style>
-                        :root {{
-                            --text-color: #31333F;
-                            --bg-color: transparent;
-                            --border-color: rgba(49, 51, 63, 0.2);
-                            --btn-bg: rgba(49, 51, 63, 0.05);
-                            --btn-hover: rgba(49, 51, 63, 0.1);
-                            --container-bg: rgba(255, 255, 255, 0.5);
-                        }}
-                        body {{
-                            margin: 0;
-                            background-color: var(--bg-color);
-                            color: var(--text-color);
-                            font-family: sans-serif;
-                        }}
-                        .controls {{
-                            position: sticky; 
-                            top: 0; 
-                            z-index: 100; 
-                            display: flex; 
-                            gap: 12px; 
-                            background-color: transparent; 
-                            padding-bottom: 10px;
-                            align-items: center;
-                        }}
-                        button {{
-                            display: flex;
-                            align-items: center;
-                            gap: 5px;
-                            padding: 6px 12px; 
-                            cursor: pointer; 
-                            border-radius: 6px; 
-                            border: 1px solid var(--border-color); 
-                            background: var(--btn-bg); 
-                            color: var(--text-color); 
-                            font-weight: bold;
-                            font-size: 13px;
-                            transition: background 0.2s;
-                        }}
+                        :root {{ --text-color: #31333F; --bg-color: transparent; --border-color: rgba(49, 51, 63, 0.2); --btn-bg: rgba(49, 51, 63, 0.05); --btn-hover: rgba(49, 51, 63, 0.1); --container-bg: rgba(255, 255, 255, 0.5); }}
+                        body {{ margin: 0; background-color: var(--bg-color); color: var(--text-color); font-family: sans-serif; }}
+                        .controls {{ position: sticky; top: 0; z-index: 100; display: flex; gap: 12px; background-color: transparent; padding-bottom: 10px; align-items: center; }}
+                        button {{ display: flex; align-items: center; gap: 5px; padding: 6px 12px; cursor: pointer; border-radius: 6px; border: 1px solid var(--border-color); background: var(--btn-bg); color: var(--text-color); font-weight: bold; font-size: 13px; transition: background 0.2s; }}
                         button .material-icons {{ font-size: 18px; }}
                         button:hover {{ background: var(--btn-hover); }}
-                        
-                        #wrapper {{
-                            width: 100%; 
-                            height: 500px; 
-                            overflow: auto; 
-                            border: 1px solid var(--border-color); 
-                            border-radius: 8px; 
-                            background: var(--container-bg);
-                            cursor: grab;
-                        }}
+                        #wrapper {{ width: 100%; height: 500px; overflow: auto; border: 1px solid var(--border-color); border-radius: 8px; background: var(--container-bg); cursor: grab; }}
                         #wrapper:active {{ cursor: grabbing; }}
-                        
                         #wrapper::-webkit-scrollbar {{ width: 10px; height: 10px; }}
                         #wrapper::-webkit-scrollbar-track {{ background: transparent; }}
-                        #wrapper::-webkit-scrollbar-thumb {{
-                            background-color: var(--border-color);
-                            border-radius: 8px;
-                        }}
+                        #wrapper::-webkit-scrollbar-thumb {{ background-color: var(--border-color); border-radius: 8px; }}
                         #wrapper::-webkit-scrollbar-thumb:hover {{ background-color: var(--text-color); }}
-                        
-                        #container {{
-                            transform-origin: 0 0; 
-                            transition: transform 0.1s ease-out; 
-                            display: inline-block; 
-                            min-width: 100%;
-                            user-select: none;
-                        }}
-                        #mermaid-img {{
-                            display: block; 
-                            width: 100%;
-                            pointer-events: none;
-                            transition: filter 0.3s ease;
-                        }}
+                        #container {{ transform-origin: 0 0; transition: transform 0.1s ease-out; display: inline-block; min-width: 100%; user-select: none; }}
+                        #mermaid-img {{ display: block; width: 100%; pointer-events: none; transition: filter 0.3s ease; }}
                     </style>
-                    
                     <div class="controls">
                         <button type="button" onclick="zoom(1.2)"><span class="material-icons">zoom_in</span> Zoom In</button>
                         <button type="button" onclick="zoom(0.8)"><span class="material-icons">zoom_out</span> Zoom Out</button>
                         <button type="button" onclick="resetZoom()"><span class="material-icons">restart_alt</span> Reset</button>
                         <span id="zoom-level" style="margin-left: 10px; align-self: center; font-weight: 500;">100%</span>
                     </div>
-                    
                     <div id="wrapper">
                         <div id="container">
                             <img id="mermaid-img" src="{mermaid_url}">
                         </div>
                     </div>
-
                     <script>
-                        // --- DYNAMIC STREAMLIT THEME SYNC ---
                         function syncTheme() {{
                             try {{
                                 const parentStyle = window.parent.getComputedStyle(window.parent.document.querySelector('.stApp') || window.parent.document.body);
                                 const bgColor = parentStyle.backgroundColor;
                                 const textColor = parentStyle.color;
-                                
                                 const rgb = bgColor.match(/\\d+/g);
                                 let isDark = false;
                                 if (rgb && rgb.length >= 3) {{
                                     const brightness = (parseInt(rgb[0]) * 299 + parseInt(rgb[1]) * 587 + parseInt(rgb[2]) * 114) / 1000;
                                     isDark = brightness < 128;
                                 }}
-
                                 document.documentElement.style.setProperty('--text-color', textColor);
                                 const textRgba = textColor.replace('rgb', 'rgba').replace(')', ', 0.2)');
                                 const btnBg = textColor.replace('rgb', 'rgba').replace(')', ', 0.05)');
                                 const btnHover = textColor.replace('rgb', 'rgba').replace(')', ', 0.1)');
                                 const containerBg = isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.5)';
-
                                 document.documentElement.style.setProperty('--border-color', textRgba);
                                 document.documentElement.style.setProperty('--btn-bg', btnBg);
                                 document.documentElement.style.setProperty('--btn-hover', btnHover);
                                 document.documentElement.style.setProperty('--container-bg', containerBg);
-
                                 const img = document.getElementById('mermaid-img');
-                                if (isDark) {{
-                                    img.style.filter = 'invert(0.85) hue-rotate(180deg)';
-                                }} else {{
-                                    img.style.filter = 'none';
-                                }}
-                            }} catch (e) {{
-                                console.log("Theme sync fallback.");
-                            }}
+                                if (isDark) {{ img.style.filter = 'invert(0.85) hue-rotate(180deg)'; }} else {{ img.style.filter = 'none'; }}
+                            }} catch (e) {{ console.log("Theme sync fallback."); }}
                         }}
-
                         syncTheme();
                         setInterval(syncTheme, 1000);
-
-                        // --- Zoom & Pan Logic ---
                         let scale = 1.0;
                         const container = document.getElementById('container');
                         const zoomLevel = document.getElementById('zoom-level');
                         const wrapper = document.getElementById('wrapper');
-
                         function zoom(factor) {{
                             scale *= factor;
                             if (scale < 0.2) scale = 0.2;
@@ -650,17 +579,13 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
                             container.style.transform = `scale(${{scale}})`;
                             zoomLevel.innerText = Math.round(scale * 100) + "%";
                         }}
-
                         function resetZoom() {{
                             scale = 1.0;
                             container.style.transform = 'scale(1)';
                             zoomLevel.innerText = "100%";
                         }}
-
-                        // --- Desktop Mouse Events ---
                         let isDown = false;
                         let startX, startY, scrollLeft, scrollTop;
-
                         wrapper.addEventListener('mousedown', (e) => {{
                             isDown = true;
                             startX = e.pageX - wrapper.offsetLeft;
@@ -678,8 +603,6 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
                             wrapper.scrollLeft = scrollLeft - (x - startX) * 1.5; 
                             wrapper.scrollTop = scrollTop - (y - startY) * 1.5;
                         }});
-
-                        // --- Mobile Touch Events ---
                         wrapper.addEventListener('touchstart', (e) => {{
                             isDown = true;
                             startX = e.touches[0].pageX - wrapper.offsetLeft;
@@ -698,10 +621,12 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
                         }}, {{ passive: false }});
                     </script>
                 """
-                # STABLE RENDERER
                 components.html(html_content, height=600)
             except Exception:
-                st.code(final_mermaid, language="text")
+                pass
+                
+            with st.expander("View Raw Mermaid Code", expanded=False):
+                st.code(final_mermaid, language="mermaid")
 
         # 7. Summary Info
         col1, col2 = st.columns(2)

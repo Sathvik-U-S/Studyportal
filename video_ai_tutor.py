@@ -84,15 +84,12 @@ def ask_video_ai(subject, video_url, api_keys):
     1. STRICT POINT-WISE FORMATTING: You MUST structure EVERY text section as a series of distinct points.
     2. THE DELIMITER RULE (CRITICAL): Do NOT use newlines (`\\n`) or standard markdown bullets (`-` or `*`) to separate your points. You MUST separate every single distinct point, sub-point, or Step using the exact string `|||`.
        - Example: `First main concept.|||Supporting detail.|||:blue[**Step 1:**] Doing x.|||:blue[**Step 2:**] Doing y.`
-    3. ARRAY FORMATTING (Core Concepts): For array items, output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
-    4. INLINE STYLING: Apply formatting deeply INSIDE the sentences. Use standard markdown **bold** and *italics*.
+    3. ARRAY FORMATTING: For array items, output ONLY the raw text. NEVER prepend with bullets.
+    4. INLINE STYLING & BOLDING: Apply standard markdown **bold** carefully. DO NOT leave trailing unmatched asterisks.
     5. INLINE COLORS: Use standard Streamlit markdown colors formatted exactly as ` :color[text] `. 
-       - CRITICAL COLOR RULES: 
-         a) There MUST be a space before the colon (e.g., `word :blue[text]`).
-         b) BOLD COLORS: To make colored text bold, you MUST put the asterisks INSIDE the brackets like this: `:blue[**Text**]`. NEVER put asterisks outside like `**:blue[Text]**`.
-         c) NO PUNCTUATION inside brackets unless it is part of the bolded phrase.
-         d) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
-    6. HIGHLIGHTING HEADERS & STEPS: Explicitly label steps and main headers as `:blue[**Step X:**]` or `:blue[**Topic:**]`.
+       - BOLD COLORS (CRITICAL RULE): To make colored text bold, you MUST put the asterisks OUTSIDE the brackets: `**:blue[Text]**`. NEVER put asterisks inside (`:blue[**Text**]` is INVALID).
+       - Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
+    6. HIGHLIGHTING STEPS: Explicitly label steps as `**:blue[Step X:]**`.
     7. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags.
     8. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
     9. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
@@ -266,11 +263,11 @@ def render_video_notes(data, video_id, created_by_user="System"):
     # ==========================================
     else:
         # --- THE BULLETPROOF DELIMITER SPLITTER ---
-        def format_markdown_text(val):
-            if not val or str(val).strip() in ["N/A", "None", ""]: return "N/A"
+        # --- THE BULLETPROOF DELIMITER SPLITTER ---
+        def format_markdown_text(val): # Note: Name is format_bullets in mcq_ai_tutor.py
+            if not val or str(val).strip() in ["N/A", "None", ""]: return "N/A" # Use "" for mcq_ai_tutor
             v_str = str(val).strip()
             
-            # 1. Split exclusively by the AI's special delimiter
             if "|||" in v_str:
                 points = [p.strip() for p in v_str.split("|||") if p.strip()]
             else:
@@ -279,15 +276,20 @@ def render_video_notes(data, video_id, created_by_user="System"):
             formatted_points = []
             for p in points:
                 p = p.replace('\\n', ' ').replace('\n', ' ')
-                p = re.sub(r'^[-*]\s*', '', p)
                 
-                # FIX: Automatically correct broken Streamlit bold-color nesting (**:blue[Text]** -> :blue[**Text**])
-                p = re.sub(r'\*\*:([a-z]+)\[(.*?)\]\*\*', r':\1[**\2**]', p)
+                # CRITICAL FIX 1: Only strip bullets if they are followed by a space!
+                # This prevents it from accidentally eating the first asterisk of a **bold** tag.
+                p = re.sub(r'^[-*]\s+', '', p)
                 
-                # Highlight Steps natively for Streamlit
-                p = re.sub(r'\**(?::[a-z]+\[)?([Ss]tep\s+\d+:?)(?:\])?\**', r':blue[**\1**]', p)
+                # FIX 2: Automatically flip inverted bold/color tags (e.g. :blue[**Text**] -> **:blue[Text]**)
+                p = re.sub(r':([a-z]+)\[\*\*(.*?)\*\*\]', r'**:\1[\2]**', p)
                 
-                # Force perfect bullet rendering with double newlines
+                # FIX 3: Highlight Steps natively for Streamlit
+                p = re.sub(r'(?<!\[)\*\*(Step\s+\d+:?)\*\*', r'**:blue[\1]**', p, flags=re.IGNORECASE)
+                
+                # FIX 4: Clean up rogue trailing asterisks
+                p = re.sub(r'\*\*([.,:;]?)$', r'\1', p) 
+                
                 formatted_points.append(f"- {p}")
                 
             return "\n\n".join(formatted_points)
@@ -330,16 +332,26 @@ def render_video_notes(data, video_id, created_by_user="System"):
             st.markdown("#### Code & Architecture")
             st.markdown(ca)
 
-        # 7. Mermaid Diagrams
+        # 7. Mermaid Diagrams (Or Visual Architecture)
         if data.get("mermaid_diagram") and data["mermaid_diagram"] != "N/A":
             st.markdown("#### Visual Architecture")
             raw_mermaid = data["mermaid_diagram"].replace('```mermaid', '').replace('```', '').strip()
             
-            # Universal Cleanups
-            clean_mermaid = raw_mermaid.replace('\xa0', ' ')
+            # --- AGGRESSIVE MERMAID SANITIZER ---
+            # Universal Cleanups (CRITICAL FIX: HTML Entity translation for arrows)
+            clean_mermaid = raw_mermaid.replace('\xa0', ' ').replace('&gt;', '>').replace('&lt;', '<')
             final_mermaid = clean_mermaid.replace('$$', '').replace('\\', '')
             
-            # STRICT FLOWCHART CLEANER
+            final_mermaid = re.sub(r':[a-z]+\[(.*?)\]', r'\1', final_mermaid) # Strip rogue colors
+            final_mermaid = final_mermaid.replace('**', '').replace('*', '') # Strip rogue markdown
+            
+            # Force all node labels into double quotes and convert newlines to <br>
+            def sanitize_node_label(match):
+                inner_text = match.group(1).replace('"', '').replace("'", "")
+                inner_text = inner_text.replace('\n', '<br>')
+                return f'["{inner_text}"]'
+            final_mermaid = re.sub(r'\[(.*?)\]', sanitize_node_label, final_mermaid, flags=re.DOTALL)
+            
             if final_mermaid.strip().startswith("graph ") or final_mermaid.strip().startswith("flowchart "):
                 final_mermaid = final_mermaid.replace("graph LRsubgraph", "graph LR\nsubgraph")
                 final_mermaid = final_mermaid.replace("graph TDsubgraph", "graph TD\nsubgraph")
@@ -351,14 +363,18 @@ def render_video_notes(data, video_id, created_by_user="System"):
                 final_mermaid = final_mermaid.replace('==', ' equals ')
                 final_mermaid = re.sub(r'(?<=\w)\s*<\s*(?=\w)', ' less than ', final_mermaid)
                 final_mermaid = re.sub(r'(?<=\w)\s*>\s*(?=\w)', ' greater than ', final_mermaid)
-                final_mermaid = final_mermaid.replace("'", "").replace('<br>', ' ').replace('<br/>', ' ')
-                final_mermaid = re.sub(r'(?<!\[)"(?!\])', '', final_mermaid)
-                final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(\[]"?([^"]*?)"?[\}\)\]](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
-                final_mermaid = re.sub(
-                    r"subgraph\s+[\"']?(.*?)[\"']?(?=\n|$)", 
-                    lambda m: m.group(0) if "[" in m.group(0) else f'subgraph {re.sub(r"[^A-Za-z0-9]", "_", m.group(1).strip())} ["{re.sub(r"[()[\]{}]", "", m.group(1).strip())}"]', 
-                    final_mermaid
-                )
+                final_mermaid = re.sub(r'([A-Za-z0-9_]+)[\{\(]"(.*?)"[\}\)](?=\s*[-=\.%]|\s*$|\s*\n)', r'\1["\2"]', final_mermaid)
+                
+                # CRITICAL FIX: Kroki does not support `subgraph ID ["Title"]`. 
+                # We strip brackets and replace spaces with underscores to guarantee rendering.
+                def make_safe_subgraph(match):
+                    raw_title = match.group(1)
+                    if '[' in raw_title:
+                        raw_title = raw_title.split('[')[0] # Isolate just the ID
+                    safe_id = re.sub(r'[^A-Za-z0-9]', '_', raw_title.strip())
+                    return f"subgraph {safe_id}"
+                final_mermaid = re.sub(r'subgraph\s+(.*?)(?=\n|$)', make_safe_subgraph, final_mermaid)
+            
             try:
                 compressed = zlib.compress(final_mermaid.encode('utf-8'), 9)
                 b64_mermaid = base64.urlsafe_b64encode(compressed).decode('utf-8').replace('=', '')
@@ -474,10 +490,12 @@ def render_video_notes(data, video_id, created_by_user="System"):
                         }}, {{ passive: false }});
                     </script>
                 """
-                # STABLE RENDERER
                 components.html(html_content, height=600)
             except Exception:
-                st.code(final_mermaid, language="text")
+                pass
+                
+            with st.expander("View Raw Mermaid Code", expanded=False):
+                st.code(final_mermaid, language="mermaid")
                 
         # 8. Interview Prep
         if data.get("interview_prep_questions") and data["interview_prep_questions"] != "N/A":
