@@ -83,23 +83,21 @@ def ask_video_ai(subject, video_url, api_keys):
     STRICT FORMATTING & PEDAGOGY RULES:
     1. STRICT POINT-WISE FORMATTING: You MUST structure EVERY text section as a series of distinct points.
     2. THE DELIMITER RULE (CRITICAL): Do NOT use newlines (`\\n`) or standard markdown bullets (`-` or `*`) to separate your points. You MUST separate every single distinct point, sub-point, or Step using the exact string `|||`.
-       - Example: `First main concept.|||Supporting detail.|||**:blue[Step 1:]** Doing x.|||**:blue[Step 2:]** Doing y.`
+       - Example: `First main concept.|||Supporting detail.|||:blue[**Step 1:**] Doing x.|||:blue[**Step 2:**] Doing y.`
     3. ARRAY FORMATTING (Core Concepts): For array items, output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
     4. INLINE STYLING: Apply formatting deeply INSIDE the sentences. Use standard markdown **bold** and *italics*.
-    5. INLINE COLORS (STRICT SYMBOL PROHIBITION): Use standard Streamlit markdown colors formatted exactly as ` :color[plain text] `. 
+    5. INLINE COLORS: Use standard Streamlit markdown colors formatted exactly as ` :color[text] `. 
        - CRITICAL COLOR RULES: 
          a) There MUST be a space before the colon (e.g., `word :blue[text]`).
-         b) SYMBOL BAN: NO `:orange[->]`, NO `:red[#]`. Use color ONLY for alphanumeric words.
-         c) NO PUNCTUATION inside brackets.
+         b) BOLD COLORS: To make colored text bold, you MUST put the asterisks INSIDE the brackets like this: `:blue[**Text**]`. NEVER put asterisks outside like `**:blue[Text]**`.
+         c) NO PUNCTUATION inside brackets unless it is part of the bolded phrase.
          d) Valid colors: `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `grey`, `gray`.
-    6. STEP-BY-STEP HIGHLIGHTING: Explicitly label steps as `**:blue[Step X:]**`. Remember to separate every step with `|||`.
+    6. HIGHLIGHTING HEADERS & STEPS: Explicitly label steps and main headers as `:blue[**Step X:**]` or `:blue[**Topic:**]`.
     7. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags.
     8. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
     9. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
     10. MERMAID BULLETPROOF SYNTAX: You MUST use `graph TD` or `graph LR` (for DBMS). 
        - NEWLINE RULE (CRITICAL): You MUST insert a newline (`\\n`) after the graph declaration, before EVERY `subgraph`, after EVERY subgraph title, after EVERY node definition, and after every `end` tag.
-       - NO SYMBOLS in node labels.
-       - SHAPES: Every single node MUST be formatted as `NodeID["Plain English Text"]`.
     11. JSON FORMAT: Return ONLY valid JSON block. NO markdown wrapper.
     12. LATEX & COLOR SEPARATION: NEVER use Streamlit color tags near numerical variables, formulas, or LaTeX.
     """
@@ -267,7 +265,6 @@ def render_video_notes(data, video_id, created_by_user="System"):
     # VIEW MODE (Standard Rendering)
     # ==========================================
     else:
-        # --- THE MARKDOWN AUTO-CORRECTOR ---
         # --- THE BULLETPROOF DELIMITER SPLITTER ---
         def format_markdown_text(val):
             if not val or str(val).strip() in ["N/A", "None", ""]: return "N/A"
@@ -277,17 +274,18 @@ def render_video_notes(data, video_id, created_by_user="System"):
             if "|||" in v_str:
                 points = [p.strip() for p in v_str.split("|||") if p.strip()]
             else:
-                # Safe fallback for older cached notes
                 points = [p.strip("- *").strip() for p in v_str.split('\n') if p.strip()]
             
             formatted_points = []
             for p in points:
-                # Clean up any leftover literal newlines or rogue dashes
                 p = p.replace('\\n', ' ').replace('\n', ' ')
                 p = re.sub(r'^[-*]\s*', '', p)
                 
+                # FIX: Automatically correct broken Streamlit bold-color nesting (**:blue[Text]** -> :blue[**Text**])
+                p = re.sub(r'\*\*:([a-z]+)\[(.*?)\]\*\*', r':\1[**\2**]', p)
+                
                 # Highlight Steps natively for Streamlit
-                p = re.sub(r'\**(?::[a-z]+\[)?([Ss]tep\s+\d+:?)(?:\])?\**', r'**:blue[\1]**', p)
+                p = re.sub(r'\**(?::[a-z]+\[)?([Ss]tep\s+\d+:?)(?:\])?\**', r':blue[**\1**]', p)
                 
                 # Force perfect bullet rendering with double newlines
                 formatted_points.append(f"- {p}")
