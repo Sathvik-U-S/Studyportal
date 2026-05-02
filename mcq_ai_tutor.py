@@ -204,23 +204,24 @@ def ask_ai_tutor(subject, question, media_type, media_content, all_options, corr
     1. STRICT POINT-WISE FORMATTING: You MUST structure EVERY text section as a series of distinct points.
     2. THE DELIMITER RULE (CRITICAL): Separate every distinct point or Step using the exact string `|||`.
        - Example: `First concept.|||Supporting detail.|||**:blue[Step 1:]** Doing x.`
-    3. TABLE EXCEPTION: If you are generating a Markdown Table (e.g., Execution Trace), output the ENTIRE table as ONE single point. Use standard newlines (`\n`) for the table rows. Do NOT put `|||` inside the table.
+    3. TABLE EXCEPTION (CRITICAL): If generating a Markdown Table (e.g., Execution Trace), you MUST use actual newlines (`\n`) to separate the rows. Do NOT squash the table into a single line. Do NOT use `|||` inside the table.
+       - Correct Format: `| Col 1 | Col 2 |\n|---|---|\n| Data | Data |`
     4. NO DELIMITERS IN MERMAID: You are STRICTLY FORBIDDEN from using the `|||` delimiter inside the `mermaid_diagram` JSON field. Use standard newlines (`\n`) only.
     5. ARRAY FORMATTING: For array items, output ONLY the raw text. NEVER prepend with bullets (`- `, `* `).
     6. INLINE COLORS & BOLDING: Use standard Streamlit colors: ` :color[text] `.
        - BOLD COLORS (MANDATORY): Put asterisks OUTSIDE the brackets: `**:blue[Text]**`. 
        - SPACE RULE: Always ensure there is a space before the first colon (e.g., `word :blue[text]`).
     7. HIGHLIGHTING HEADERS & STEPS: Explicitly label steps as `**:blue[Step X:]**`.
-    8. EXECUTION TRACE: MUST be a well-formatted Markdown Table (e.g., `| Step | Variable | State |`).
-    9. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags.
-    10. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
+    8. ZERO HTML TAGS: You are strictly forbidden from using any HTML tags.
+    9. CONDITIONAL RELEVANCE: If a section is irrelevant, output EXACTLY "N/A".
+    10. EXECUTION TRACE: MUST be a well-formatted Markdown Table.
     11. MERMAID BULLETPROOF SYNTAX (CRITICAL):
        - NEWLINE AFTER HEADER: You MUST start a new line immediately after `graph LR`, `graph TD`, or `erDiagram`.
        - NO TYPE PARAMETERS: In ER Diagrams, NEVER use parentheses for types (e.g., use `string`, NOT `VARCHAR(50)`).
        - NO HYPHENS: Use underscores (`_`) instead of hyphens (`-`).
        - NO MARKDOWN/COLORS: Never use `**` or `:blue[]` inside Mermaid code.
        - NO SYMBOLS: No parentheses `()` or brackets `[]` inside node text.
-       - SUBGRAPHS: Use simple IDs without spaces (e.g., `subgraph Data_Process`).
+       - SUBGRAPHS: Use simple IDs without spaces.
     12. JSON FORMAT: Return ONLY a valid JSON block. NO markdown wrapper.
     13. LATEX & COLOR SEPARATION: NEVER use Streamlit color tags near numerical variables, formulas, or LaTeX. Use standard markdown bolding `**text**` instead.
     """
@@ -400,7 +401,7 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
 
         # PYTHON AUTO-CORRECTOR: Delimiter Version
         def format_bullets(val):
-            if not val or str(val).strip() in ["N/A", "None", ""]: return "" 
+            if not val or str(val).strip() in ["N/A", "None", ""]: return "" # Use "" for mcq_ai_tutor
             v_str = str(val).strip()
             
             # 1. Split by delimiter
@@ -411,11 +412,14 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
             
             formatted_points = []
             for p in points:
-                # --- CRITICAL FIX: TABLE DETECTOR ---
+                # --- THE TABLE UN-SQUASHER ---
                 # If this chunk contains the markdown table separator row, treat it as a table!
                 if re.search(r'\|[\-\s:]+\|', p):
-                    clean_table = p.replace('\\n', '\n') # Restore standard newlines
-                    formatted_points.append(f"\n{clean_table}\n") # Add it without a bullet
+                    # 1. Fix squashed tables by replacing "| |" with "|\n|"
+                    clean_table = re.sub(r'\|\s+\|', '|\n|', p)
+                    # 2. Restore standard newlines
+                    clean_table = clean_table.replace('\\n', '\n') 
+                    formatted_points.append(f"\n{clean_table}\n") 
                 else:
                     # --- STANDARD TEXT POINT ---
                     p = p.replace('\\n', ' ').replace('\n', ' ')
@@ -426,7 +430,7 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
                     # Flip inverted bold/color tags (e.g. :blue[**Text**] -> **:blue[Text]**)
                     p = re.sub(r':([a-z]+)\[\*\*(.*?)\*\*\]', r'**:\1[\2]**', p)
                     
-                    # Force highlight Steps
+                    # Force highlight Steps natively for Streamlit
                     p = re.sub(r'(?<!\[)\*?\*?(Step\s+\d+:?)\*?\*?', r'**:blue[\1]**', p, flags=re.IGNORECASE)
                     
                     # Clean rogue trailing asterisks and leading/trailing bold fragments
