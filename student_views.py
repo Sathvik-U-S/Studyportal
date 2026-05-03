@@ -315,9 +315,75 @@ def render_take_assessment():
     # STUDY MODE (Micro-Reloading Execution)
     # =========================================================================
     else:
+        # --- NEW BULK AI GENERATOR FOR ADMINS ---
+        if st.session_state.get("role") == "admin":
+            #st.markdown("##### ⚙️ Admin Operations")
+            if st.button("Bulk Generate Missing AI Explanations", type="primary", use_container_width=True):
+                if not st.session_state.get("user_api_keys"):
+                    st.error("You need API keys configured in 'My Settings' to run bulk generation.", icon=":material/vpn_key:")
+                else:
+                    # 1. Identify which questions are actually missing AI data
+                    missing_qs = []
+                    for q in questions:
+                        ai_key = f"num_{q['id']}" if q.get('q_type') == 'numerical' else f"mcq_{q['id']}"
+                        if not get_cached_ai_response(ai_key):
+                            missing_qs.append(q)
+                    
+                    if not missing_qs:
+                        st.success("All questions in this activity already have AI explanations!", icon=":material/check_circle:")
+                    else:
+                        # 2. Setup Progress UI
+                        my_bar = st.progress(0, text="Initializing Bulk Generation...")
+                        success_count = 0
+                        
+                        # 3. Sequential Generation Loop
+                        for idx, q in enumerate(missing_qs):
+                            my_bar.progress(idx / len(missing_qs), text=f"Generating {idx+1} of {len(missing_qs)}: {q['heading'][:40]}...")
+                            
+                            ai_key = f"num_{q['id']}" if q.get('q_type') == 'numerical' else f"mcq_{q['id']}"
+                            options = opts_by_q.get(q['id'], [])
+                            opt_texts = []
+                            c_ans = None
+                            
+                            # Format Data for AI payload
+                            if q.get('q_type') == 'numerical':
+                                c_ans = q['correct_answer']
+                            else:
+                                for o in options:
+                                    if o['media_type'] == 'image' and o['media_content']:
+                                        opt_texts.append(f"[IMAGE: {o['media_content']}]")
+                                    else:
+                                        opt_texts.append(o['option_text'] or o['media_content'] or "No Content")
+                                        
+                                is_multi = len([o for o in options if o['is_correct']]) > 1
+                                c_ans_list = [opt_texts[i] for i, o in enumerate(options) if o['is_correct']]
+                                c_ans = c_ans_list if is_multi else (c_ans_list[0] if c_ans_list else "Unknown")
+
+                            # 4. Trigger AI
+                            explanation = ask_ai_tutor(s_sel, q['heading'], q['media_type'], q['media_content'], opt_texts, c_ans, st.session_state["user_api_keys"])
+                            
+                            # 5. Handle Errors vs Success
+                            if "choice_analysis" in explanation and str(explanation.get("choice_analysis", "")).startswith("API Error"):
+                                st.error(f"Bulk Process Halted on Q{q['id']}: API Limits Exhausted or Error.", icon=":material/error:")
+                                break # CRITICAL: Stop the loop so we don't spam failed API requests
+                            else:
+                                meta = {'q_id': q['id'], 'sub': s_sel, 'heading': q['heading'], 'week': w_sel, 'ass_name': a_sel}
+                                save_ai_cache(ai_key, explanation, st.session_state["name"], metadata=meta)
+                                success_count += 1
+                                
+                            # CRITICAL RATE LIMIT PROTECTOR (Gemini Free Tier = 15 RPM. 60sec / 15 = 4 sec)
+                            if idx < len(missing_qs) - 1:
+                                time.sleep(4.5)
+                                
+                        my_bar.progress(1.0, text=f"Finished! Successfully generated {success_count} explanations.")
+                        time.sleep(1.5)
+                        st.rerun()
+                        
+            st.divider()
+
+        # Render standard question loop
         for i, q in enumerate(questions):
             options = opts_by_q.get(q['id'], [])
-            # Call the fragment function for each question independently!
             render_study_question(i, q, options, s_sel, w_sel, a_sel)
 
 def render_take_test():

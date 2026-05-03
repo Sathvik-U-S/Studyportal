@@ -401,28 +401,31 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
 
         # PYTHON AUTO-CORRECTOR: Delimiter Version
         def format_bullets(val):
-            if not val or str(val).strip() in ["N/A", "None", ""]: return "" # Use "" for mcq_ai_tutor
+            if not val or str(val).strip() in ["N/A", "None", ""]: return "N/A" # Use "" for mcq_ai_tutor
             v_str = str(val).strip()
             
             # 1. Split by delimiter
             if "|||" in v_str:
                 points = [p.strip() for p in v_str.split("|||") if p.strip()]
+            elif "\n\n" in v_str:
+                # SAFER FALLBACK: Split by double newlines instead of single to protect math/code blocks
+                points = [p.strip("- *").strip() for p in v_str.split('\n\n') if p.strip()]
             else:
-                points = [p.strip("- *").strip() for p in v_str.split('\n') if p.strip()]
+                # If no clear delimiter, keep it as a single block to prevent shattering equations
+                points = [v_str]
             
             formatted_points = []
             for p in points:
                 # --- THE TABLE UN-SQUASHER ---
-                # If this chunk contains the markdown table separator row, treat it as a table!
                 if re.search(r'\|[\-\s:]+\|', p):
-                    # 1. Fix squashed tables by replacing "| |" with "|\n|"
                     clean_table = re.sub(r'\|\s+\|', '|\n|', p)
-                    # 2. Restore standard newlines
                     clean_table = clean_table.replace('\\n', '\n') 
                     formatted_points.append(f"\n{clean_table}\n") 
                 else:
                     # --- STANDARD TEXT POINT ---
-                    p = p.replace('\\n', ' ').replace('\n', ' ')
+                    # CRITICAL FIX: Do NOT squash real newlines into spaces! 
+                    # Only convert escaped newlines into real newlines to preserve math derivations.
+                    p = p.replace('\\n', '\n')
                     
                     # Strip bullets ONLY if followed by a space (prevents eating **bold**)
                     p = re.sub(r'^[-*•]\s+', '', p)
@@ -433,9 +436,8 @@ def render_ai_tutor_response(data, ai_key, created_by_user="System"):
                     # Force highlight Steps natively for Streamlit
                     p = re.sub(r'(?<!\[)\*?\*?(Step\s+\d+:?)\*?\*?', r'**:blue[\1]**', p, flags=re.IGNORECASE)
                     
-                    # Clean rogue trailing asterisks and leading/trailing bold fragments
+                    # Clean rogue trailing asterisks (from the previous bug fix)
                     p = p.strip().rstrip("*").strip()
-                    if p.startswith("**") and not p.endswith("**"): p += "**"
                     
                     formatted_points.append(f"- {p}")
                 
